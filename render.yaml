@@ -4,18 +4,27 @@ services:
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120
+    healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: RUN_BOT_ON_RENDER
         value: "1"
+      - key: START_BOT_THREAD
+        value: "1"
+      - key: ENABLE_KEEP_ALIVE
+        value: "1"
+      - key: KEEP_ALIVE_INTERVAL
+        value: "300"
       - key: PANEL_SECRET_KEY
         generateValue: true
       - key: ADMIN_USER
-        value: hama
+        sync: false
       - key: ADMIN_PASS
-        value: "1211"
+        sync: false
       - key: BOT_TOKEN
         sync: false
       - key: API_BASE_URL
+        sync: false
+      - key: PUBLIC_API_URL
         sync: false
