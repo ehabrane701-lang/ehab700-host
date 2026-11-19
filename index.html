@@ -6,14 +6,22 @@
   <title>𝗘𝗛𝗔𝗕𝗔𝗜𝗛𝗔𝗪𝗕𝗔𝗡𝗜 — لوحة التحكم والاستضافة</title>
   <style>
     :root{
-      --bg0:#05060a; --bg1:#070a12;
-      --glass:rgba(255,255,255,.06);
-      --border:rgba(255,255,255,.12);
-      --muted:rgba(255,255,255,.65);
-      --text:rgba(255,255,255,.92);
-      --accent:#00d4ff; --accent2:#7b61ff;
-      --danger:#ff4d4d; --ok:#33ff99; --warn:#ffd166;
-      --shadow:0 18px 60px rgba(0,0,0,.55);
+      --bg0:#f1f5fb;
+      --bg1:#ffffff;
+      --glass:rgba(255,255,255,.92);
+      --border:rgba(15,44,89,.14);
+      --muted:#475569;
+      --text:#0b1f3a;
+      --accent:#1d4ed8;       /* أزرق ملكي */
+      --accent2:#800020;      /* أحمر عنابي */
+      --burgundy:#800020;
+      --burgundy-light:#a31636;
+      --royal-blue:#0f3d7a;
+      --sky-blue:#0284c7;
+      --danger:#9b111e;
+      --ok:#0f766e;
+      --warn:#b45309;
+      --shadow:0 16px 42px rgba(11,31,58,.10);
       --radius:18px;
     }
     *{box-sizing:border-box}
@@ -22,22 +30,24 @@
       color:var(--text);
       font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Naskh Arabic",Tahoma,sans-serif;
       background:
-        radial-gradient(1200px 600px at 10% 10%, rgba(0,212,255,.24), transparent 60%),
-        radial-gradient(900px 500px at 90% 20%, rgba(123,97,255,.22), transparent 55%),
-        radial-gradient(800px 500px at 40% 90%, rgba(51,255,153,.10), transparent 60%),
+        radial-gradient(1100px 560px at 8% 6%, rgba(128,0,32,.11), transparent 60%),
+        radial-gradient(950px 520px at 92% 14%, rgba(29,78,216,.13), transparent 58%),
+        radial-gradient(850px 500px at 50% 95%, rgba(2,132,199,.09), transparent 60%),
         linear-gradient(180deg, var(--bg1), var(--bg0));
       overflow-x:hidden;
     }
     body:before{
       content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");
-      opacity:.22;mix-blend-mode:overlay;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.06'/%3E%3C/svg%3E");
+      opacity:.35;
     }
 
     .topbar{
       position:sticky;top:0;z-index:20;
-      backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-      background:rgba(0,0,0,.38);border-bottom:1px solid var(--border);
+      backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+      background:linear-gradient(90deg, rgba(255,255,255,.94), rgba(248,250,255,.94));
+      border-bottom:2px solid rgba(128,0,32,.22);
+      box-shadow:0 8px 28px rgba(11,31,58,.06);
     }
     .topbar-inner{
       max-width:1200px;margin:0 auto;padding:14px 18px;
@@ -45,33 +55,55 @@
     }
     .brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:.4px}
     .brand .logo{
-      width:38px;height:38px;border-radius:12px;cursor:pointer;
-      background:
-        radial-gradient(circle at 30% 30%, rgba(0,212,255,.9), transparent 60%),
-        radial-gradient(circle at 70% 70%, rgba(123,97,255,.7), transparent 55%),
-        rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.14);
-      box-shadow:0 10px 30px rgba(0,212,255,.15);
-      display:grid;place-items:center;
+      width:40px;height:40px;border-radius:12px;cursor:pointer;
+      background:linear-gradient(135deg, var(--burgundy) 0%, var(--accent) 100%);
+      color:#ffffff;
+      border:1px solid rgba(255,255,255,.65);
+      box-shadow:0 8px 22px rgba(128,0,32,.26);
+      display:grid;place-items:center;font-size:18px;
     }
-    .brand .title{color:var(--accent);font-size:15px;line-height:1.1}
-    .brand .sub{display:block;font-weight:700;color:rgba(255,255,255,.6);font-size:11px;letter-spacing:.2px;margin-top:2px;direction:ltr;text-align:right}
+    .brand .title{
+      background:linear-gradient(90deg, var(--burgundy), var(--accent));
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      font-size:16px;line-height:1.15;font-weight:950;
+    }
+    .brand .sub{display:block;font-weight:700;color:var(--royal-blue);font-size:11px;letter-spacing:.2px;margin-top:2px;direction:ltr;text-align:right;-webkit-text-fill-color:var(--royal-blue)}
 
     .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .btn{
-      border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);
+      border:1px solid rgba(29,78,216,.24);
+      background:#ffffff;
+      color:var(--royal-blue);
       padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:800;font-size:12px;
-      transition:transform .12s ease,background .12s ease,border-color .12s ease;
-      backdrop-filter:blur(10px);text-decoration:none;display:inline-flex;align-items:center;gap:6px;
+      transition:transform .14s ease,background .14s ease,border-color .14s ease,box-shadow .14s ease;
+      text-decoration:none;display:inline-flex;align-items:center;gap:6px;
+      box-shadow:0 4px 12px rgba(11,31,58,.05);
     }
-    .btn:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.10)}
+    .btn:hover:not(:disabled){
+      transform:translateY(-1px);
+      border-color:var(--burgundy);
+      background:#f8faff;
+      box-shadow:0 8px 20px rgba(29,78,216,.12);
+    }
     .btn:disabled{opacity:.45;cursor:not-allowed}
     .btn-primary{
-      background:linear-gradient(135deg, rgba(0,212,255,.95), rgba(123,97,255,.85));
-      color:#00131c;border:0;box-shadow:0 14px 40px rgba(0,212,255,.18);
+      background:linear-gradient(135deg, var(--burgundy), var(--accent));
+      color:#ffffff;border:0;
+      box-shadow:0 10px 26px rgba(128,0,32,.24);
+    }
+    .btn-primary:hover:not(:disabled){
+      background:linear-gradient(135deg, var(--burgundy-light), #2563eb);
+      color:#ffffff;
     }
     .btn-danger{
-      background:rgba(255,77,77,.14);border-color:rgba(255,77,77,.28);color:rgba(255,220,220,.95);
+      background:rgba(128,0,32,.08);
+      border-color:rgba(128,0,32,.32);
+      color:var(--burgundy);
+    }
+    .btn-danger:hover:not(:disabled){
+      background:var(--burgundy);
+      color:#ffffff;
     }
     .btn-mini{padding:7px 10px;border-radius:10px;font-size:11px}
 
@@ -80,20 +112,28 @@
       display:grid;place-items:center;padding:24px 16px;
     }
     .auth-card{
-      width:min(450px,94vw);border:1px solid var(--border);
-      background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.04));
-      border-radius:18px;backdrop-filter:blur(16px);box-shadow:var(--shadow);padding:20px;
+      width:min(450px,94vw);
+      border:1px solid rgba(29,78,216,.18);
+      border-top:4px solid var(--burgundy);
+      background:rgba(255,255,255,.96);
+      border-radius:18px;box-shadow:var(--shadow);padding:22px;
     }
-    .auth-title{display:flex;align-items:center;gap:10px;font-weight:950;font-size:16px}
+    .auth-title{display:flex;align-items:center;gap:10px;font-weight:950;font-size:16px;color:var(--burgundy)}
     .sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.6}
     input.field{
-      width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
-      background:rgba(0,0,0,.38);color:var(--text);outline:none;margin-top:10px;
+      width:100%;padding:12px;border-radius:14px;
+      border:1px solid rgba(29,78,216,.22);
+      background:#f8fbff;color:var(--text);outline:none;margin-top:10px;
+      transition:border-color .15s ease,box-shadow .15s ease;
     }
-    input.field:focus{border-color:var(--accent)}
+    input.field:focus{
+      border-color:var(--burgundy);
+      background:#ffffff;
+      box-shadow:0 0 0 3px rgba(128,0,32,.10);
+    }
     .row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center}
     .row .btn{flex:1;justify-content:center}
-    .msg{margin-top:10px;color:var(--muted);font-size:12px;min-height:18px}
+    .msg{margin-top:10px;color:var(--burgundy);font-weight:700;font-size:12px;min-height:18px}
 
     .container{position:relative;z-index:2;max-width:1200px;margin:20px auto 60px;padding:0 18px}
     .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
@@ -102,129 +142,166 @@
     @media (max-width:480px){.grid{grid-template-columns:1fr}}
 
     .card{
-      border:1px solid var(--border);
-      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));
+      border:1px solid rgba(29,78,216,.16);
+      border-right:4px solid var(--accent);
+      background:linear-gradient(180deg,#ffffff,#f7faff);
       border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
-      backdrop-filter:blur(14px);cursor:pointer;
-      transition:transform .15s ease,border-color .15s ease;min-height:124px;
+      cursor:pointer;
+      transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;min-height:124px;
     }
-    .card:hover{transform:translateY(-3px);border-color:rgba(0,212,255,.38)}
-    .srv-title{font-weight:950;font-size:14px;margin:0}
+    .card:hover{
+      transform:translateY(-3px);
+      border-color:var(--burgundy);
+      border-right-color:var(--burgundy);
+      box-shadow:0 18px 38px rgba(128,0,32,.14);
+    }
+    .srv-title{font-weight:950;font-size:14px;margin:0;color:var(--royal-blue)}
     .srv-sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45}
 
     .pill{
-      display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
-      border:1px solid var(--border);background:rgba(0,0,0,.22);
+      display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;
+      border:1px solid rgba(29,78,216,.18);background:#eef4ff;color:var(--royal-blue);
       font-size:11px;font-weight:900;margin-top:10px;
     }
     .dot{width:8px;height:8px;border-radius:50%}
-    .pill.running .dot{background:var(--ok)}
-    .pill.installing .dot{background:var(--warn)}
-    .pill.banned .dot{background:var(--danger)}
-    .pill.offline .dot{background:rgba(255,255,255,.35)}
+    .pill.running{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+    .pill.running .dot{background:#10b981}
+    .pill.installing{background:#fffbeb;border-color:#fde68a;color:#92400e}
+    .pill.installing .dot{background:#f59e0b}
+    .pill.banned{background:#fff1f2;border-color:#fecdd3;color:var(--burgundy)}
+    .pill.banned .dot{background:var(--burgundy)}
+    .pill.offline .dot{background:#64748b}
 
     .header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:10px}
-    .hleft h1{margin:0;font-size:22px;font-weight:950}
+    .hleft h1{margin:0;font-size:22px;font-weight:950;color:var(--burgundy)}
     .hleft .muted{margin-top:6px;color:var(--muted);font-size:12px}
 
     .tabs{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .tab{
-      border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);
+      border:1px solid rgba(29,78,216,.22);background:#ffffff;color:var(--royal-blue);
       padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:900;font-size:12px;
     }
     .tab.active{
-      background:linear-gradient(135deg,rgba(0,212,255,.95),rgba(123,97,255,.85));
-      color:#00131c;border:0;box-shadow:0 14px 40px rgba(0,212,255,.18);
+      background:linear-gradient(135deg, var(--burgundy), var(--accent));
+      color:#ffffff;border:0;box-shadow:0 10px 24px rgba(128,0,32,.22);
     }
 
     .panel{
-      margin-top:14px;border:1px solid var(--border);
-      background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));
-      border-radius:var(--radius);backdrop-filter:blur(14px);box-shadow:var(--shadow);overflow:hidden;
+      margin-top:14px;border:1px solid rgba(29,78,216,.16);
+      background:#ffffff;
+      border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;
     }
     .grid-2{display:grid;grid-template-columns:1fr 340px;gap:14px;padding:14px}
     @media (max-width:980px){.grid-2{grid-template-columns:1fr}}
 
     .console{
-      background:rgba(0,0,0,.48);border:1px solid rgba(255,255,255,.10);border-radius:16px;
+      background:#08162b;
+      border:2px solid rgba(128,0,32,.35);
+      border-radius:16px;
       padding:14px;height:520px;overflow:auto;direction:ltr;text-align:left;
       font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
-      font-size:13px;line-height:1.45;white-space:pre-wrap;color:rgba(235,245,255,.88);
+      font-size:13px;line-height:1.45;white-space:pre-wrap;color:#e2f1ff;
     }
     .side{display:flex;flex-direction:column;gap:10px}
     .btn-block{
-      width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.06);color:var(--text);font-weight:950;cursor:pointer;transition:.12s ease;
+      width:100%;padding:12px;border-radius:14px;
+      border:1px solid rgba(29,78,216,.22);
+      background:#f8fbff;color:var(--royal-blue);font-weight:950;cursor:pointer;transition:.14s ease;
     }
-    .btn-block:hover:not(:disabled){transform:translateY(-1px);background:rgba(255,255,255,.10)}
+    .btn-block:hover:not(:disabled){transform:translateY(-1px);background:#eef5ff;border-color:var(--accent)}
     .btn-block:disabled{opacity:.45;cursor:not-allowed}
-    .btn-block.primary{background:linear-gradient(135deg,rgba(0,212,255,.95),rgba(123,97,255,.85));color:#00131c;border:0}
-    .btn-block.danger{background:rgba(255,77,77,.14);border-color:rgba(255,77,77,.28);color:rgba(255,220,220,.95)}
+    .btn-block.primary{
+      background:linear-gradient(135deg, var(--accent), var(--burgundy));
+      color:#ffffff;border:0;box-shadow:0 8px 20px rgba(29,78,216,.20);
+    }
+    .btn-block.danger{
+      background:rgba(128,0,32,.08);
+      border-color:rgba(128,0,32,.35);
+      color:var(--burgundy);
+    }
+    .btn-block.danger:hover:not(:disabled){
+      background:var(--burgundy);
+      color:#ffffff;
+    }
 
     .stat{
-      border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.25);border-radius:16px;
+      border:1px solid rgba(29,78,216,.15);
+      background:linear-gradient(135deg, #ffffff, #f3f7ff);
+      border-radius:16px;
       padding:12px;display:flex;gap:10px;align-items:center;
     }
     .stat .ico{
       width:36px;height:36px;border-radius:14px;display:grid;place-items:center;
-      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
+      background:linear-gradient(135deg, rgba(128,0,32,.10), rgba(29,78,216,.12));
+      border:1px solid rgba(128,0,32,.18);
     }
     .stat small{display:block;color:var(--muted);font-weight:800}
-    .stat b{display:block;margin-top:4px;font-size:13px}
-    #mainFileTxt{color:var(--accent);cursor:pointer}
+    .stat b{display:block;margin-top:4px;font-size:13px;color:var(--text)}
+    #mainFileTxt{color:var(--burgundy);cursor:pointer;text-decoration:underline}
 
     .fm-top{
       display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;
-      padding:14px;border-bottom:1px solid rgba(255,255,255,.08);
+      padding:14px;border-bottom:1px solid rgba(29,78,216,.12);
+      background:#f8fbff;
     }
     .path{color:var(--muted);font-size:12px;margin-top:6px;direction:ltr;text-align:left}
-    .crumb a{color:var(--accent);text-decoration:none;font-weight:900}
-    .crumb .sep{color:rgba(255,255,255,.35);padding:0 6px}
+    .crumb a{color:var(--burgundy);text-decoration:none;font-weight:900}
+    .crumb .sep{color:#94a3b8;padding:0 6px}
 
     .table{width:100%;border-collapse:collapse}
-    .table th,.table td{padding:12px 10px;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px;text-align:right}
-    .table th{color:rgba(255,255,255,.78);font-weight:950;font-size:11px}
+    .table th,.table td{padding:12px 10px;border-bottom:1px solid rgba(29,78,216,.10);font-size:13px;text-align:right}
+    .table th{color:#ffffff;background:linear-gradient(90deg, var(--royal-blue), var(--burgundy));font-weight:950;font-size:11px}
+    .table tr:hover td{background:#f8fbff}
     .name-link{color:var(--accent);font-weight:900;cursor:pointer}
+    .name-link:hover{color:var(--burgundy);text-decoration:underline}
     .row-actions{white-space:nowrap}
     .row-actions button{margin-left:6px;margin-top:4px}
 
-    .k{color:var(--muted);font-size:12px}
-    .v{font-size:20px;font-weight:950;margin-top:6px}
-    h2{margin:22px 0 10px}
-    .tag{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.10);font-weight:900;font-size:11px}
-    .tag.ok{color:var(--ok)} .tag.bad{color:var(--danger)} .tag.mid{color:var(--warn)}
+    .k{color:var(--muted);font-size:12px;font-weight:700}
+    .v{font-size:20px;font-weight:950;margin-top:6px;color:var(--burgundy)}
+    h2{margin:22px 0 10px;color:var(--royal-blue)}
+    .tag{display:inline-block;padding:4px 9px;border-radius:999px;background:#f1f5f9;border:1px solid rgba(29,78,216,.18);font-weight:900;font-size:11px;color:var(--royal-blue)}
+    .tag.ok{color:#065f46;background:#ecfdf5;border-color:#a7f3d0}
+    .tag.bad{color:var(--burgundy);background:#fff1f2;border-color:#fecdd3}
+    .tag.mid{color:#92400e;background:#fffbeb;border-color:#fde68a}
 
     .modal-backdrop{
-      position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;
+      position:fixed;inset:0;background:rgba(8,22,43,.62);display:none;
       align-items:center;justify-content:center;z-index:50;padding:18px;
+      backdrop-filter:blur(4px);
     }
     .modal{
-      width:100%;max-width:430px;
-      background:linear-gradient(180deg,rgba(20,25,40,.95),rgba(10,13,22,.96));
-      border:1px solid rgba(255,255,255,.16);border-radius:18px;box-shadow:var(--shadow);
-      backdrop-filter:blur(16px);padding:18px;
+      width:100%;max-width:450px;
+      background:#ffffff;
+      border:1px solid rgba(29,78,216,.22);
+      border-top:4px solid var(--burgundy);
+      border-radius:18px;box-shadow:0 24px 60px rgba(8,22,43,.28);
+      padding:20px;
     }
-    .modal h3{margin:0 0 10px 0}
+    .modal h3{margin:0 0 10px 0;color:var(--burgundy)}
     .modal input{
-      width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
-      background:rgba(0,0,0,.42);color:var(--text);outline:none;
+      width:100%;padding:12px;border-radius:14px;
+      border:1px solid rgba(29,78,216,.24);
+      background:#f8fbff;color:var(--text);outline:none;
     }
+    .modal input:focus{border-color:var(--burgundy);background:#ffffff}
 
     #editor-modal{
-      display:none;position:fixed;inset:0;background:rgba(0,0,0,.84);z-index:60;padding:18px;
+      display:none;position:fixed;inset:0;background:rgba(8,22,43,.76);z-index:60;padding:18px;
     }
     .editor{
       height:100%;max-width:1200px;margin:0 auto;border-radius:18px;
-      border:1px solid rgba(255,255,255,.14);background:rgba(10,14,22,.92);
-      backdrop-filter:blur(16px);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;
+      border:2px solid var(--burgundy);background:#08162b;
+      box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;
     }
     .editor-top{
-      padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.10);
+      padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.14);
+      background:linear-gradient(90deg, var(--royal-blue), var(--burgundy));
       display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
     }
-    .editor-top .fn{font-weight:950;color:var(--accent);word-break:break-all;direction:ltr}
+    .editor-top .fn{font-weight:950;color:#ffffff;word-break:break-all;direction:ltr}
     #ed-area{
-      flex:1;background:transparent;color:rgba(235,245,255,.92);border:0;outline:none;direction:ltr;text-align:left;
+      flex:1;background:transparent;color:#e8f3ff;border:0;outline:none;direction:ltr;text-align:left;
       font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
       font-size:13px;padding:14px;resize:none;line-height:1.5;
     }
@@ -233,11 +310,52 @@
       position:fixed;bottom:18px;left:18px;z-index:90;display:flex;flex-direction:column;gap:8px;max-width:340px;
     }
     .toast{
-      padding:11px 14px;border-radius:12px;border:1px solid var(--border);
-      background:rgba(10,15,28,.94);color:var(--text);font-size:12px;font-weight:800;box-shadow:var(--shadow);
+      padding:11px 14px;border-radius:12px;border:1px solid rgba(29,78,216,.25);
+      background:#ffffff;color:var(--royal-blue);font-size:12px;font-weight:800;box-shadow:0 12px 30px rgba(8,22,43,.16);
     }
-    .toast.ok{border-color:rgba(51,255,153,.4);color:var(--ok)}
-    .toast.err{border-color:rgba(255,77,77,.45);color:#ff9b9b}
+    .toast.ok{border-color:#10b981;color:#065f46;background:#ecfdf5}
+    .toast.err{border-color:var(--burgundy);color:var(--burgundy);background:#fff1f2}
+
+    .services-section{
+      margin-top:28px;
+      padding:20px;
+      border-radius:20px;
+      background:rgba(255,255,255,.85);
+      border:1px solid rgba(29,78,216,.15);
+      box-shadow:var(--shadow);
+    }
+    .services-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+    .services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    @media (max-width:960px){.services-grid{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:600px){.services-grid{grid-template-columns:1fr}}
+    .svc-card{
+      border:1px solid rgba(29,78,216,.16);
+      border-top:3px solid var(--accent);
+      background:#ffffff;
+      border-radius:var(--radius);padding:16px;box-shadow:0 10px 26px rgba(11,31,58,.06);
+      display:flex;flex-direction:column;justify-content:space-between;gap:12px;
+      transition:transform .15s ease,border-color .15s ease;
+    }
+    .svc-card:hover{
+      transform:translateY(-2px);
+      border-top-color:var(--burgundy);
+    }
+    .svc-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid rgba(29,78,216,.2);background:#f8fbff}
+    .svc-badge.free{color:#065f46;border-color:#a7f3d0;background:#ecfdf5}
+    .svc-badge.paid{color:var(--burgundy);border-color:#fecdd3;background:#fff1f2}
+    .svc-price{font-weight:950;font-size:13px;color:var(--accent)}
+    .type-choice-row{display:flex;gap:10px;margin-top:12px}
+    .type-choice-btn{
+      flex:1;padding:12px;border-radius:12px;
+      border:1px solid rgba(29,78,216,.24);
+      background:#f8fbff;color:var(--royal-blue);font-weight:950;cursor:pointer;
+      transition:.14s ease;
+    }
+    .type-choice-btn.active{
+      background:linear-gradient(135deg, var(--burgundy), var(--accent));
+      color:#ffffff;border:0;
+      box-shadow:0 8px 20px rgba(128,0,32,.22);
+    }
   </style>
 </head>
 <body>
@@ -256,7 +374,7 @@
       </div>
 
       <div class="actions">
-        <a class="btn" href="https://t.me/hama_DEV" target="_blank" rel="noopener noreferrer">📩 تواصل @hama_DEV</a>
+        <a class="btn" href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer">📩 تواصل @Y_20_20</a>
         <button id="loginNavBtn" class="btn" style="display:none" onclick="navigate('/login')">تسجيل الدخول</button>
         <button id="createNavBtn" class="btn" style="display:none" onclick="navigate('/create')">إنشاء حساب</button>
         <button id="adminBtn" class="btn" style="display:none" onclick="navigate('/admin')">لوحة الأدمن</button>
@@ -282,7 +400,7 @@
       </div>
 
       <div class="msg" id="login_m"></div>
-      <div class="sub">استخدم بيانات حسابك للدخول. صلاحيات الأدمن مقتصرة على المشرفين · تواصل: <a href="https://t.me/hama_DEV" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@hama_DEV</a></div>
+      <div class="sub">استخدم بيانات حسابك للدخول. صلاحيات الأدمن مقتصرة على المشرفين · تواصل: <a href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@Y_20_20</a></div>
     </div>
   </div>
 
@@ -290,7 +408,7 @@
   <div class="auth-shell" id="createView" style="display:none">
     <div class="auth-card">
       <div class="auth-title"><div class="logo" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center">✨</div> إنشاء حساب جديد</div>
-      <div class="sub">المستخدم العادي يحصل على سيرفر مجاني واحد (المميز = 16 سيرفر). لزيادة الحد تواصل على تيليجرام <a href="https://t.me/hama_DEV" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@hama_DEV</a></div>
+      <div class="sub">المستخدم العادي يحصل على سيرفر مجاني واحد (المميز = 16 سيرفر). لزيادة الحد تواصل على تيليجرام <a href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@Y_20_20</a></div>
 
       <input id="cr_u" class="field" placeholder="اسم المستخدم (أحرف / أرقام / _ / .)">
       <input id="cr_e" class="field" placeholder="البريد الإلكتروني">
@@ -309,6 +427,91 @@
   <!-- ٣ أ. الرئيسية (/) -->
   <div class="container" id="homeView" style="display:none">
     <div class="grid" id="cardsContainer"></div>
+
+    <!-- قسم الخدمات المجانية والمدفوعة -->
+    <div class="services-section" id="servicesSection">
+      <div class="services-head">
+        <div>
+          <h2 style="margin:0">🛒 الخدمات المجانية والمدفوعة</h2>
+          <div class="sub">اختر خدمة مجانية فورية أو خدمة مدفوعة متكاملة مع حماية الرصيد والارتباط المباشر بالخادم</div>
+        </div>
+        <div class="tag ok" id="walletBalanceBadge">الرصيد: 0.00 USD</div>
+      </div>
+
+      <div class="services-grid">
+        <div class="svc-card">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <span class="svc-badge free">مجاني • FREE</span>
+              <span class="svc-price">0.00 USD</span>
+            </div>
+            <div class="srv-title" style="margin-top:10px">قالب بوت بايثون جاهز (PY)</div>
+            <div class="srv-sub">ينشئ مشروع بايثون بملف تشغيل <code>main.py</code> جاهز للتشغيل الفوري بدون رسوم.</div>
+          </div>
+          <button class="btn btn-mini btn-primary" onclick="orderFreeService('py')">تفعيل الخدمة المجانية (PY)</button>
+        </div>
+
+        <div class="svc-card">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <span class="svc-badge free">مجاني • FREE</span>
+              <span class="svc-price">0.00 USD</span>
+            </div>
+            <div class="srv-title" style="margin-top:10px">قالب سيرفر Node / JS جاهز (JS)</div>
+            <div class="srv-sub">ينشئ مشروع جافا سكريبت بملف تشغيل <code>index.js</code> جاهز للتشغيل الفوري بدون رسوم.</div>
+          </div>
+          <button class="btn btn-mini btn-primary" onclick="orderFreeService('js')">تفعيل الخدمة المجانية (JS)</button>
+        </div>
+
+        <div class="svc-card">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <span class="svc-badge paid">مدفوع • PAID</span>
+              <span class="svc-price">5.00 USD</span>
+            </div>
+            <div class="srv-title" style="margin-top:10px">استضافة بايثون / بوتات (Python)</div>
+            <div class="srv-sub">تشغيل سكريبتات وبوتات بايثون مع تثبيت تلقائي للمكتبات وحفظ السجلات.</div>
+          </div>
+          <button class="btn btn-mini" onclick="openPaidServiceModal('srv_python_host', 'استضافة بايثون / بوتات (Python)', '5.00 USD')">طلب الخدمة المدفوعة</button>
+        </div>
+
+        <div class="svc-card">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <span class="svc-badge paid">مدفوع • PAID</span>
+              <span class="svc-price">3.00 USD</span>
+            </div>
+            <div class="srv-title" style="margin-top:10px">استضافة HTML / JavaScript / Node</div>
+            <div class="srv-sub">استضافة ملفات <code>.js</code> و<code>.html</code> وتطبيقات الويب مع إدارة الملفات.</div>
+          </div>
+          <button class="btn btn-mini" onclick="openPaidServiceModal('srv_js_html_host', 'استضافة HTML / JavaScript / Node', '3.00 USD')">طلب الخدمة المدفوعة</button>
+        </div>
+
+        <div class="svc-card">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <span class="svc-badge paid">مدفوع • PAID</span>
+              <span class="svc-price">4.00 USD</span>
+            </div>
+            <div class="srv-title" style="margin-top:10px">استضافة PHP ومواقع ويب</div>
+            <div class="srv-sub">تشغيل مشاريع PHP وملفات الويب مع إدارة الملفات والسجلات.</div>
+          </div>
+          <button class="btn btn-mini" onclick="openPaidServiceModal('srv_php_host', 'استضافة PHP ومواقع ويب', '4.00 USD')">طلب الخدمة المدفوعة</button>
+        </div>
+
+        <div class="svc-card">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <span class="svc-badge paid">مدفوع • PAID</span>
+              <span class="svc-price">10.00 USD</span>
+            </div>
+            <div class="srv-title" style="margin-top:10px">طلب موقع إلكتروني / ربط مسار مخصص</div>
+            <div class="srv-sub">تجهيز مسار موقع إلكتروني وملفاته وضبط الإعدادات الخاصة به على <code>/web/&lt;order_id&gt;</code>.</div>
+          </div>
+          <button class="btn btn-mini" onclick="openPaidServiceModal('srv_web_request', 'طلب موقع إلكتروني / ربط مسار مخصص', '10.00 USD')">طلب الخدمة المدفوعة</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ٣ ب. الكونسول وإدارة الملفات -->
@@ -345,7 +548,7 @@
     <div class="panel" id="viewFiles" style="display:none">
       <div class="fm-top">
         <div>
-          <div style="font-weight:950;font-size:16px">مدير الملفات</div>
+          <div style="font-weight:950;font-size:16px;color:var(--royal-blue)">مدير الملفات</div>
           <div class="path" id="pathBar"></div>
         </div>
         <div class="actions">
@@ -404,7 +607,7 @@
       </table>
     </div>
 
-    <div class="msg">يمكن للأدمن حظر/فك حظر المستخدمين والسيرفرات وتفعيل الباقة المميزة · تواصل: <a href="https://t.me/hama_DEV" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@hama_DEV</a></div>
+    <div class="msg">يمكن للأدمن حظر/فك حظر المستخدمين والسيرفرات وتفعيل الباقة المميزة · تواصل: <a href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@Y_20_20</a></div>
   </div>
 
   <!-- نافذة محرر الملفات -->
@@ -421,11 +624,18 @@
     </div>
   </div>
 
-  <!-- نافذة الإدخال -->
+  <!-- نافذة الإدخال واختيار نوع السيرفر (JS / PY) -->
   <div id="modalBackdrop" class="modal-backdrop">
     <div class="modal">
       <h3 id="mTitle">العنوان</h3>
       <input id="mIn" />
+      <div id="serverTypeSelector" style="display:none">
+        <div class="sub" style="margin-top:8px">اختر نوع بيئة السيرفر:</div>
+        <div class="type-choice-row">
+          <button type="button" id="choicePyBtn" class="type-choice-btn active" onclick="selectServerKind('py')">🐍 PY (Python)</button>
+          <button type="button" id="choiceJsBtn" class="type-choice-btn" onclick="selectServerKind('js')">🟨 JS (JavaScript)</button>
+        </div>
+      </div>
       <div class="actions" style="justify-content:flex-start;margin-top:12px">
         <button class="btn" onclick="closeM()">إلغاء</button>
         <button id="mConfirm" class="btn btn-primary">تأكيد</button>
@@ -449,7 +659,7 @@
 
 <script>
 /* =========================================================================
-   1. HYBRID API ENGINE (Live Backend First + LocalStorage Fallback)
+   1. HYBRID API ENGINE (Live Backend First + Network-Failure Fallback Only)
    ========================================================================= */
 const DB_KEY = 'HAMA_PANEL_DB_V1';
 const SESSION_KEY = 'HAMA_PANEL_SESSION_V1';
@@ -611,6 +821,9 @@ async function localFallbackFetch(input, init={}){
   if(path === '/add' && method === 'POST'){
     const body = JSON.parse(init.body || '{}');
     const rawName = (body.name || '').trim();
+    const srvType = (body.server_type || 'Python').trim();
+    const isJs = srvType.toLowerCase().includes('js') || srvType.toLowerCase().includes('node');
+    const defaultStartup = isJs ? 'index.js' : 'main.py';
     if(!rawName) return jsonRes({ success:false, message:'اسم السيرفر مطلوب.' }, 400);
     const folder = rawName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || 'server_' + Date.now();
     const ownedCount = db.servers.filter(s => s.owner === currentUser.username).length;
@@ -620,13 +833,16 @@ async function localFallbackFetch(input, init={}){
     }
     const key = `${currentUser.username}::${folder}`;
     if(db.servers.some(s => s.key === key)) return jsonRes({ success:false, message:'السيرفر موجود مسبقاً.' }, 409);
+    const filesMap = isJs
+      ? { 'index.js': `console.log("Running ${rawName} (JS)");\n` }
+      : { 'main.py': `print("Running ${rawName} (PY)")\n` };
     db.servers.push({
       key, folder, display_name: rawName, title: rawName,
-      subtitle: `${currentUser.premium ? 'Premium' : 'Standard'} · ${folder}`,
-      owner: currentUser.username, startup_file: 'main.py',
+      subtitle: `${srvType} · ${folder}`,
+      owner: currentUser.username, startup_file: defaultStartup,
       status: 'Offline', banned: false, mem: '0 MB', ip: '127.0.0.1',
-      logs: `[HAMA PANEL] Created server "${rawName}" (${folder})\n`,
-      files: { 'main.py': `print("Running ${rawName}")\n` }
+      logs: `[HAMA PANEL] Created ${srvType} server "${rawName}" (${folder})\n`,
+      files: filesMap
     });
     saveDb(db);
     return jsonRes({ success:true, key });
@@ -860,14 +1076,11 @@ async function localFallbackFetch(input, init={}){
 }
 
 window.fetch = async (input, init={}) => {
+  const opts = Object.assign({ credentials: 'same-origin' }, init);
   try{
-    const res = await nativeFetch(input, init);
-    if(res.status >= 500){
-      return await localFallbackFetch(input, init);
-    }
-    return res;
-  }catch(_err){
-    return await localFallbackFetch(input, init);
+    return await nativeFetch(input, opts);
+  }catch(_networkErr){
+    return await localFallbackFetch(input, opts);
   }
 };
 
@@ -876,6 +1089,7 @@ window.fetch = async (input, init={}) => {
    ========================================================================= */
 let currentSrv = null, poll = null, currentFile = null, currentPath = '';
 let confirmResolver = null;
+let selectedServerKind = 'py';
 
 function stopPoll(){
   if(poll){ clearInterval(poll); poll = null; }
@@ -960,6 +1174,7 @@ function renderRoute(route = window.location.pathname){
   document.getElementById('newBtn').style.display = 'inline-block';
   loadServers();
   loadPythonHost();
+  refreshWalletBadge();
 }
 
 window.addEventListener('popstate', () => renderRoute(window.location.pathname));
@@ -1005,13 +1220,13 @@ async function doCreate(){
 }
 
 async function doLogout(){
-  try{ await nativeFetch('/logout'); }catch{}
+  try{ await nativeFetch('/logout', { credentials: 'same-origin' }); }catch{}
   setSession(null);
   navigate('/login');
 }
 
 /* =========================================================================
-   4. HOME & SERVER CONSOLE / FILE MANAGER
+   4. HOME & SERVER CONSOLE / FILE MANAGER + SERVICES
    ========================================================================= */
 function statusClass(st){
   st = (st || '').toLowerCase();
@@ -1019,6 +1234,102 @@ function statusClass(st){
   if(st === 'installing' || st === 'starting') return 'installing';
   if(st === 'banned') return 'banned';
   return 'offline';
+}
+
+function selectServerKind(kind){
+  selectedServerKind = kind === 'js' ? 'js' : 'py';
+  document.getElementById('choicePyBtn').classList.toggle('active', selectedServerKind === 'py');
+  document.getElementById('choiceJsBtn').classList.toggle('active', selectedServerKind === 'js');
+}
+
+function refreshWalletBadge(){
+  const badge = document.getElementById('walletBalanceBadge');
+  if(!badge) return;
+  const sess = getSession();
+  const key = sess && sess.username ? `user:${sess.username}` : 'guest';
+  try{
+    const balMap = JSON.parse(localStorage.getItem('HAMA_WALLET_BALANCES_V1') || '{}');
+    const val = Number(balMap[key] ?? 0).toFixed(2);
+    badge.textContent = `الرصيد: ${val} USD`;
+  }catch{
+    badge.textContent = 'الرصيد: 0.00 USD';
+  }
+}
+
+async function orderFreeService(kind){
+  const isJs = kind === 'js';
+  const srvType = isJs ? 'Node.js/JS' : 'Python';
+  const defaultFile = isJs ? 'index.js' : 'main.py';
+  const srvName = `${isJs ? 'js-free' : 'py-free'}-${Date.now().toString().slice(-4)}`;
+
+  const res = await fetch('/add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: srvName, server_type: srvType })
+  });
+  const d = await res.json().catch(() => ({ success:false, message:'خطأ' }));
+  if(!res.ok || !d.success){
+    toast(d.message || 'تعذر تفعيل الخدمة المجانية', 'err');
+    return;
+  }
+  const srvKey = d.key || srvName;
+  const sampleCode = isJs
+    ? `console.log("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 Free JS Service (${srvName}) Running!");\nsetInterval(() => {}, 60000);\n`
+    : `import time\nprint("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 Free PY Service (${srvName}) Running!")\ntime.sleep(2)\n`;
+
+  await fetch(`/files/save/${encodeURIComponent(srvKey)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file: defaultFile, content: sampleCode })
+  });
+  await fetch(`/server/set-startup/${encodeURIComponent(srvKey)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file: defaultFile })
+  });
+  await fetch(`/server/action/${encodeURIComponent(srvKey)}/start`, { method: 'POST' });
+
+  toast(`تم إنشاء وتشغيل الخدمة المجانية (${kind.toUpperCase()}) ✅`, 'ok');
+  await loadServers();
+  openServer({
+    key: srvKey,
+    folder: srvName,
+    title: srvName,
+    subtitle: `${srvType} · Free Service`,
+    startup_file: defaultFile,
+    status: 'Running'
+  });
+}
+
+function openPaidServiceModal(svcId, svcName, priceLabel){
+  openM(`طلب خدمة مدفوعة: ${svcName} (${priceLabel})`, '', async (details) => {
+    const cleanDetails = (details || '').trim();
+    if(cleanDetails.length < 2){
+      toast('يرجى إدخال تفاصيل الطلب بشكل صحيح', 'err');
+      return;
+    }
+    const sess = getSession();
+    const wKey = sess && sess.username ? `user:${sess.username}` : 'guest';
+    let balMap = {};
+    try{ balMap = JSON.parse(localStorage.getItem('HAMA_WALLET_BALANCES_V1') || '{}'); }catch{}
+    const curBal = Number(balMap[wKey] ?? 0);
+    const numericPrice = parseFloat(priceLabel) || 0;
+    if(curBal < numericPrice){
+      toast(`رصيدك الحالي (${curBal.toFixed(2)} USD) غير كافٍ للخدمة (${priceLabel})`, 'err');
+      return;
+    }
+    balMap[wKey] = Number((curBal - numericPrice).toFixed(2));
+    localStorage.setItem('HAMA_WALLET_BALANCES_V1', JSON.stringify(balMap));
+    const orderId = 'ORD-' + Math.random().toString(16).slice(2, 10).toUpperCase();
+    try{
+      const ordersArr = JSON.parse(localStorage.getItem('HAMA_SERVICE_ORDERS_V1') || '[]');
+      ordersArr.push({ orderId, svcId, svcName, details: cleanDetails, price: numericPrice, route: `/web/${orderId}`, createdAt: new Date().toISOString() });
+      localStorage.setItem('HAMA_SERVICE_ORDERS_V1', JSON.stringify(ordersArr));
+    }catch{}
+    refreshWalletBadge();
+    closeM();
+    toast(`تم إتمام طلب الخدمة (${orderId}) على المسار /web/${orderId} ✅`, 'ok');
+  });
 }
 
 async function loadPythonHost(){
@@ -1092,6 +1403,7 @@ function goHome(){
   document.getElementById('homeBtn').style.display = 'none';
   document.getElementById('newBtn').style.display = 'inline-block';
   loadServers();
+  refreshWalletBadge();
 }
 
 function switchTab(t){
@@ -1138,7 +1450,7 @@ async function srvAction(act){
 
 function changeStartup(){
   if(!currentSrv) return;
-  openM('تحديد ملف التشغيل الرئيسي (مثال: bot.py)', currentSrv.startup_file || '', async (v) => {
+  openM('تحديد ملف التشغيل الرئيسي (مثال: bot.py أو index.js)', currentSrv.startup_file || '', async (v) => {
     const r = await fetch(`/server/set-startup/${encodeURIComponent(currentSrv.key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1318,28 +1630,63 @@ async function saveFile(){
 
 function closeEditor(){ document.getElementById('editor-modal').style.display = 'none'; }
 
-function openM(t, v, cb){
+function openM(t, v, cb, showTypeChoice=false){
   document.getElementById('modalBackdrop').style.display = 'flex';
   document.getElementById('mTitle').textContent = t;
+  const typeBox = document.getElementById('serverTypeSelector');
+  typeBox.style.display = showTypeChoice ? 'block' : 'none';
+  if(showTypeChoice) selectServerKind('py');
   const inp = document.getElementById('mIn');
   inp.value = v || '';
   inp.focus();
-  document.getElementById('mConfirm').onclick = () => cb(inp.value);
+  document.getElementById('mConfirm').onclick = () => cb(inp.value, selectedServerKind);
 }
-function closeM(){ document.getElementById('modalBackdrop').style.display = 'none'; }
+function closeM(){
+  document.getElementById('serverTypeSelector').style.display = 'none';
+  document.getElementById('modalBackdrop').style.display = 'none';
+}
 
-document.getElementById('newBtn').onclick = () => openM('اسم السيرفر الجديد', '', async (v) => {
+document.getElementById('newBtn').onclick = () => openM('اسم السيرفر الجديد (اختر JS أو PY)', '', async (v, kind) => {
+  const cleanName = (v || '').trim();
+  if(!cleanName){ toast('يرجى إدخال اسم السيرفر', 'err'); return; }
+  const isJs = kind === 'js';
+  const serverType = isJs ? 'Node.js/JS' : 'Python';
+  const startupFile = isJs ? 'index.js' : 'main.py';
+  const starterCode = isJs
+    ? `console.log("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 JS Server (${cleanName}) Started!");\nsetInterval(() => {}, 60000);\n`
+    : `import time\nprint("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 PY Server (${cleanName}) Started!")\ntime.sleep(2)\n`;
+
   const res = await fetch('/add', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: v })
+    body: JSON.stringify({ name: cleanName, server_type: serverType })
   });
   const d = await res.json().catch(() => ({ success:false, message:'خطأ' }));
   if(!res.ok || !d.success){ toast(d.message || 'فشل إنشاء السيرفر', 'err'); return; }
-  toast('تم إنشاء السيرفر ✅', 'ok');
+
+  const srvKey = d.key || cleanName;
+  await fetch(`/files/save/${encodeURIComponent(srvKey)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file: startupFile, content: starterCode })
+  });
+  await fetch(`/server/set-startup/${encodeURIComponent(srvKey)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file: startupFile })
+  });
+  await fetch(`/server/action/${encodeURIComponent(srvKey)}/start`, { method: 'POST' });
+
+  toast(`تم إنشاء وتشغيل السيرفر (${kind.toUpperCase()}) ✅`, 'ok');
   closeM();
-  loadServers();
-  loadPythonHost();
-});
+  await loadServers();
+  await loadPythonHost();
+  openServer({
+    key: srvKey,
+    folder: cleanName,
+    title: cleanName,
+    subtitle: `${serverType} · ${startupFile}`,
+    startup_file: startupFile,
+    status: 'Running'
+  });
+}, true);
 
 /* =========================================================================
    5. ADMIN PANEL (/admin) — XSS-Safe & Checked Responses
@@ -1391,8 +1738,8 @@ async function refreshServers(){
       btn.onclick = () => banServer(s.key || s.folder, s.folder, false);
     }else{
       btn.textContent = 'حظر';
-      btn.style.borderColor = 'rgba(255,107,107,.35)';
-      btn.style.color = 'var(--danger)';
+      btn.style.borderColor = 'rgba(128,0,32,.4)';
+      btn.style.color = 'var(--burgundy)';
       btn.onclick = () => banServer(s.key || s.folder, s.folder, true);
     }
     tr.querySelector('.actions').appendChild(btn);
