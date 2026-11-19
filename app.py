@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 - النظام الموحد للاستضافة والتحكم وإدارة البوتات والخدمات (app.py)
+𝗘𝗛𝗔𝗕 - النظام الموحد للاستضافة والتحكم وإدارة البوتات والخدمات (app.py)
 طُوِّر بواسطة: 𝗘𝗛𝗔𝗕𝗔𝗜𝗛𝗔𝗪𝗕𝗔𝗡𝗜 | @Y_20_20
 """
 
@@ -21,12 +21,13 @@ import time
 import uuid
 import logging
 import asyncio
+from urllib.parse import quote
 from functools import wraps
 from datetime import datetime, timezone
 
 import psutil
 import requests
-from flask import Flask, request, jsonify, session, Response
+from flask import Flask, request, jsonify, session, Response, redirect
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -77,18 +78,19 @@ PANEL_PORT_PRIMARY = int(os.environ.get("PORT", os.environ.get("SERVER_PORT", 80
 PANEL_PORT_SECONDARY = int(os.environ.get("SECONDARY_SERVER_PORT", 3004))
 
 ADMIN_USERNAME = os.environ.get("ADMIN_USER", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASS", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASS", "1002670694")
 
 # إعدادات بوت تيليجرام والمطور
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
 API_BASE_URL = os.environ.get("API_BASE_URL", f"http://127.0.0.1:{PANEL_PORT_PRIMARY}").rstrip("/")
-PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "").strip()
+PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "https://ehab700-host-3.onrender.com").strip()
+GOOGLE_REDIRECT_URL = os.environ.get("GOOGLE_REDIRECT_URL", "https://ehab700-host-3.onrender.com").strip() or "https://ehab700-host-3.onrender.com"
 
 _admin_ids_raw = os.environ.get("ADMIN_TELEGRAM_IDS", "1002670694")
 ADMIN_TELEGRAM_IDS = [
     int(x.strip()) for x in _admin_ids_raw.split(",") if x.strip().isdigit()
 ]
-LOG_CHANNEL_ID = os.environ.get("LOG_CHANNEL_ID", "").strip()
+LOG_CHANNEL_ID = os.environ.get("LOG_CHANNEL_ID", "1002670694").strip()
 
 DEVELOPER_INFO = (
     "<b><blockquote>🛠 طُوِّر بواسطة: 𝗘𝗛𝗔𝗕𝗔𝗜𝗛𝗔𝗪𝗕𝗔𝗡𝗜</blockquote></b>\n"
@@ -343,6 +345,79 @@ def log_append(key: str, text: str):
         pass
 
 
+def get_site_base_url(req=None) -> str:
+    raw = (
+        os.environ.get("RENDER_EXTERNAL_URL")
+        or PUBLIC_API_URL
+        or ""
+    ).strip().rstrip("/")
+    if raw:
+        return raw if raw.startswith("http") else f"https://{raw}"
+    if req is not None:
+        try:
+            host_url = (req.host_url or "").strip().rstrip("/")
+            if host_url:
+                return host_url
+        except Exception:
+            pass
+    if API_BASE_URL and "127.0.0.1" not in API_BASE_URL and "localhost" not in API_BASE_URL:
+        return API_BASE_URL
+    return f"http://{get_ip()}:{PANEL_PORT_PRIMARY}"
+
+
+def build_generated_server_url(
+    owner: str,
+    folder: str,
+    startup_file: str = "",
+    subpath: str = "",
+    req=None,
+    auto_redirect_google: bool = False,
+) -> dict:
+    safe_o = re.sub(r"[^a-zA-Z0-9_.-]", "", owner or "")
+    safe_f = re.sub(r"[^a-zA-Z0-9_.-]", "", folder or "")
+    base_url = get_site_base_url(req)
+    clean_sub = (subpath or "").replace("\\", "/").strip("/")
+    route_path = f"/js/{quote(safe_o)}/{quote(safe_f)}"
+    if clean_sub:
+        route_path += f"/{quote(clean_sub)}"
+
+    params = []
+    if startup_file:
+        params.append(f"file={quote(startup_file.strip())}")
+    if auto_redirect_google:
+        params.append("redirect_google=1")
+    query_str = ("?" + "&".join(params)) if params else ""
+
+    generated_url = f"{base_url}{route_path}{query_str}"
+    google_jump_url = f"{base_url}/js/go/{quote(safe_o)}/{quote(safe_f)}" + (f"/{quote(clean_sub)}" if clean_sub else "") + (f"?file={quote(startup_file.strip())}" if startup_file else "")
+
+    return {
+        "generated_url": generated_url,
+        "google_jump_url": google_jump_url,
+        "google_target": GOOGLE_REDIRECT_URL,
+        "route_path": route_path,
+    }
+
+
+def refresh_server_js_link(owner: str, folder: str, startup_file: str = "", subpath: str = "", req=None) -> dict:
+    meta = read_meta(owner, folder)
+    eff_file = (startup_file or meta.get("startup_file") or "").strip()
+    links = build_generated_server_url(
+        owner=owner,
+        folder=folder,
+        startup_file=eff_file,
+        subpath=subpath,
+        req=req,
+        auto_redirect_google=False,
+    )
+    meta["generated_url"] = links["generated_url"]
+    meta["google_jump_url"] = links["google_jump_url"]
+    meta["js_route"] = links["route_path"]
+    meta["last_run_at"] = _utc_now_iso()
+    write_meta(owner, folder, meta)
+    return links
+
+
 # ==============================================================================
 # ٤. قاعدة البيانات والأرصدة والخدمات والطلبات (DB, Balances, Services & Orders)
 # ==============================================================================
@@ -407,8 +482,8 @@ def get_user_limit(username: str) -> int:
     db = load_users()
     u = find_user(db, username)
     if not u:
-        return 1
-    return 1000 if u.get("premium", False) else 1
+        return 15
+    return 1000 if u.get("premium", False) else 15
 
 
 def get_balance(user_key: str) -> float:
@@ -543,7 +618,14 @@ def ensure_meta(owner: str, folder: str):
     server_dir = get_server_dir(owner, folder)
     os.makedirs(server_dir, exist_ok=True)
     meta_path = os.path.join(server_dir, "meta.json")
-    base = {"display_name": folder, "startup_file": "", "owner": owner, "banned": False}
+    base = {
+        "display_name": folder,
+        "startup_file": "",
+        "owner": owner,
+        "banned": False,
+        "generated_url": "",
+        "google_jump_url": "",
+    }
     if not os.path.exists(meta_path):
         _atomic_write_json_raw(meta_path, base)
     else:
@@ -734,8 +816,16 @@ const path = require('path');
 const fs = require('fs');
 
 const script = process.argv[1];
-const npmBin = process.argv[2];
+const npmBin = process.argv[2] || 'npm';
 const cwd = process.cwd();
+
+function logSys(msg) {
+  const line = `[AUTO-INSTALL-JS] ${msg}\n`;
+  process.stdout.write(line);
+  try {
+    fs.appendFileSync(path.join(cwd, 'server.log'), line, 'utf8');
+  } catch (_) {}
+}
 
 function appendInstalled(pkg) {
   try {
@@ -761,42 +851,62 @@ function parseMissingModule(outputText) {
   }
   const m2 = outputText.match(/ERR_MODULE_NOT_FOUND[\s\S]*?package '([^']+)'/);
   if (m2 && m2[1]) return m2[1];
+  const m3 = outputText.match(/Cannot find package '([^']+)'/);
+  if (m3 && m3[1]) return m3[1];
   return null;
 }
 
 const tried = new Set();
 while (true) {
-  const res = spawnSync(process.execPath, [script], { cwd, env: process.env, encoding: 'utf8' });
+  const res = spawnSync(process.execPath, [script], {
+    cwd,
+    env: Object.assign({}, process.env, { FORCE_COLOR: '0' }),
+    encoding: 'utf8',
+    maxBuffer: 10 * 1024 * 1024
+  });
+
   const out = (res.stdout || '') + (res.stderr || '');
   if (res.stdout) process.stdout.write(res.stdout);
   if (res.stderr) process.stderr.write(res.stderr);
 
-  if (res.status === 0 || res.error) {
-    if (res.error) console.error(res.error);
+  if (res.error) {
+    logSys(`Execution error: ${res.error.message}`);
+    break;
+  }
+
+  if (res.status === 0) {
+    logSys('Script exited cleanly (code 0).');
     break;
   }
 
   const missingPkg = parseMissingModule(out);
-  if (missingPkg && npmBin && !tried.has(missingPkg)) {
+  if (missingPkg && !tried.has(missingPkg)) {
     tried.add(missingPkg);
-    console.log(`[AUTO-INSTALL-JS] Missing module: ${missingPkg} -> installing...`);
+    logSys(`Missing module: ${missingPkg} -> installing via ${npmBin}...`);
     const inst = spawnSync(npmBin, ['install', '--no-save', '--no-audit', '--no-fund', missingPkg], {
       cwd,
       env: process.env,
       encoding: 'utf8',
+      maxBuffer: 10 * 1024 * 1024
     });
+    if (inst.stdout) process.stdout.write(inst.stdout);
+    if (inst.stderr) process.stderr.write(inst.stderr);
+
     if (inst.status === 0) {
       appendInstalled(missingPkg);
-      console.log(`[AUTO-INSTALL-JS] Installed: ${missingPkg} ✅ -> restarting...`);
+      logSys(`Installed: ${missingPkg} -> restarting script...`);
       continue;
     } else {
-      console.error(`[AUTO-INSTALL-JS] Failed installing ${missingPkg}`);
+      logSys(`Failed installing ${missingPkg} (exit code ${inst.status})`);
       break;
     }
   }
+
+  logSys(`Process exited with code ${res.status}`);
   break;
 }
 """
+
         log_path = os.path.join(server_dir, "server.log")
         log_file = open(log_path, "a", encoding="utf-8", errors="ignore")
         proc = subprocess.Popen(
@@ -924,7 +1034,7 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 - اللوحة الموحدة</title>
+  <title>𝗘𝗛𝗔𝗕 - اللوحة الموحدة</title>
   <style>
     body { font-family: Tahoma, Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
     .container { max-width: 960px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
@@ -938,11 +1048,12 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
     .hidden { display: none; }
     pre { background: #020617; padding: 12px; border-radius: 8px; overflow-x: auto; direction: ltr; text-align: left; }
     .msg { padding: 10px; border-radius: 8px; margin-bottom: 12px; background: #172554; }
+    a.link-pill { color: #93c5fd; word-break: break-all; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>🚀 𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 — اللوحة الموحدة (دخول • إنشاء حساب • سيرفرات • أدمن)</h2>
+    <h2>🚀 𝗘𝗛𝗔𝗕 — اللوحة الموحدة (دخول • إنشاء حساب • سيرفرات • أدمن)</h2>
     <div id="statusMsg" class="msg hidden"></div>
 
     <div class="nav">
@@ -986,10 +1097,15 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
       <div id="fileManagerBox" class="card hidden">
         <h4>إدارة ملفات السيرفر: <span id="activeServerKey"></span></h4>
         <input id="startupFileInput" placeholder="ملف التشغيل الرئيسي (مثال: main.py أو index.js)" />
-        <button onclick="saveStartup()">💾 حفظ ملف التشغيل</button>
-        <button class="success" onclick="serverAct('start')">▶️ تشغيل</button>
+        <input id="extraPathInput" placeholder="زيادة/امتداد مسار إضافي للرابط (اختياري، مثال: bot/run)" />
+        <button onclick="saveStartup()">💾 حفظ ملف التشغيل وتوليد الرابط</button>
+        <button class="success" onclick="serverAct('start')">▶️ تشغيل وتوليد الرابط</button>
         <button class="danger" onclick="serverAct('stop')">⏹ إيقاف</button>
         <button class="danger" onclick="serverAct('restart')">🔄 إعادة تشغيل</button>
+        <div id="generatedLinkBox" class="card hidden" style="margin-top:12px;">
+          <div><b>🔗 الرابط المولّد لملف JavaScript:</b> <a id="genUrlAnchor" class="link-pill" target="_blank"></a></div>
+          <div style="margin-top:8px;"><b>🌐 رابط التحويل المباشر إلى جوجل وتشغيل البوت:</b> <a id="goUrlAnchor" class="link-pill" target="_blank"></a></div>
+        </div>
         <h5>الملفات والمجلدات:</h5>
         <div id="filesList"></div>
         <input id="editFilePath" placeholder="مسار الملف للتعديل أو الحفظ (مثال: main.py أو app.js)" />
@@ -1082,7 +1198,8 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
       for (const s of (d.servers || [])) {
         const div = document.createElement("div");
         div.className = "card";
-        div.innerHTML = `<b>${s.title}</b> (${s.status}) - ${s.subtitle}<br/><button onclick="openServer('${s.key}', '${s.startup_file || ""}')">⚙️ إدارة</button>`;
+        const linkHtml = s.generated_url ? `<br/>🔗 الرابط المولّد: <a class="link-pill" href="${s.generated_url}" target="_blank">${s.generated_url}</a>` : "";
+        div.innerHTML = `<b>${s.title}</b> (${s.status}) - ${s.subtitle}${linkHtml}<br/><br/><button onclick="openServer('${s.key}', '${s.startup_file || ""}')">⚙️ إدارة</button>`;
         box.appendChild(div);
       }
     }
@@ -1105,6 +1222,25 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
       document.getElementById("startupFileInput").value = startup;
       refreshServerDetails();
     }
+    async function updateGeneratedLinkUI() {
+      if (!currentKey) return;
+      const f = document.getElementById("startupFileInput").value || "";
+      const sub = document.getElementById("extraPathInput").value || "";
+      const q = `/api/bot/js-link?folder=${encodeURIComponent(currentKey)}&file=${encodeURIComponent(f)}&subpath=${encodeURIComponent(sub)}`;
+      const r = await fetch(q);
+      if (r.ok) {
+        const d = await r.json();
+        if (d.success && d.generated_url) {
+          document.getElementById("generatedLinkBox").classList.remove("hidden");
+          const a1 = document.getElementById("genUrlAnchor");
+          const a2 = document.getElementById("goUrlAnchor");
+          a1.href = d.generated_url;
+          a1.textContent = d.generated_url;
+          a2.href = d.google_jump_url;
+          a2.textContent = d.google_jump_url;
+        }
+      }
+    }
     async function saveStartup() {
       const f = document.getElementById("startupFileInput").value;
       await fetch("/server/set-startup/" + encodeURIComponent(currentKey), {
@@ -1112,16 +1248,29 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({file: f})
       });
-      showMsg("تم حفظ ملف التشغيل");
+      await updateGeneratedLinkUI();
+      showMsg("تم حفظ ملف التشغيل وتوليد الرابط");
     }
     async function serverAct(act) {
-      const res = await fetch("/server/action/" + encodeURIComponent(currentKey) + "/" + act, {method: "POST"});
+      const f = document.getElementById("startupFileInput").value || "";
+      const sub = document.getElementById("extraPathInput").value || "";
+      const res = await fetch("/server/action/" + encodeURIComponent(currentKey) + "/" + act, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({file: f, subpath: sub})
+      });
       const d = await res.json();
-      showMsg(d.success ? ("تم تنفيذ " + act) : ("خطأ: " + d.message));
+      if (d.generated_url) {
+        showMsg(`تم تنفيذ ${act} — الرابط المولّد: ${d.generated_url}`);
+      } else {
+        showMsg(d.success ? ("تم تنفيذ " + act) : ("خطأ: " + d.message));
+      }
+      await updateGeneratedLinkUI();
       refreshServerDetails();
     }
     async function refreshServerDetails() {
       if (!currentKey) return;
+      await updateGeneratedLinkUI();
       const stRes = await fetch("/server/stats/" + encodeURIComponent(currentKey));
       if (stRes.ok) {
         const st = await stRes.json();
@@ -1264,6 +1413,7 @@ def list_all_servers_for_admin():
             banned = bool(meta.get("banned", False))
             key = normalize_state_key(owner, folder)
             st = _lookup_running_state([key, folder], banned)
+            links = build_generated_server_url(owner, folder, meta.get("startup_file", ""))
             servers.append({
                 "title": meta.get("display_name", folder),
                 "folder": folder,
@@ -1271,6 +1421,8 @@ def list_all_servers_for_admin():
                 "key": key,
                 "subtitle": f"Owner: {owner}",
                 "startup_file": meta.get("startup_file", ""),
+                "generated_url": meta.get("generated_url") or links["generated_url"],
+                "google_jump_url": meta.get("google_jump_url") or links["google_jump_url"],
                 "status": st,
             })
     return servers
@@ -1351,6 +1503,7 @@ def list_servers_for_user(username: str):
         banned = bool(meta.get("banned", False))
         key = normalize_state_key(username, folder)
         st = _lookup_running_state([key, folder], banned)
+        links = build_generated_server_url(username, folder, meta.get("startup_file", ""))
         servers.append({
             "title": meta.get("display_name", folder),
             "folder": folder,
@@ -1358,9 +1511,162 @@ def list_servers_for_user(username: str):
             "key": key,
             "subtitle": f"Owner: {username}",
             "startup_file": meta.get("startup_file", ""),
+            "generated_url": meta.get("generated_url") or links["generated_url"],
+            "google_jump_url": meta.get("google_jump_url") or links["google_jump_url"],
             "status": st,
         })
     return servers
+
+
+def _render_js_runner_page(owner: str, folder: str, startup_file: str = "", subpath: str = "", auto_google: bool = False):
+    server_dir = get_server_dir(owner, folder)
+    if not os.path.isdir(server_dir):
+        return jsonify({"success": False, "message": "السيرفر غير موجود"}), 404
+
+    meta = read_meta(owner, folder)
+    bot_title = meta.get("display_name") or folder
+    resolved_file = startup_file or resolve_startup_file(owner, folder, meta.get("startup_file") or "index.js")
+    links = refresh_server_js_link(owner, folder, resolved_file, subpath=subpath, req=request)
+    google_url = links["google_target"]
+    gen_url = links["generated_url"]
+
+    # تشغيل السيرفر تلقائياً إذا لم يكن قيد التشغيل بالفعل
+    state_key = normalize_state_key(owner, folder)
+    cur_state = _lookup_running_state([state_key, folder], bool(meta.get("banned", False)))
+    if not meta.get("banned", False) and cur_state != "Running":
+        log_append(state_key, f"[JS-LINK] Auto-starting server for file: {resolved_file} | URL: {gen_url}\n")
+        t = threading.Thread(target=background_start, args=(state_key, owner, folder, resolved_file), daemon=True)
+        t.start()
+
+    if auto_google:
+        return redirect(google_url, code=302)
+
+    html = f"""<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تشغيل البوت - {bot_title}</title>
+  <style>
+    body {{
+      font-family: Tahoma, Arial, sans-serif;
+      background: #ffffff;
+      color: #111827;
+      margin: 0;
+      padding: 40px 18px;
+      text-align: center;
+    }}
+    .box {{
+      max-width: 640px;
+      margin: 0 auto;
+      line-height: 1.9;
+    }}
+    .title {{
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }}
+    .meta {{
+      font-size: 16px;
+      font-weight: bold;
+      margin: 6px 0;
+    }}
+    .url-box {{
+      margin-top: 18px;
+      padding: 12px;
+      background: #f3f4f6;
+      border-radius: 8px;
+      word-break: break-all;
+      font-size: 13px;
+    }}
+    a.btn {{
+      display: inline-block;
+      margin-top: 14px;
+      background: #1a73e8;
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: bold;
+    }}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="title">✨ تم بنجاح تشغيل الخادم والبوت ✨</div>
+    <div class="meta">🤖 البوت : {bot_title}</div>
+    <div class="meta">@Y_20_20 : المطور</div>
+    <div class="url-box">
+      <div><b>ملف التشغيل:</b> {resolved_file}</div>
+      <div><b>الرابط المولّد:</b> <a href="{gen_url}">{gen_url}</a></div>
+    </div>
+    <a class="btn" id="goGoogleBtn" href="{google_url}">الانتقال إلى جوجل</a>
+  </div>
+  <script>
+    setTimeout(function() {{
+      window.location.href = {json.dumps(google_url)};
+    }}, 800);
+  </script>
+</body>
+</html>"""
+    return Response(html, mimetype="text/html; charset=utf-8")
+
+
+@app.route("/js/<owner>/<folder>", methods=["GET"])
+@app.route("/js/<owner>/<folder>/<path:subpath>", methods=["GET"])
+def js_server_link_route(owner, folder, subpath=""):
+    safe_o = re.sub(r"[^a-zA-Z0-9_.-]", "", owner or "")
+    safe_f = re.sub(r"[^a-zA-Z0-9_.-]", "", folder or "")
+    if not safe_o or not safe_f:
+        return jsonify({"success": False, "message": "معرّف السيرفر غير صالح"}), 400
+    startup_file = (request.args.get("file") or "").strip()
+    auto_google = (request.args.get("redirect_google") or "").strip() in ("1", "true", "yes")
+    return _render_js_runner_page(safe_o, safe_f, startup_file=startup_file, subpath=subpath, auto_google=auto_google)
+
+
+@app.route("/js/go/<owner>/<folder>", methods=["GET"])
+@app.route("/js/go/<owner>/<folder>/<path:subpath>", methods=["GET"])
+def js_server_google_redirect(owner, folder, subpath=""):
+    safe_o = re.sub(r"[^a-zA-Z0-9_.-]", "", owner or "")
+    safe_f = re.sub(r"[^a-zA-Z0-9_.-]", "", folder or "")
+    if not safe_o or not safe_f:
+        return redirect(GOOGLE_REDIRECT_URL, code=302)
+    startup_file = (request.args.get("file") or "").strip()
+    return _render_js_runner_page(safe_o, safe_f, startup_file=startup_file, subpath=subpath, auto_google=True)
+
+
+@app.route("/api/bot/js-link", methods=["GET", "POST"])
+def api_bot_js_link():
+    src = request.get_json(silent=True) if request.method == "POST" else request.args
+    src = src or {}
+    api_key = (src.get("api_key") or "").strip()
+    user_info = resolve_user_for_api(api_key)
+    if not user_info:
+        return jsonify({"success": False, "message": "Invalid API Key"}), 401
+
+    folder_or_key = (src.get("folder") or "").strip()
+    startup_file = (src.get("file") or "").strip()
+    subpath = (src.get("subpath") or "").strip()
+
+    try:
+        owner, folder = parse_server_key(
+            folder_or_key,
+            allow_admin=True,
+            default_owner=user_info.get("username", ""),
+            force_admin=bool(user_info.get("is_admin")),
+        )
+    except Exception:
+        return jsonify({"success": False, "message": "معرّف السيرفر غير صالح"}), 400
+
+    if not user_info.get("is_admin") and owner != user_info.get("username"):
+        return jsonify({"success": False, "message": "Forbidden"}), 403
+
+    server_dir = get_server_dir(owner, folder)
+    if not os.path.isdir(server_dir):
+        return jsonify({"success": False, "message": "السيرفر غير موجود"}), 404
+
+    links = refresh_server_js_link(owner, folder, startup_file=startup_file, subpath=subpath, req=request)
+    return jsonify({"success": True, **links})
 
 
 @app.route("/")
@@ -1516,11 +1822,14 @@ def add_server():
 
     os.makedirs(target, exist_ok=True)
     open(os.path.join(target, "server.log"), "w", encoding="utf-8").close()
+    links = build_generated_server_url(owner, folder, default_startup, req=request)
     write_meta(owner, folder, {
         "display_name": name or folder,
         "startup_file": default_startup,
         "owner": owner,
         "banned": False,
+        "generated_url": links["generated_url"],
+        "google_jump_url": links["google_jump_url"],
     })
 
     types_db = _read_json(SERVER_TYPES_DB, {"types": {}})
@@ -1587,14 +1896,25 @@ def server_stats(key):
         state = "Offline"
         set_state(full_key, "Offline")
 
-    return jsonify({"status": state, "cpu": cpu, "mem": mem, "logs": logs, "ip": get_ip()})
+    return jsonify({
+        "status": state,
+        "cpu": cpu,
+        "mem": mem,
+        "logs": logs,
+        "ip": get_ip(),
+        "generated_url": meta.get("generated_url", ""),
+        "google_jump_url": meta.get("google_jump_url", ""),
+    })
 
 
-def background_start(key: str, owner: str, folder: str, startup_file: str):
+def background_start(key: str, owner: str, folder: str, startup_file: str, subpath: str = ""):
     state_key = normalize_state_key(owner, folder)
     try:
+        links = refresh_server_js_link(owner, folder, startup_file=startup_file, subpath=subpath)
         set_state(state_key, "Installing")
         log_append(state_key, "[SYSTEM] Preparing...\n")
+        log_append(state_key, f"[GENERATED-URL] {links['generated_url']}\n")
+        log_append(state_key, f"[GOOGLE-JUMP-URL] {links['google_jump_url']}\n")
         ensure_requirements_installed(owner, folder)
 
         set_state(state_key, "Starting")
@@ -1628,11 +1948,19 @@ def server_action(key, act):
     if not os.path.isdir(server_dir):
         return jsonify({"success": False, "message": "Server not found"}), 404
 
+    payload = request.get_json(silent=True) or {}
+    subpath = (payload.get("subpath") or "").strip()
+    custom_file = (payload.get("file") or "").strip()
+
     meta = read_meta(owner, folder)
     state_key = normalize_state_key(owner, folder)
     if meta.get("banned", False):
         set_state(state_key, "Banned")
         return jsonify({"success": False, "message": "Server is banned by admin"}), 403
+
+    if custom_file and ".." not in custom_file.replace("\\", "/").split("/"):
+        meta["startup_file"] = custom_file.replace("\\", "/").lstrip("/")
+        write_meta(owner, folder, meta)
 
     if act in ("stop", "restart"):
         stop_proc(key, owner, folder)
@@ -1645,10 +1973,15 @@ def server_action(key, act):
     if not startup:
         return jsonify({"success": False, "message": "No main file set"}), 400
 
+    links = refresh_server_js_link(owner, folder, startup_file=startup, subpath=subpath, req=request)
     open(os.path.join(server_dir, "server.log"), "w", encoding="utf-8").close()
-    t = threading.Thread(target=background_start, args=(state_key, owner, folder, startup), daemon=True)
+    t = threading.Thread(target=background_start, args=(state_key, owner, folder, startup, subpath), daemon=True)
     t.start()
-    return jsonify({"success": True})
+    return jsonify({
+        "success": True,
+        "generated_url": links["generated_url"],
+        "google_jump_url": links["google_jump_url"],
+    })
 
 
 @app.route("/server/set-startup/<path:key>", methods=["POST"])
@@ -1669,7 +2002,12 @@ def set_startup(key):
     meta = read_meta(owner, folder)
     meta["startup_file"] = f
     write_meta(owner, folder, meta)
-    return jsonify({"success": True})
+    links = refresh_server_js_link(owner, folder, startup_file=f, req=request)
+    return jsonify({
+        "success": True,
+        "generated_url": links["generated_url"],
+        "google_jump_url": links["google_jump_url"],
+    })
 
 
 @app.route("/files/list/<path:key>")
@@ -1890,6 +2228,7 @@ def api_bot_servers():
             or types_db.get("types", {}).get(folder)
             or detect_runtime_kind(owner, folder, s.get("startup_file", ""))
         )
+        links = build_generated_server_url(owner, folder, s.get("startup_file", ""), req=request)
         formatted.append({
             "id": key,
             "folder": folder,
@@ -1898,6 +2237,8 @@ def api_bot_servers():
             "type": srv_type,
             "status": s["status"],
             "port": f"{get_ip()}:{PANEL_PORT_PRIMARY}",
+            "generated_url": s.get("generated_url") or links["generated_url"],
+            "google_jump_url": s.get("google_jump_url") or links["google_jump_url"],
         })
     return jsonify({"success": True, "servers": formatted})
 
@@ -1934,11 +2275,14 @@ def api_bot_create_server():
         "Python": "main.py",
     }.get(srv_type, "main.py")
 
+    links = build_generated_server_url(owner, folder, default_startup, req=request)
     write_meta(owner, folder, {
         "display_name": name or folder,
         "startup_file": default_startup,
         "owner": owner,
         "banned": False,
+        "generated_url": links["generated_url"],
+        "google_jump_url": links["google_jump_url"],
     })
 
     types_db = _read_json(SERVER_TYPES_DB, {"types": {}})
@@ -1947,7 +2291,13 @@ def api_bot_create_server():
     _atomic_write_json(SERVER_TYPES_DB, types_db)
     set_state(full_key, "Offline")
 
-    return jsonify({"success": True, "folder": full_key, "type": srv_type})
+    return jsonify({
+        "success": True,
+        "folder": full_key,
+        "type": srv_type,
+        "generated_url": links["generated_url"],
+        "google_jump_url": links["google_jump_url"],
+    })
 
 
 @app.route("/api/bot/server/action", methods=["POST"])
@@ -1960,6 +2310,7 @@ def api_bot_server_action():
 
     folder_or_key = (data.get("folder") or "").strip()
     action = (data.get("action") or "").strip()
+    subpath = (data.get("subpath") or "").strip()
 
     try:
         owner, folder = parse_server_key(
@@ -2006,14 +2357,20 @@ def api_bot_server_action():
         os.makedirs(os.path.dirname(sample_path), exist_ok=True)
         with open(sample_path, "w", encoding="utf-8") as f:
             if startup.endswith(".js"):
-                f.write('console.log("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 Node/JS Server Running...");\nsetInterval(() => {}, 60000);\n')
+                f.write('console.log("𝗘𝗛𝗔𝗕 Node/JS Server Running...");\nsetInterval(() => {}, 60000);\n')
             else:
-                f.write('import time\nprint("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 Server Running...")\ntime.sleep(2)\n')
+                f.write('import time\nprint("𝗘𝗛𝗔𝗕 Server Running...")\ntime.sleep(2)\n')
 
+    links = refresh_server_js_link(owner, folder, startup_file=startup, subpath=subpath, req=request)
     open(os.path.join(server_dir, "server.log"), "w", encoding="utf-8").close()
-    t = threading.Thread(target=background_start, args=(state_key, owner, folder, startup), daemon=True)
+    t = threading.Thread(target=background_start, args=(state_key, owner, folder, startup, subpath), daemon=True)
     t.start()
-    return jsonify({"success": True, "message": "تم إرسال أمر التشغيل بنجاح"})
+    return jsonify({
+        "success": True,
+        "message": "تم إرسال أمر التشغيل بنجاح",
+        "generated_url": links["generated_url"],
+        "google_jump_url": links["google_jump_url"],
+    })
 
 
 @app.route("/api/bot/console", methods=["GET"])
@@ -2270,7 +2627,7 @@ def admin_quickstats():
 
 
 # ==============================================================================
-# ٧. مسارات التنقل والرجوع خطوة للوراء وبوت 𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 (Bot Navigation & UI)
+# ٧. مسارات التنقل والرجوع خطوة للوراء وبوت 𝗘𝗛𝗔𝗕 (Bot Navigation & UI)
 # ==============================================================================
 def api_request(endpoint, method="GET", data=None, params=None, api_key=None):
     url = f"{API_BASE_URL}{endpoint}"
@@ -2363,7 +2720,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, edi
 
     text = (
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-        "      <b>𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 🚀</b>\n"
+        "      <b>𝗘𝗛𝗔𝗕 🚀</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
     )
     if username:
@@ -2515,6 +2872,14 @@ async def show_servers_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif "PY" in srv_type:
             type_icon = "🐍"
 
+        gen_url = srv.get("generated_url", "")
+        go_url = srv.get("google_jump_url", "")
+        link_lines = ""
+        if gen_url:
+            link_lines += f"\n🔗 <b>الرابط المولّد:</b> <code>{gen_url}</code>"
+        if go_url:
+            link_lines += f"\n🌐 <b>تحويل جوجل:</b> <code>{go_url}</code>"
+
         text = (
             "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
             f"{status_emoji} <b>{srv.get('name', srv.get('title', 'ملف'))}</b>\n"
@@ -2522,6 +2887,7 @@ async def show_servers_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{type_icon} <b>نوع البيئة:</b> <code>{srv_type}</code>\n"
             f"<b>📊 الحالة:</b> <code>{srv.get('status', 'نشط')}</code>\n"
             f"<b>🔌 المنفذ/الرابط:</b> <code>{srv.get('port', 'متصل')}</code>"
+            f"{link_lines}"
         )
         folder = srv.get("id", srv.get("folder", ""))
         keyboard = [
@@ -2571,7 +2937,7 @@ async def show_admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = (
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-        "  <b>👑 لوحة إدارة 𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃</b>\n"
+        "  <b>👑 لوحة إدارة 𝗘𝗛𝗔𝗕</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         f"<b>👥 إجمالي المستخدمين:</b> <code>{len(users)}</code>\n"
         f"<b>🔔 طلبات الحسابات المعلقة:</b> <code>{pending_count}</code>\n"
@@ -2672,7 +3038,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     await update.message.reply_text(
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-        "      <b>𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 🚀</b>\n"
+        "      <b>𝗘𝗛𝗔𝗕 🚀</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         "<b>منصة استضافة الملفات والخدمات الشاملة</b> (HTML, JS, PHP, Python)\n\n"
         "<b>للحصول على حساب مفعل:</b>\n"
@@ -2758,10 +3124,12 @@ async def receive_server_type(update: Update, context: ContextTypes.DEFAULT_TYPE
     })
 
     if result and result.get("success"):
+        gen_url = result.get("generated_url", "")
+        link_txt = f"\n<b>🔗 الرابط المولّد:</b> <code>{gen_url}</code>" if gen_url else ""
         await query.edit_message_text(
             f"<b>✅ تم تجهيز السيرفر والبيئة بنجاح!</b>\n\n"
             f"<b>📛 الاسم:</b> <code>{name}</code>\n"
-            f"<b>⚙️ النوع:</b> <code>{srv_type}</code>",
+            f"<b>⚙️ النوع:</b> <code>{srv_type}</code>{link_txt}",
             parse_mode=ParseMode.HTML,
         )
     else:
@@ -3036,7 +3404,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "action": action,
             })
             if result and result.get("success"):
-                await query.answer(result.get("message", "✅ تمت العملية بنجاح")[:200], show_alert=True)
+                msg = result.get("message", "✅ تمت العملية بنجاح")
+                if result.get("generated_url"):
+                    msg += f"\nالرابط: {result.get('generated_url')}"
+                await query.answer(msg[:200], show_alert=True)
             else:
                 await query.answer(f"❌ {result.get('message', 'فشل التنفيذ') if result else 'خطأ'}"[:200], show_alert=True)
             await show_servers_list(update, context)
@@ -3088,7 +3459,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==============================================================================
 async def runner_start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "<b>👋 مرحباً! أنا بوت يعمل على 𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃</b>\n\n"
+        "<b>👋 مرحباً! أنا بوت يعمل على 𝗘𝗛𝗔𝗕</b>\n\n"
         "<b>الأوامر المتاحة:</b>\n"
         "• <code>/start</code> - عرض هذه الرسالة\n"
         "• <code>/help</code> - الحصول على المساعدة\n"
@@ -3101,7 +3472,7 @@ async def runner_start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def runner_help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "<b>📚 المساعدة:</b>\n\n"
-        "<i>هذا البوت يعمل بشكل مستمر على خادم 𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃</i>\n"
+        "<i>هذا البوت يعمل بشكل مستمر على خادم 𝗘𝗛𝗔𝗕</i>\n"
         "<b>للاشتراك أو الاستفسار:</b> <code>@Y_20_20</code>",
         parse_mode=ParseMode.HTML,
     )
@@ -3110,7 +3481,7 @@ async def runner_help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def runner_info_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "<b>ℹ️ معلومات البوت:</b>\n\n"
-        "<b>🤖 الخدمة:</b> <code>𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃</code>\n"
+        "<b>🤖 الخدمة:</b> <code>𝗘𝗛𝗔𝗕</code>\n"
         "<b>✅ الحالة:</b> <b>نشط ومستمر</b>\n"
         "<b>🛠 المطور:</b> <code>@Y_20_20</code>",
         parse_mode=ParseMode.HTML,
@@ -3121,7 +3492,7 @@ async def runner_handle_message(update: Update, context: ContextTypes.DEFAULT_TY
     user_message = update.message.text or ""
     await update.message.reply_text(
         f"<b>📨 تم استقبال رسالتك:</b>\n\n<blockquote>{user_message}</blockquote>\n"
-        "<i>شكراً لاستخدامك 𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃!</i>\n"
+        "<i>شكراً لاستخدامك 𝗘𝗛𝗔𝗕!</i>\n"
         "<b>🛠</b> <code>@Y_20_20</code>",
         parse_mode=ParseMode.HTML,
     )
@@ -3133,7 +3504,7 @@ async def runner_error_handler(update: object, context: ContextTypes.DEFAULT_TYP
 
 def run_runner_bot(token: str, bot_name: str) -> None:
     try:
-        logger.info("🤖 𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 - تشغيل البوت الفرعي: %s", bot_name)
+        logger.info("🤖 𝗘𝗛𝗔𝗕 - تشغيل البوت الفرعي: %s", bot_name)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         application = Application.builder().token(token).build()
@@ -3199,7 +3570,7 @@ def build_and_run_main_bot():
 
             application.add_handler(conv)
             application.add_handler(CallbackQueryHandler(button_callback))
-            logger.info("🚀 𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 Bot يعمل بكفاءة تامة 24/7...")
+            logger.info("🚀 𝗘𝗛𝗔𝗕 Bot يعمل بكفاءة تامة 24/7...")
             application.run_polling(drop_pending_updates=True, stop_signals=None)
         except Exception as e:
             logger.error("انقطاع مؤقت في البوت الرئيسي، إعادة الاتصال خلال 5 ثوانٍ: %s", e)
@@ -3211,7 +3582,7 @@ def _start_bot_background_once():
         if not any(t.name == "MeroHostBotThread" for t in threading.enumerate()):
             bot_thread = threading.Thread(target=build_and_run_main_bot, name="MeroHostBotThread", daemon=True)
             bot_thread.start()
-            logger.info("🤖 تم إطلاق خيط بوت 𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 تلقائياً مع app.py")
+            logger.info("🤖 تم إطلاق خيط بوت 𝗘𝗛𝗔𝗕 تلقائياً مع app.py")
 
 
 ensure_index_html_exists()
