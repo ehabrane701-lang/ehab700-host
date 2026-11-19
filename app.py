@@ -142,11 +142,14 @@ SERVICES_CATALOG = {
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("PANEL_SECRET_KEY") or ("MERO_HOST_SECURE_" + os.urandom(16).hex())
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 running_procs = {}   # key -> (Popen, log_file_handle)
 server_states = {}   # key -> Offline/Installing/Starting/Running/Banned
 lock = threading.Lock()
 finance_lock = threading.Lock()
+db_lock = threading.Lock()
 
 
 # ==============================================================================
@@ -166,17 +169,16 @@ def secure_join(base_dir: str, *paths) -> str:
     base_dir = os.path.realpath(base_dir)
     current_path = base_dir
     for path in paths:
-        parts = str(path).split("/")
+        parts = str(path).replace("\\", "/").split("/")
         for part in parts:
             if part == "..":
                 raise ValueError("Path traversal attempt detected")
             if part in (".", ""):
                 continue
             current_path = os.path.join(current_path, part)
-            current_path = os.path.realpath(current_path)
-            if not current_path.startswith(base_dir + os.sep) and current_path != base_dir:
+            if not is_path_safe(base_dir, current_path):
                 raise ValueError("Security violation: Attempted to access outside secure root")
-    return current_path
+    return os.path.abspath(current_path)
 
 
 def get_ip():
@@ -194,6 +196,7 @@ def sanitize_folder_name(name: str) -> str:
     name = (name or "").strip()
     name = re.sub(r"\s+", "-", name)
     name = re.sub(r"[^A-Za-z0-9\-_\.]", "", name)
+    name = name.strip(".")
     return name[:200]
 
 
@@ -202,6 +205,10 @@ def safe_name(name: str) -> str:
     name = re.sub(r"[\\/]+", "", name)
     name = re.sub(r"[^A-Za-z0-9\-_\. ]", "", name)
     return name[:200].strip()
+
+
+def normalize_state_key(owner: str, folder: str) -> str:
+    return f"{owner}::{folder}"
 
 
 def set_state(key: str, state: str):
@@ -216,20 +223,21 @@ def get_state(key: str) -> str:
 
 def get_user_servers_root(username: str) -> str:
     safe_username = re.sub(r"[^a-zA-Z0-9_.-]", "", username or "")
-    return os.path.join(USERS_ROOT, safe_username, "servers")
+    return os.path.abspath(os.path.join(USERS_ROOT, safe_username, "servers"))
 
 
 def get_server_dir(owner: str, folder: str) -> str:
     safe_owner = re.sub(r"[^a-zA-Z0-9_.-]", "", owner or "")
     safe_folder = re.sub(r"[^a-zA-Z0-9_.-]", "", folder or "")
     base = get_user_servers_root(safe_owner)
-    return os.path.join(base, safe_folder)
+    return os.path.abspath(os.path.join(base, safe_folder))
 
 
 def ensure_user_dirs(username: str):
     try:
         path = get_user_servers_root(username)
-        os.makedirs(path, exist_ok=True)
+        if is_path_safe(USERS_ROOT, path):
+            os.makedirs(path, exist_ok=True)
     except Exception as e:
         logger.warning(f"Security Alert: {e}")
 
@@ -244,13 +252,29 @@ def current_username():
     return (u.get("username") or "").strip()
 
 
-def parse_server_key(key: str, allow_admin: bool):
+def resolve_user_for_api(api_key: str):
+    user_info = find_user_by_api_key(api_key)
+    if user_info:
+        return user_info
+    if is_admin_session():
+        return {"username": current_username() or ADMIN_USERNAME, "is_admin": True, "active": True, "premium": True}
+    if current_username():
+        db = load_users()
+        u = find_user(db, current_username())
+        if u:
+            return {**u, "is_admin": False}
+    return None
+
+
+def parse_server_key(key: str, allow_admin: bool, default_owner: str = "", force_admin: bool = False):
     key = (key or "").strip()
     if ".." in key or key.startswith("/") or key.startswith("\\"):
         raise ValueError("Invalid key format")
 
+    admin_mode = force_admin or (allow_admin and is_admin_session())
+
     if "::" in key:
-        if not allow_admin or not is_admin_session():
+        if not admin_mode:
             raise ValueError("forbidden")
         owner, folder = key.split("::", 1)
         owner = owner.strip()
@@ -259,27 +283,34 @@ def parse_server_key(key: str, allow_admin: bool):
             raise ValueError("Invalid characters in owner or folder")
         return owner, folder
 
-    user = current_username()
-    if not is_admin_session():
+    user = (default_owner or current_username() or "").strip()
+    if not admin_mode:
         if not user or not re.match(r"^[a-zA-Z0-9_.-]+$", user) or not re.match(r"^[a-zA-Z0-9_.-]+$", key):
             raise ValueError("Invalid characters")
         return user, key
     return (user or ADMIN_USERNAME), key
 
 
-def can_access_key(key: str) -> bool:
+def can_access_key(key: str, user_info: dict = None) -> bool:
     try:
-        owner, _folder = parse_server_key(key, allow_admin=True)
+        default_owner = (user_info or {}).get("username", "") or current_username()
+        is_adm = bool((user_info or {}).get("is_admin")) or is_admin_session()
+        owner, _folder = parse_server_key(key, allow_admin=True, default_owner=default_owner, force_admin=is_adm)
     except Exception:
         return False
-    if is_admin_session():
+    if is_adm:
         return True
-    return owner == current_username()
+    return owner == default_owner
 
 
-def safe_join_server_path(key: str, rel_path: str = "") -> str:
-    owner, folder = parse_server_key(key, allow_admin=True)
+def safe_join_server_path(key: str, rel_path: str = "", user_info: dict = None) -> str:
+    default_owner = (user_info or {}).get("username", "") or current_username()
+    is_adm = bool((user_info or {}).get("is_admin")) or is_admin_session()
+    owner, folder = parse_server_key(key, allow_admin=True, default_owner=default_owner, force_admin=is_adm)
     server_root = os.path.abspath(get_server_dir(owner, folder))
+
+    if not is_path_safe(USERS_ROOT, server_root):
+        raise ValueError("Security violation outside USERS_ROOT")
 
     if not os.path.exists(server_root):
         raise FileNotFoundError(f"Server directory not found: {server_root}")
@@ -299,7 +330,10 @@ def safe_join_server_path(key: str, rel_path: str = "") -> str:
 
 def log_append(key: str, text: str):
     try:
-        owner, folder = parse_server_key(key, allow_admin=True)
+        if "::" in key:
+            owner, folder = key.split("::", 1)
+        else:
+            owner, folder = (current_username() or ADMIN_USERNAME), key
         server_dir = get_server_dir(owner, folder)
         os.makedirs(server_dir, exist_ok=True)
         log_path = os.path.join(server_dir, "server.log")
@@ -313,22 +347,29 @@ def log_append(key: str, text: str):
 # ٤. قاعدة البيانات والأرصدة والخدمات والطلبات (DB, Balances, Services & Orders)
 # ==============================================================================
 def _atomic_write_json(path: str, payload: dict):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
-    os.replace(tmp, path)
+    with db_lock:
+        abs_path = os.path.abspath(path)
+        if not is_path_safe(DATA_DIR, abs_path):
+            raise ValueError("Unsafe database write path")
+        os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        tmp = abs_path + f".{os.getpid()}.{uuid.uuid4().hex[:6]}.tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, abs_path)
 
 
 def _read_json(path: str, default: dict) -> dict:
-    if not os.path.exists(path):
-        return dict(default)
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data if isinstance(data, dict) else dict(default)
-    except Exception:
-        return dict(default)
+    with db_lock:
+        if not os.path.exists(path):
+            return json.loads(json.dumps(default))
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data if isinstance(data, dict) else json.loads(json.dumps(default))
+        except Exception:
+            return json.loads(json.dumps(default))
 
 
 def load_users():
@@ -373,17 +414,18 @@ def get_user_limit(username: str) -> int:
 def get_balance(user_key: str) -> float:
     with finance_lock:
         db = _read_json(BALANCES_DB, {"balances": {}})
-        return float(db["balances"].get(str(user_key), 0.0))
+        return float(db.get("balances", {}).get(str(user_key), 0.0))
 
 
 def add_balance(user_key: str, amount: float) -> float:
     with finance_lock:
         db = _read_json(BALANCES_DB, {"balances": {}})
-        cur = float(db["balances"].get(str(user_key), 0.0))
+        balances = db.setdefault("balances", {})
+        cur = float(balances.get(str(user_key), 0.0))
         new_bal = round(cur + float(amount), 4)
         if new_bal < 0:
             raise ValueError("Balance cannot be negative")
-        db["balances"][str(user_key)] = new_bal
+        balances[str(user_key)] = new_bal
         _atomic_write_json(BALANCES_DB, db)
         return new_bal
 
@@ -392,13 +434,14 @@ def deduct_balance_safe(user_key: str, amount: float) -> tuple[bool, float]:
     with finance_lock:
         amt = float(amount)
         if amt <= 0:
-            return False, get_balance(user_key)
+            return False, float(_read_json(BALANCES_DB, {"balances": {}}).get("balances", {}).get(str(user_key), 0.0))
         db = _read_json(BALANCES_DB, {"balances": {}})
-        cur = float(db["balances"].get(str(user_key), 0.0))
+        balances = db.setdefault("balances", {})
+        cur = float(balances.get(str(user_key), 0.0))
         if cur < amt:
             return False, cur
         new_bal = round(cur - amt, 4)
-        db["balances"][str(user_key)] = new_bal
+        balances[str(user_key)] = new_bal
         _atomic_write_json(BALANCES_DB, db)
         return True, new_bal
 
@@ -417,13 +460,13 @@ def record_order(user_key: str, service_id: str, amount: float, details: str, st
             "result": result_msg,
             "created_at": _utc_now_iso(),
         }
-        db["orders"].append(entry)
+        db.setdefault("orders", []).append(entry)
         _atomic_write_json(ORDERS_DB, db)
 
         svc_meta = SERVICES_CATALOG.get(service_id)
         if svc_meta:
             svc_data = _read_json(svc_meta["file"], {"service_id": service_id, "records": []})
-            svc_data["records"].append(entry)
+            svc_data.setdefault("records", []).append(entry)
             _atomic_write_json(svc_meta["file"], svc_data)
         return order_id
 
@@ -461,6 +504,8 @@ def execute_paid_service_order(user_key: str, service_id: str, details: str) -> 
             raise ValueError("البيانات المدخلة للطلب غير مكتملة")
 
         web_dir = os.path.join(DATA_DIR, "web_requests", order_id)
+        if not is_path_safe(DATA_DIR, web_dir):
+            raise ValueError("مسار الطلب غير آمن")
         os.makedirs(web_dir, exist_ok=True)
         request_file = os.path.join(web_dir, "request_info.json")
         _atomic_write_json(request_file, {
@@ -500,7 +545,7 @@ def ensure_meta(owner: str, folder: str):
     meta_path = os.path.join(server_dir, "meta.json")
     base = {"display_name": folder, "startup_file": "", "owner": owner, "banned": False}
     if not os.path.exists(meta_path):
-        _atomic_write_json(meta_path, base)
+        _atomic_write_json_raw(meta_path, base)
     else:
         m = _read_json(meta_path, base)
         changed = False
@@ -512,8 +557,22 @@ def ensure_meta(owner: str, folder: str):
             m["owner"] = owner
             changed = True
         if changed:
-            _atomic_write_json(meta_path, m)
+            _atomic_write_json_raw(meta_path, m)
     return meta_path
+
+
+def _atomic_write_json_raw(path: str, payload: dict):
+    with db_lock:
+        abs_path = os.path.abspath(path)
+        if not is_path_safe(USERS_ROOT, abs_path) and not is_path_safe(DATA_DIR, abs_path):
+            raise ValueError("Unsafe path for JSON write")
+        os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        tmp = abs_path + f".{os.getpid()}.{uuid.uuid4().hex[:6]}.tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, abs_path)
 
 
 def read_meta(owner: str, folder: str):
@@ -525,7 +584,7 @@ def read_meta(owner: str, folder: str):
 def write_meta(owner: str, folder: str, meta):
     ensure_meta(owner, folder)
     meta_path = os.path.join(get_server_dir(owner, folder), "meta.json")
-    _atomic_write_json(meta_path, meta)
+    _atomic_write_json_raw(meta_path, meta)
 
 
 def sha256_file(path):
@@ -575,29 +634,180 @@ def write_installed(owner: str, folder: str, req_sha=None, add_pkgs=None):
         f.write("\n".join(lines) + ("\n" if lines else ""))
 
 
+def detect_runtime_kind(owner: str, folder: str, startup_file: str) -> str:
+    ext = os.path.splitext((startup_file or "").lower())[1]
+    if ext in (".js", ".mjs", ".cjs"):
+        return "js"
+    if ext == ".py":
+        return "py"
+
+    types_db = _read_json(SERVER_TYPES_DB, {"types": {}})
+    for candidate_key in (normalize_state_key(owner, folder), folder):
+        t = str(types_db.get("types", {}).get(candidate_key, "")).lower()
+        if "js" in t or "node" in t:
+            return "js"
+        if "py" in t:
+            return "py"
+
+    server_dir = get_server_dir(owner, folder)
+    if os.path.exists(os.path.join(server_dir, "package.json")) and not os.path.exists(os.path.join(server_dir, "requirements.txt")):
+        return "js"
+    return "py"
+
+
+def resolve_startup_file(owner: str, folder: str, startup_file: str) -> str:
+    server_dir = get_server_dir(owner, folder)
+    cleaned = (startup_file or "").strip()
+    if cleaned:
+        candidate = os.path.abspath(os.path.join(server_dir, cleaned))
+        if is_path_safe(server_dir, candidate) and os.path.isfile(candidate):
+            return os.path.relpath(candidate, server_dir)
+        return cleaned
+
+    for fallback in ("main.py", "app.py", "bot.py", "index.js", "server.js", "app.js", "index.html", "index.php"):
+        if os.path.isfile(os.path.join(server_dir, fallback)):
+            return fallback
+
+    for root_dir, _dirs, files in os.walk(server_dir):
+        for fname in sorted(files):
+            if fname.endswith((".py", ".js")):
+                full_f = os.path.join(root_dir, fname)
+                return os.path.relpath(full_f, server_dir)
+    return "main.py"
+
+
 def ensure_requirements_installed(owner: str, folder: str):
     server_dir = get_server_dir(owner, folder)
+    state_key = normalize_state_key(owner, folder)
+    installed_any = False
+
     req_path = os.path.join(server_dir, "requirements.txt")
-    if not os.path.exists(req_path):
-        return False
+    if os.path.exists(req_path):
+        req_sha = sha256_file(req_path)
+        cur = read_installed(owner, folder)
+        if cur["req_sha"] != req_sha:
+            log_append(state_key, "[SYSTEM] Installing requirements.txt...\n")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], cwd=server_dir)
+                write_installed(owner, folder, req_sha=req_sha)
+                log_append(state_key, "[SYSTEM] requirements installed ✅\n")
+                installed_any = True
+            except subprocess.CalledProcessError as e:
+                log_append(state_key, f"[SYSTEM] requirements install failed: {e}\n")
 
-    req_sha = sha256_file(req_path)
-    cur = read_installed(owner, folder)
-    if cur["req_sha"] == req_sha:
-        return False
+    pkg_path = os.path.join(server_dir, "package.json")
+    npm_bin = shutil.which("npm")
+    if os.path.exists(pkg_path) and npm_bin:
+        pkg_sha = "NPM:" + sha256_file(pkg_path)
+        cur = read_installed(owner, folder)
+        if cur["req_sha"] != pkg_sha:
+            log_append(state_key, "[SYSTEM] Installing package.json via npm...\n")
+            try:
+                subprocess.check_call([npm_bin, "install", "--no-audit", "--no-fund"], cwd=server_dir)
+                write_installed(owner, folder, req_sha=pkg_sha)
+                log_append(state_key, "[SYSTEM] npm packages installed ✅\n")
+                installed_any = True
+            except subprocess.CalledProcessError as e:
+                log_append(state_key, f"[SYSTEM] npm install failed: {e}\n")
 
-    log_append(f"{owner}::{folder}", "[SYSTEM] Installing requirements.txt...\n")
-    try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], cwd=server_dir)
-        write_installed(owner, folder, req_sha=req_sha)
-        log_append(f"{owner}::{folder}", "[SYSTEM] requirements installed ✅\n")
-        return True
-    except subprocess.CalledProcessError as e:
-        log_append(f"{owner}::{folder}", f"[SYSTEM] requirements install failed: {e}\n")
-        return False
+    return installed_any
 
 
 def start_with_autoinstall(owner: str, folder: str, startup_file: str):
+    server_dir = get_server_dir(owner, folder)
+    resolved_startup = resolve_startup_file(owner, folder, startup_file)
+    runtime_kind = detect_runtime_kind(owner, folder, resolved_startup)
+
+    child_env = os.environ.copy()
+    child_env["PYTHONUNBUFFERED"] = "1"
+    child_env["NODE_ENV"] = child_env.get("NODE_ENV", "production")
+
+    if runtime_kind == "js":
+        node_bin = shutil.which("node")
+        npm_bin = shutil.which("npm")
+        if not node_bin:
+            raise RuntimeError("Node.js (node) غير مثبت على الخادم لتشغيل ملفات JavaScript")
+
+        js_wrapper_code = r"""
+const { spawnSync } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+const script = process.argv[1];
+const npmBin = process.argv[2];
+const cwd = process.cwd();
+
+function appendInstalled(pkg) {
+  try {
+    const p = path.join(cwd, '.installed');
+    let existing = new Set();
+    if (fs.existsSync(p)) {
+      fs.readFileSync(p, 'utf8').split(/\r?\n/).forEach(l => {
+        if (l.trim()) existing.add(l.trim());
+      });
+    }
+    if (pkg && !existing.has(pkg)) {
+      fs.appendFileSync(p, pkg + '\n', 'utf8');
+    }
+  } catch (_) {}
+}
+
+function parseMissingModule(outputText) {
+  const m1 = outputText.match(/Cannot find module '([^']+)'/);
+  if (m1 && m1[1]) {
+    const raw = m1[1];
+    if (raw.startsWith('.') || raw.startsWith('/')) return null;
+    return raw.startsWith('@') ? raw.split('/').slice(0, 2).join('/') : raw.split('/')[0];
+  }
+  const m2 = outputText.match(/ERR_MODULE_NOT_FOUND[\s\S]*?package '([^']+)'/);
+  if (m2 && m2[1]) return m2[1];
+  return null;
+}
+
+const tried = new Set();
+while (true) {
+  const res = spawnSync(process.execPath, [script], { cwd, env: process.env, encoding: 'utf8' });
+  const out = (res.stdout || '') + (res.stderr || '');
+  if (res.stdout) process.stdout.write(res.stdout);
+  if (res.stderr) process.stderr.write(res.stderr);
+
+  if (res.status === 0 || res.error) {
+    if (res.error) console.error(res.error);
+    break;
+  }
+
+  const missingPkg = parseMissingModule(out);
+  if (missingPkg && npmBin && !tried.has(missingPkg)) {
+    tried.add(missingPkg);
+    console.log(`[AUTO-INSTALL-JS] Missing module: ${missingPkg} -> installing...`);
+    const inst = spawnSync(npmBin, ['install', '--no-save', '--no-audit', '--no-fund', missingPkg], {
+      cwd,
+      env: process.env,
+      encoding: 'utf8',
+    });
+    if (inst.status === 0) {
+      appendInstalled(missingPkg);
+      console.log(`[AUTO-INSTALL-JS] Installed: ${missingPkg} ✅ -> restarting...`);
+      continue;
+    } else {
+      console.error(`[AUTO-INSTALL-JS] Failed installing ${missingPkg}`);
+      break;
+    }
+  }
+  break;
+}
+"""
+        log_path = os.path.join(server_dir, "server.log")
+        log_file = open(log_path, "a", encoding="utf-8", errors="ignore")
+        proc = subprocess.Popen(
+            [node_bin, "-e", js_wrapper_code, resolved_startup, npm_bin or ""],
+            cwd=server_dir,
+            env=child_env,
+            stdout=log_file,
+            stderr=log_file,
+        )
+        return proc, log_file
+
     wrapper_code = r"""
 import runpy, sys, subprocess, traceback, re, os
 script = sys.argv[1]
@@ -619,22 +829,24 @@ def append_installed(pkg):
 def parse_missing_name(e):
     n = getattr(e, "name", None)
     if n:
-        return n
+        return n.split(".")[0]
     s = str(e)
     m = re.search(r"No module named '([^']+)'", s)
     if m:
-        return m.group(1)
+        return m.group(1).split(".")[0]
     return None
 
+tried_pkgs = set()
 while True:
     try:
         runpy.run_path(script, run_name="__main__")
         break
     except ModuleNotFoundError as e:
         pkg = parse_missing_name(e)
-        if not pkg:
+        if not pkg or pkg in tried_pkgs:
             traceback.print_exc()
             break
+        tried_pkgs.add(pkg)
         print(f"[AUTO-INSTALL] Missing module: {pkg} -> installing...")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
@@ -649,31 +861,55 @@ while True:
         traceback.print_exc()
         break
 """
-    server_dir = get_server_dir(owner, folder)
     log_path = os.path.join(server_dir, "server.log")
     log_file = open(log_path, "a", encoding="utf-8", errors="ignore")
 
     proc = subprocess.Popen(
-        [sys.executable, "-u", "-c", wrapper_code, startup_file],
+        [sys.executable, "-u", "-c", wrapper_code, resolved_startup],
         cwd=server_dir,
+        env=child_env,
         stdout=log_file,
         stderr=log_file,
     )
     return proc, log_file
 
 
-def stop_proc(key: str):
+def _candidate_keys(key: str, owner: str = "", folder: str = "") -> list[str]:
+    keys = []
+    if key:
+        keys.append(key)
+    if owner and folder:
+        full_k = normalize_state_key(owner, folder)
+        if full_k not in keys:
+            keys.append(full_k)
+        if folder not in keys:
+            keys.append(folder)
+    return keys
+
+
+def stop_proc(key: str, owner: str = "", folder: str = ""):
+    candidates = _candidate_keys(key, owner, folder)
     with lock:
-        proc_tuple = running_procs.pop(key, None)
-    if proc_tuple:
-        proc, logf = proc_tuple
+        tuples_to_stop = []
+        for k in candidates:
+            t = running_procs.pop(k, None)
+            if t:
+                tuples_to_stop.append(t)
+
+    for proc, logf in tuples_to_stop:
         try:
             p = psutil.Process(proc.pid)
             for child in p.children(recursive=True):
-                child.kill()
+                try:
+                    child.kill()
+                except Exception:
+                    pass
             p.kill()
         except Exception:
-            pass
+            try:
+                proc.kill()
+            except Exception:
+                pass
         try:
             logf.close()
         except Exception:
@@ -736,6 +972,12 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
     <div id="tab-home">
       <h3>إضافة سيرفر جديد</h3>
       <input id="newServerName" placeholder="اسم السيرفر (مثال: my-bot)" />
+      <select id="newServerType">
+        <option value="Python">Python (.py)</option>
+        <option value="Node.js/JS">JavaScript / Node (.js)</option>
+        <option value="HTML">HTML / Web</option>
+        <option value="PHP">PHP</option>
+      </select>
       <button class="success" onclick="addServer()">➕ إنشاء سيرفر</button>
       <button onclick="loadServers()">🔄 تحديث القائمة</button>
       <hr />
@@ -743,14 +985,14 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
       <div id="serversList"></div>
       <div id="fileManagerBox" class="card hidden">
         <h4>إدارة ملفات السيرفر: <span id="activeServerKey"></span></h4>
-        <input id="startupFileInput" placeholder="ملف التشغيل الرئيسي (مثال: main.py)" />
+        <input id="startupFileInput" placeholder="ملف التشغيل الرئيسي (مثال: main.py أو index.js)" />
         <button onclick="saveStartup()">💾 حفظ ملف التشغيل</button>
         <button class="success" onclick="serverAct('start')">▶️ تشغيل</button>
         <button class="danger" onclick="serverAct('stop')">⏹ إيقاف</button>
         <button class="danger" onclick="serverAct('restart')">🔄 إعادة تشغيل</button>
         <h5>الملفات والمجلدات:</h5>
         <div id="filesList"></div>
-        <input id="editFilePath" placeholder="مسار الملف للتعديل أو الحفظ (مثال: main.py)" />
+        <input id="editFilePath" placeholder="مسار الملف للتعديل أو الحفظ (مثال: main.py أو app.js)" />
         <textarea id="editFileContent" rows="8" placeholder="محتوى الملف..."></textarea>
         <button onclick="loadFileContent()">📂 فتح الملف</button>
         <button class="success" onclick="saveFileContent()">💾 حفظ الملف</button>
@@ -846,10 +1088,11 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
     }
     async function addServer() {
       const name = document.getElementById("newServerName").value;
+      const server_type = document.getElementById("newServerType").value;
       const res = await fetch("/add", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({name})
+        body: JSON.stringify({name, server_type})
       });
       const d = await res.json();
       showMsg(d.success ? "تم إنشاء السيرفر" : ("خطأ: " + d.message));
@@ -982,6 +1225,29 @@ def api_admin_required(fn):
     return wrapper
 
 
+def _lookup_running_state(keys_to_check: list[str], banned: bool) -> str:
+    if banned:
+        return "Banned"
+    with lock:
+        for k in keys_to_check:
+            proc_tuple = running_procs.get(k)
+            if proc_tuple:
+                proc, _logf = proc_tuple
+                if proc.poll() is None and psutil.pid_exists(proc.pid):
+                    try:
+                        p = psutil.Process(proc.pid)
+                        if p.is_running() and p.status() != psutil.STATUS_ZOMBIE:
+                            return "Running"
+                    except Exception:
+                        pass
+            if k in server_states and server_states[k] in ("Installing", "Starting", "Running"):
+                return server_states[k]
+        for k in keys_to_check:
+            if k in server_states:
+                return server_states[k]
+    return "Offline"
+
+
 def list_all_servers_for_admin():
     servers = []
     if not os.path.isdir(USERS_ROOT):
@@ -996,8 +1262,8 @@ def list_all_servers_for_admin():
                 continue
             meta = read_meta(owner, folder)
             banned = bool(meta.get("banned", False))
-            key = f"{owner}::{folder}"
-            st = "Banned" if banned else get_state(key)
+            key = normalize_state_key(owner, folder)
+            st = _lookup_running_state([key, folder], banned)
             servers.append({
                 "title": meta.get("display_name", folder),
                 "folder": folder,
@@ -1083,8 +1349,8 @@ def list_servers_for_user(username: str):
             continue
         meta = read_meta(username, folder)
         banned = bool(meta.get("banned", False))
-        key = folder
-        st = "Banned" if banned else get_state(key)
+        key = normalize_state_key(username, folder)
+        st = _lookup_running_state([key, folder], banned)
         servers.append({
             "title": meta.get("display_name", folder),
             "folder": folder,
@@ -1126,8 +1392,10 @@ def logout():
 @app.route("/web/<order_id>")
 def web_order_route(order_id):
     safe_oid = re.sub(r"[^A-Za-z0-9\-]", "", order_id or "")
-    req_file = os.path.join(DATA_DIR, "web_requests", safe_oid, "request_info.json")
-    if not os.path.exists(req_file):
+    if not safe_oid:
+        return jsonify({"success": False, "message": "Invalid order ID"}), 400
+    req_file = os.path.abspath(os.path.join(DATA_DIR, "web_requests", safe_oid, "request_info.json"))
+    if not is_path_safe(DATA_DIR, req_file) or not os.path.exists(req_file):
         return jsonify({"success": False, "message": "Web route not found"}), 404
     return jsonify({"success": True, "data": _read_json(req_file, {})})
 
@@ -1218,6 +1486,7 @@ def servers():
 def add_server():
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()
+    srv_type = (data.get("server_type") or "Python").strip()
     folder = sanitize_folder_name(name)
     if not folder:
         return jsonify({"success": False, "message": "Invalid server name"}), 400
@@ -1233,18 +1502,32 @@ def add_server():
             return jsonify({"success": False, "message": f"Server limit reached ({limit}). Ask admin for premium."}), 403
 
     target = get_server_dir(owner, folder)
+    if not is_path_safe(USERS_ROOT, target):
+        return jsonify({"success": False, "message": "Unsafe server path"}), 400
     if os.path.exists(target):
         return jsonify({"success": False, "message": "Server already exists"}), 409
+
+    default_startup = {
+        "HTML": "index.html",
+        "Node.js/JS": "index.js",
+        "PHP": "index.php",
+        "Python": "main.py",
+    }.get(srv_type, "main.py")
 
     os.makedirs(target, exist_ok=True)
     open(os.path.join(target, "server.log"), "w", encoding="utf-8").close()
     write_meta(owner, folder, {
         "display_name": name or folder,
-        "startup_file": "",
+        "startup_file": default_startup,
         "owner": owner,
         "banned": False,
     })
-    set_state(folder if not is_admin_session() else f"{owner}::{folder}", "Offline")
+
+    types_db = _read_json(SERVER_TYPES_DB, {"types": {}})
+    full_key = normalize_state_key(owner, folder)
+    types_db.setdefault("types", {})[full_key] = srv_type
+    _atomic_write_json(SERVER_TYPES_DB, types_db)
+    set_state(full_key, "Offline")
 
     if is_admin_session():
         return jsonify({"success": True, "servers": list_all_servers_for_admin()})
@@ -1263,26 +1546,30 @@ def server_stats(key):
         return jsonify({"status": "Offline", "cpu": "0%", "mem": "0 MB", "logs": "", "ip": get_ip()}), 404
 
     meta = read_meta(owner, folder)
-    if meta.get("banned", False):
-        set_state(key, "Banned")
+    full_key = normalize_state_key(owner, folder)
+    keys_to_check = _candidate_keys(key, owner, folder)
 
-    with lock:
-        proc_tuple = running_procs.get(key)
+    if meta.get("banned", False):
+        set_state(full_key, "Banned")
 
     running = False
     cpu, mem = "0%", "0 MB"
 
-    if proc_tuple:
-        proc, _logf = proc_tuple
-        if psutil.pid_exists(proc.pid):
-            try:
-                p = psutil.Process(proc.pid)
-                if p.is_running() and p.status() != psutil.STATUS_ZOMBIE:
-                    running = True
-                    cpu = f"{p.cpu_percent(interval=None)}%"
-                    mem = f"{p.memory_info().rss / 1024 / 1024:.1f} MB"
-            except Exception:
-                pass
+    with lock:
+        for k in keys_to_check:
+            proc_tuple = running_procs.get(k)
+            if proc_tuple:
+                proc, _logf = proc_tuple
+                if proc.poll() is None and psutil.pid_exists(proc.pid):
+                    try:
+                        p = psutil.Process(proc.pid)
+                        if p.is_running() and p.status() != psutil.STATUS_ZOMBIE:
+                            running = True
+                            cpu = f"{p.cpu_percent(interval=None)}%"
+                            mem = f"{p.memory_info().rss / 1024 / 1024:.1f} MB"
+                            break
+                    except Exception:
+                        pass
 
     log_path = os.path.join(server_dir, "server.log")
     try:
@@ -1290,39 +1577,44 @@ def server_stats(key):
     except Exception:
         logs = ""
 
-    state = get_state(key)
+    state = _lookup_running_state(keys_to_check, bool(meta.get("banned", False)))
     if meta.get("banned", False):
         state = "Banned"
     elif running:
         state = "Running"
-        set_state(key, "Running")
+        set_state(full_key, "Running")
     elif state not in ("Installing", "Starting"):
         state = "Offline"
-        set_state(key, "Offline")
+        set_state(full_key, "Offline")
 
     return jsonify({"status": state, "cpu": cpu, "mem": mem, "logs": logs, "ip": get_ip()})
 
 
 def background_start(key: str, owner: str, folder: str, startup_file: str):
+    state_key = normalize_state_key(owner, folder)
     try:
-        set_state(key, "Installing")
-        log_append(key, "[SYSTEM] Preparing...\n")
+        set_state(state_key, "Installing")
+        log_append(state_key, "[SYSTEM] Preparing...\n")
         ensure_requirements_installed(owner, folder)
 
-        set_state(key, "Starting")
-        log_append(key, "[SYSTEM] Starting...\n")
+        set_state(state_key, "Starting")
+        log_append(state_key, "[SYSTEM] Starting...\n")
         proc, logf = start_with_autoinstall(owner, folder, startup_file)
         with lock:
-            running_procs[key] = (proc, logf)
+            running_procs[state_key] = (proc, logf)
 
         time.sleep(1.0)
         if proc.poll() is None:
-            set_state(key, "Running")
+            set_state(state_key, "Running")
         else:
-            set_state(key, "Offline")
+            set_state(state_key, "Offline")
+            try:
+                logf.flush()
+            except Exception:
+                pass
     except Exception as e:
-        log_append(key, f"[SYSTEM] Start failed: {e}\n")
-        set_state(key, "Offline")
+        log_append(state_key, f"[SYSTEM] Start failed: {e}\n")
+        set_state(state_key, "Offline")
 
 
 @app.route("/server/action/<path:key>/<act>", methods=["POST"])
@@ -1337,23 +1629,24 @@ def server_action(key, act):
         return jsonify({"success": False, "message": "Server not found"}), 404
 
     meta = read_meta(owner, folder)
+    state_key = normalize_state_key(owner, folder)
     if meta.get("banned", False):
-        set_state(key, "Banned")
+        set_state(state_key, "Banned")
         return jsonify({"success": False, "message": "Server is banned by admin"}), 403
 
     if act in ("stop", "restart"):
-        stop_proc(key)
-        set_state(key, "Offline")
+        stop_proc(key, owner, folder)
+        set_state(state_key, "Offline")
 
     if act == "stop":
         return jsonify({"success": True})
 
-    startup = meta.get("startup_file") or ""
+    startup = resolve_startup_file(owner, folder, meta.get("startup_file") or "")
     if not startup:
         return jsonify({"success": False, "message": "No main file set"}), 400
 
     open(os.path.join(server_dir, "server.log"), "w", encoding="utf-8").close()
-    t = threading.Thread(target=background_start, args=(key, owner, folder, startup), daemon=True)
+    t = threading.Thread(target=background_start, args=(state_key, owner, folder, startup), daemon=True)
     t.start()
     return jsonify({"success": True})
 
@@ -1370,7 +1663,9 @@ def set_startup(key):
         return jsonify({"success": False, "message": "Server not found"}), 404
 
     data = request.get_json(silent=True) or {}
-    f = (data.get("file") or "").strip()
+    f = (data.get("file") or "").strip().replace("\\", "/").lstrip("/")
+    if ".." in f.split("/"):
+        return jsonify({"success": False, "message": "Invalid startup file path"}), 400
     meta = read_meta(owner, folder)
     meta["startup_file"] = f
     write_meta(owner, folder, meta)
@@ -1435,6 +1730,8 @@ def file_save(key):
     data = request.get_json(silent=True) or {}
     file_rel = data.get("file", "") or ""
     content = data.get("content", "")
+    if not str(file_rel).strip():
+        return jsonify({"success": False, "message": "File path required"}), 400
     try:
         full = safe_join_server_path(key, file_rel)
     except Exception:
@@ -1501,6 +1798,9 @@ def file_delete(key):
         return jsonify({"success": False, "message": "Bad name"}), 400
     try:
         target = safe_join_server_path(key, os.path.join(rel, name))
+        owner, folder = parse_server_key(key, allow_admin=True)
+        if os.path.abspath(target) == os.path.abspath(get_server_dir(owner, folder)):
+            return jsonify({"success": False, "message": "Cannot delete server root"}), 400
         if kind == "dir":
             shutil.rmtree(target)
         else:
@@ -1536,7 +1836,9 @@ def file_upload(key):
     for i, f in enumerate(files):
         if not f or not f.filename:
             continue
-        filename = os.path.basename(f.filename)
+        filename = safe_name(os.path.basename(f.filename))
+        if not filename:
+            continue
         rp = (relpaths[i] or "").replace("\\", "/").lstrip("/") if (relpaths and i < len(relpaths)) else ""
         try:
             target_dir = safe_join_server_path(key, os.path.join(rel, os.path.dirname(rp))) if rp else base_dir
@@ -1568,7 +1870,7 @@ def api_bot_verify():
 @app.route("/api/bot/servers", methods=["GET"])
 def api_bot_servers():
     api_key = (request.args.get("api_key") or "").strip()
-    user_info = find_user_by_api_key(api_key)
+    user_info = resolve_user_for_api(api_key)
     if not user_info:
         return jsonify({"success": False, "message": "Invalid API Key"}), 401
 
@@ -1581,10 +1883,16 @@ def api_bot_servers():
     formatted = []
     for s in raw:
         key = s["key"]
-        srv_type = types_db["types"].get(key, "python")
+        owner = s["owner"]
+        folder = s["folder"]
+        srv_type = (
+            types_db.get("types", {}).get(key)
+            or types_db.get("types", {}).get(folder)
+            or detect_runtime_kind(owner, folder, s.get("startup_file", ""))
+        )
         formatted.append({
             "id": key,
-            "folder": s["folder"],
+            "folder": folder,
             "name": s["title"],
             "title": s["title"],
             "type": srv_type,
@@ -1598,7 +1906,7 @@ def api_bot_servers():
 def api_bot_create_server():
     data = request.get_json(silent=True) or {}
     api_key = (data.get("api_key") or "").strip()
-    user_info = find_user_by_api_key(api_key)
+    user_info = resolve_user_for_api(api_key)
     if not user_info:
         return jsonify({"success": False, "message": "Invalid API Key"}), 401
 
@@ -1611,6 +1919,8 @@ def api_bot_create_server():
     owner = user_info.get("username")
     ensure_user_dirs(owner)
     target = get_server_dir(owner, folder)
+    if not is_path_safe(USERS_ROOT, target):
+        return jsonify({"success": False, "message": "مسار السيرفر غير آمن"}), 400
     if os.path.exists(target):
         return jsonify({"success": False, "message": "السيرفر موجود مسبقاً"}), 409
 
@@ -1632,42 +1942,52 @@ def api_bot_create_server():
     })
 
     types_db = _read_json(SERVER_TYPES_DB, {"types": {}})
-    key = f"{owner}::{folder}" if user_info.get("is_admin") else folder
-    types_db["types"][key] = srv_type
+    full_key = normalize_state_key(owner, folder)
+    types_db.setdefault("types", {})[full_key] = srv_type
     _atomic_write_json(SERVER_TYPES_DB, types_db)
-    set_state(key, "Offline")
+    set_state(full_key, "Offline")
 
-    return jsonify({"success": True, "folder": key, "type": srv_type})
+    return jsonify({"success": True, "folder": full_key, "type": srv_type})
 
 
 @app.route("/api/bot/server/action", methods=["POST"])
 def api_bot_server_action():
     data = request.get_json(silent=True) or {}
     api_key = (data.get("api_key") or "").strip()
-    user_info = find_user_by_api_key(api_key)
+    user_info = resolve_user_for_api(api_key)
     if not user_info:
         return jsonify({"success": False, "message": "Invalid API Key"}), 401
 
     folder_or_key = (data.get("folder") or "").strip()
     action = (data.get("action") or "").strip()
 
-    if "::" in folder_or_key:
-        owner, folder = folder_or_key.split("::", 1)
-    else:
-        owner, folder = user_info.get("username"), folder_or_key
+    try:
+        owner, folder = parse_server_key(
+            folder_or_key,
+            allow_admin=True,
+            default_owner=user_info.get("username", ""),
+            force_admin=bool(user_info.get("is_admin")),
+        )
+    except Exception:
+        return jsonify({"success": False, "message": "معرّف السيرفر غير صالح"}), 400
 
     if not user_info.get("is_admin") and owner != user_info.get("username"):
         return jsonify({"success": False, "message": "Forbidden"}), 403
 
     server_dir = get_server_dir(owner, folder)
+    if not is_path_safe(USERS_ROOT, server_dir):
+        return jsonify({"success": False, "message": "Unsafe server path"}), 400
     if not os.path.isdir(server_dir):
         return jsonify({"success": False, "message": "السيرفر غير موجود"}), 404
 
-    state_key = f"{owner}::{folder}" if user_info.get("is_admin") else folder
+    state_key = normalize_state_key(owner, folder)
     meta = read_meta(owner, folder)
 
     if action == "delete":
-        stop_proc(state_key)
+        stop_proc(folder_or_key, owner, folder)
+        with lock:
+            for k in _candidate_keys(folder_or_key, owner, folder):
+                server_states.pop(k, None)
         shutil.rmtree(server_dir, ignore_errors=True)
         return jsonify({"success": True, "message": "تم حذف السيرفر بنجاح"})
 
@@ -1675,17 +1995,22 @@ def api_bot_server_action():
         return jsonify({"success": False, "message": "السيرفر محظور من الإدارة"}), 403
 
     if action in ("stop", "restart"):
-        stop_proc(state_key)
+        stop_proc(folder_or_key, owner, folder)
         set_state(state_key, "Offline")
         if action == "stop":
             return jsonify({"success": True, "message": "تم إيقاف السيرفر"})
 
-    startup = meta.get("startup_file") or "main.py"
-    sample_path = os.path.join(server_dir, startup)
-    if not os.path.exists(sample_path):
+    startup = resolve_startup_file(owner, folder, meta.get("startup_file") or "")
+    sample_path = os.path.abspath(os.path.join(server_dir, startup))
+    if is_path_safe(server_dir, sample_path) and not os.path.exists(sample_path):
+        os.makedirs(os.path.dirname(sample_path), exist_ok=True)
         with open(sample_path, "w", encoding="utf-8") as f:
-            f.write('import time\nprint("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 Server Running...")\ntime.sleep(2)\n')
+            if startup.endswith(".js"):
+                f.write('console.log("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 Node/JS Server Running...");\nsetInterval(() => {}, 60000);\n')
+            else:
+                f.write('import time\nprint("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 Server Running...")\ntime.sleep(2)\n')
 
+    open(os.path.join(server_dir, "server.log"), "w", encoding="utf-8").close()
     t = threading.Thread(target=background_start, args=(state_key, owner, folder, startup), daemon=True)
     t.start()
     return jsonify({"success": True, "message": "تم إرسال أمر التشغيل بنجاح"})
@@ -1694,11 +2019,21 @@ def api_bot_server_action():
 @app.route("/api/bot/console", methods=["GET"])
 def api_bot_console():
     api_key = (request.args.get("api_key") or "").strip()
-    user_info = find_user_by_api_key(api_key)
+    user_info = resolve_user_for_api(api_key)
     if not user_info:
         return jsonify({"success": False, "message": "Invalid API Key"}), 401
     folder_or_key = (request.args.get("folder") or "").strip()
-    owner, folder = folder_or_key.split("::", 1) if "::" in folder_or_key else (user_info.get("username"), folder_or_key)
+    try:
+        owner, folder = parse_server_key(
+            folder_or_key,
+            allow_admin=True,
+            default_owner=user_info.get("username", ""),
+            force_admin=bool(user_info.get("is_admin")),
+        )
+    except Exception:
+        return jsonify({"success": False, "message": "Invalid folder"}), 400
+    if not user_info.get("is_admin") and owner != user_info.get("username"):
+        return jsonify({"success": False, "message": "Forbidden"}), 403
     log_path = os.path.join(get_server_dir(owner, folder), "server.log")
     logs = open(log_path, "r", encoding="utf-8", errors="ignore").read() if os.path.exists(log_path) else "لا توجد سجلات"
     return jsonify({"success": True, "logs": logs})
@@ -1707,11 +2042,21 @@ def api_bot_console():
 @app.route("/api/bot/errors", methods=["GET"])
 def api_bot_errors():
     api_key = (request.args.get("api_key") or "").strip()
-    user_info = find_user_by_api_key(api_key)
+    user_info = resolve_user_for_api(api_key)
     if not user_info:
         return jsonify({"success": False, "message": "Invalid API Key"}), 401
     folder_or_key = (request.args.get("folder") or "").strip()
-    owner, folder = folder_or_key.split("::", 1) if "::" in folder_or_key else (user_info.get("username"), folder_or_key)
+    try:
+        owner, folder = parse_server_key(
+            folder_or_key,
+            allow_admin=True,
+            default_owner=user_info.get("username", ""),
+            force_admin=bool(user_info.get("is_admin")),
+        )
+    except Exception:
+        return jsonify({"success": False, "message": "Invalid folder"}), 400
+    if not user_info.get("is_admin") and owner != user_info.get("username"):
+        return jsonify({"success": False, "message": "Forbidden"}), 403
     log_path = os.path.join(get_server_dir(owner, folder), "server.log")
     content = open(log_path, "r", encoding="utf-8", errors="ignore").read() if os.path.exists(log_path) else ""
     err_lines = [ln for ln in content.splitlines() if any(w in ln.lower() for w in ("error", "traceback", "exception", "failed", "خطأ"))]
@@ -1722,13 +2067,23 @@ def api_bot_errors():
 def api_bot_install():
     data = request.get_json(silent=True) or {}
     api_key = (data.get("api_key") or "").strip()
-    user_info = find_user_by_api_key(api_key)
+    user_info = resolve_user_for_api(api_key)
     if not user_info:
         return jsonify({"success": False, "message": "Invalid API Key"}), 401
     folder_or_key = (data.get("folder") or "").strip()
-    owner, folder = folder_or_key.split("::", 1) if "::" in folder_or_key else (user_info.get("username"), folder_or_key)
+    try:
+        owner, folder = parse_server_key(
+            folder_or_key,
+            allow_admin=True,
+            default_owner=user_info.get("username", ""),
+            force_admin=bool(user_info.get("is_admin")),
+        )
+    except Exception:
+        return jsonify({"success": False, "message": "Invalid folder"}), 400
+    if not user_info.get("is_admin") and owner != user_info.get("username"):
+        return jsonify({"success": False, "message": "Forbidden"}), 403
     ok = ensure_requirements_installed(owner, folder)
-    return jsonify({"success": True, "message": "تم فحص/تثبيت requirements.txt" if ok else "لا يوجد ملف requirements.txt جديد أو تم التثبيت مسبقاً"})
+    return jsonify({"success": True, "message": "تم فحص/تثبيت الحزم بنجاح" if ok else "لا يوجد ملف حزم جديد أو تم التثبيت مسبقاً"})
 
 
 @app.route("/api/system/metrics", methods=["GET"])
@@ -1760,13 +2115,14 @@ def admin_server_ban():
     meta = read_meta(owner, folder)
     meta["banned"] = banned
     write_meta(owner, folder, meta)
+    state_key = normalize_state_key(owner, folder)
     if banned:
-        stop_proc(key)
-        set_state(key, "Banned")
-        log_append(key, "[ADMIN] Server banned.\n")
+        stop_proc(key, owner, folder)
+        set_state(state_key, "Banned")
+        log_append(state_key, "[ADMIN] Server banned.\n")
     else:
-        set_state(key, "Offline")
-        log_append(key, "[ADMIN] Server unbanned.\n")
+        set_state(state_key, "Offline")
+        log_append(state_key, "[ADMIN] Server unbanned.\n")
     return jsonify({"success": True})
 
 
@@ -1859,7 +2215,9 @@ def admin_delete_user():
     save_users(db)
 
     safe_u = re.sub(r"[^a-zA-Z0-9_.-]", "", target_user)
-    shutil.rmtree(os.path.join(USERS_ROOT, safe_u), ignore_errors=True)
+    user_dir = os.path.abspath(os.path.join(USERS_ROOT, safe_u))
+    if safe_u and is_path_safe(USERS_ROOT, user_dir) and user_dir != os.path.abspath(USERS_ROOT):
+        shutil.rmtree(user_dir, ignore_errors=True)
     return jsonify({"success": True})
 
 
@@ -1950,12 +2308,23 @@ def pop_nav_state(context: ContextTypes.DEFAULT_TYPE) -> str:
     return stack[-1] if stack else "main_menu"
 
 
+def _wallet_owner_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    uname = (context.user_data.get("username") or "").strip()
+    if uname:
+        return f"user:{uname}"
+    uid = update.effective_user.id if update.effective_user else 0
+    return str(uid)
+
+
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, edit=False):
     context.user_data["nav_stack"] = ["main_menu"]
     api_key = context.user_data.get("api_key")
     username = context.user_data.get("username", "")
     uid = update.effective_user.id if update.effective_user else 0
-    bal = get_balance(uid)
+    wkey = _wallet_owner_key(update, context)
+    bal = get_balance(wkey)
+    if bal == 0.0 and wkey != str(uid):
+        bal = get_balance(uid)
     is_adm = is_admin_tg(update)
 
     keyboard = []
@@ -2050,9 +2419,15 @@ async def show_wallet_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
 
     uid = update.effective_user.id if update.effective_user else 0
-    bal = get_balance(uid)
+    wkey = _wallet_owner_key(update, context)
+    bal = get_balance(wkey)
+    if bal == 0.0 and wkey != str(uid):
+        bal = get_balance(uid)
     orders_db = _read_json(ORDERS_DB, {"orders": []})
-    user_orders = [o for o in orders_db.get("orders", []) if str(o.get("user_key")) == str(uid)][-5:]
+    user_orders = [
+        o for o in orders_db.get("orders", [])
+        if str(o.get("user_key")) in (str(uid), wkey)
+    ][-5:]
 
     orders_txt = ""
     if user_orders:
@@ -2401,10 +2776,12 @@ async def receive_server_type(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def receive_service_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id if update.effective_user else 0
+    wkey = _wallet_owner_key(update, context)
+    active_wkey = wkey if get_balance(wkey) > 0 or get_balance(uid) == 0 else str(uid)
     svc_id = context.user_data.get("pending_service_id", "")
     details = (update.message.text or "").strip()
 
-    res = execute_paid_service_order(uid, svc_id, details)
+    res = execute_paid_service_order(active_wkey, svc_id, details)
     if res.get("success"):
         await update.message.reply_text(
             f"<b>✅ تم تأكيد الدفع وإتمام التسليم بنجاح!</b>\n"
@@ -2416,7 +2793,7 @@ async def receive_service_input(update: Update, context: ContextTypes.DEFAULT_TY
     else:
         await update.message.reply_text(
             f"<b>⚠️ لم يكتمل الطلب:</b>\n<i>{res.get('message')}</i>\n"
-            f"<b>الرصيد الحالي:</b> <code>{res.get('balance', get_balance(uid)):.2f} USD</code>",
+            f"<b>الرصيد الحالي:</b> <code>{res.get('balance', get_balance(active_wkey)):.2f} USD</code>",
             parse_mode=ParseMode.HTML,
         )
     await show_main_menu(update, context)
@@ -2425,11 +2802,13 @@ async def receive_service_input(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def receive_topup_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id if update.effective_user else 0
+    wkey = _wallet_owner_key(update, context)
     info_txt = (update.message.text or "").strip()
     topup_file = os.path.join(SERVICES_STORAGE_DIR, "topup_requests.json")
     db = _read_json(topup_file, {"requests": []})
-    db["requests"].append({
+    db.setdefault("requests", []).append({
         "user_id": uid,
+        "wallet_key": wkey,
         "info": info_txt,
         "status": "pending_payment_confirmation",
         "created_at": _utc_now_iso(),
