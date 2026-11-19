@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: mero-host-unified
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: RUN_BOT_ON_RENDER
+        value: "1"
+      - key: PANEL_SECRET_KEY
+        generateValue: true
+      - key: ADMIN_USER
+        value: hama
+      - key: ADMIN_PASS
+        value: "1211"
+      - key: BOT_TOKEN
+        sync: false
+      - key: API_BASE_URL
+        sync: false

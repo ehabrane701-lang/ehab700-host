@@ -1,0 +1,1510 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>𝗘𝗛𝗔𝗕𝗔𝗜𝗛𝗔𝗪𝗕𝗔𝗡𝗜 — لوحة التحكم والاستضافة</title>
+  <style>
+    :root{
+      --bg0:#05060a; --bg1:#070a12;
+      --glass:rgba(255,255,255,.06);
+      --border:rgba(255,255,255,.12);
+      --muted:rgba(255,255,255,.65);
+      --text:rgba(255,255,255,.92);
+      --accent:#00d4ff; --accent2:#7b61ff;
+      --danger:#ff4d4d; --ok:#33ff99; --warn:#ffd166;
+      --shadow:0 18px 60px rgba(0,0,0,.55);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{min-height:100%;margin:0}
+    body{
+      color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Naskh Arabic",Tahoma,sans-serif;
+      background:
+        radial-gradient(1200px 600px at 10% 10%, rgba(0,212,255,.24), transparent 60%),
+        radial-gradient(900px 500px at 90% 20%, rgba(123,97,255,.22), transparent 55%),
+        radial-gradient(800px 500px at 40% 90%, rgba(51,255,153,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+      overflow-x:hidden;
+    }
+    body:before{
+      content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");
+      opacity:.22;mix-blend-mode:overlay;
+    }
+
+    .topbar{
+      position:sticky;top:0;z-index:20;
+      backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+      background:rgba(0,0,0,.38);border-bottom:1px solid var(--border);
+    }
+    .topbar-inner{
+      max-width:1200px;margin:0 auto;padding:14px 18px;
+      display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+    }
+    .brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:.4px}
+    .brand .logo{
+      width:38px;height:38px;border-radius:12px;cursor:pointer;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(0,212,255,.9), transparent 60%),
+        radial-gradient(circle at 70% 70%, rgba(123,97,255,.7), transparent 55%),
+        rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow:0 10px 30px rgba(0,212,255,.15);
+      display:grid;place-items:center;
+    }
+    .brand .title{color:var(--accent);font-size:15px;line-height:1.1}
+    .brand .sub{display:block;font-weight:700;color:rgba(255,255,255,.6);font-size:11px;letter-spacing:.2px;margin-top:2px;direction:ltr;text-align:right}
+
+    .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .btn{
+      border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);
+      padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:800;font-size:12px;
+      transition:transform .12s ease,background .12s ease,border-color .12s ease;
+      backdrop-filter:blur(10px);text-decoration:none;display:inline-flex;align-items:center;gap:6px;
+    }
+    .btn:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.10)}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .btn-primary{
+      background:linear-gradient(135deg, rgba(0,212,255,.95), rgba(123,97,255,.85));
+      color:#00131c;border:0;box-shadow:0 14px 40px rgba(0,212,255,.18);
+    }
+    .btn-danger{
+      background:rgba(255,77,77,.14);border-color:rgba(255,77,77,.28);color:rgba(255,220,220,.95);
+    }
+    .btn-mini{padding:7px 10px;border-radius:10px;font-size:11px}
+
+    .auth-shell{
+      position:relative;z-index:2;min-height:calc(100vh - 70px);
+      display:grid;place-items:center;padding:24px 16px;
+    }
+    .auth-card{
+      width:min(450px,94vw);border:1px solid var(--border);
+      background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.04));
+      border-radius:18px;backdrop-filter:blur(16px);box-shadow:var(--shadow);padding:20px;
+    }
+    .auth-title{display:flex;align-items:center;gap:10px;font-weight:950;font-size:16px}
+    .sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.6}
+    input.field{
+      width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
+      background:rgba(0,0,0,.38);color:var(--text);outline:none;margin-top:10px;
+    }
+    input.field:focus{border-color:var(--accent)}
+    .row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center}
+    .row .btn{flex:1;justify-content:center}
+    .msg{margin-top:10px;color:var(--muted);font-size:12px;min-height:18px}
+
+    .container{position:relative;z-index:2;max-width:1200px;margin:20px auto 60px;padding:0 18px}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    @media (max-width:1050px){.grid{grid-template-columns:repeat(3,1fr)}}
+    @media (max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media (max-width:480px){.grid{grid-template-columns:1fr}}
+
+    .card{
+      border:1px solid var(--border);
+      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));
+      border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
+      backdrop-filter:blur(14px);cursor:pointer;
+      transition:transform .15s ease,border-color .15s ease;min-height:124px;
+    }
+    .card:hover{transform:translateY(-3px);border-color:rgba(0,212,255,.38)}
+    .srv-title{font-weight:950;font-size:14px;margin:0}
+    .srv-sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45}
+
+    .pill{
+      display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
+      border:1px solid var(--border);background:rgba(0,0,0,.22);
+      font-size:11px;font-weight:900;margin-top:10px;
+    }
+    .dot{width:8px;height:8px;border-radius:50%}
+    .pill.running .dot{background:var(--ok)}
+    .pill.installing .dot{background:var(--warn)}
+    .pill.banned .dot{background:var(--danger)}
+    .pill.offline .dot{background:rgba(255,255,255,.35)}
+
+    .header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:10px}
+    .hleft h1{margin:0;font-size:22px;font-weight:950}
+    .hleft .muted{margin-top:6px;color:var(--muted);font-size:12px}
+
+    .tabs{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .tab{
+      border:1px solid var(--border);background:rgba(255,255,255,.06);color:var(--text);
+      padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:900;font-size:12px;
+    }
+    .tab.active{
+      background:linear-gradient(135deg,rgba(0,212,255,.95),rgba(123,97,255,.85));
+      color:#00131c;border:0;box-shadow:0 14px 40px rgba(0,212,255,.18);
+    }
+
+    .panel{
+      margin-top:14px;border:1px solid var(--border);
+      background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));
+      border-radius:var(--radius);backdrop-filter:blur(14px);box-shadow:var(--shadow);overflow:hidden;
+    }
+    .grid-2{display:grid;grid-template-columns:1fr 340px;gap:14px;padding:14px}
+    @media (max-width:980px){.grid-2{grid-template-columns:1fr}}
+
+    .console{
+      background:rgba(0,0,0,.48);border:1px solid rgba(255,255,255,.10);border-radius:16px;
+      padding:14px;height:520px;overflow:auto;direction:ltr;text-align:left;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+      font-size:13px;line-height:1.45;white-space:pre-wrap;color:rgba(235,245,255,.88);
+    }
+    .side{display:flex;flex-direction:column;gap:10px}
+    .btn-block{
+      width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);color:var(--text);font-weight:950;cursor:pointer;transition:.12s ease;
+    }
+    .btn-block:hover:not(:disabled){transform:translateY(-1px);background:rgba(255,255,255,.10)}
+    .btn-block:disabled{opacity:.45;cursor:not-allowed}
+    .btn-block.primary{background:linear-gradient(135deg,rgba(0,212,255,.95),rgba(123,97,255,.85));color:#00131c;border:0}
+    .btn-block.danger{background:rgba(255,77,77,.14);border-color:rgba(255,77,77,.28);color:rgba(255,220,220,.95)}
+
+    .stat{
+      border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.25);border-radius:16px;
+      padding:12px;display:flex;gap:10px;align-items:center;
+    }
+    .stat .ico{
+      width:36px;height:36px;border-radius:14px;display:grid;place-items:center;
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
+    }
+    .stat small{display:block;color:var(--muted);font-weight:800}
+    .stat b{display:block;margin-top:4px;font-size:13px}
+    #mainFileTxt{color:var(--accent);cursor:pointer}
+
+    .fm-top{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;
+      padding:14px;border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .path{color:var(--muted);font-size:12px;margin-top:6px;direction:ltr;text-align:left}
+    .crumb a{color:var(--accent);text-decoration:none;font-weight:900}
+    .crumb .sep{color:rgba(255,255,255,.35);padding:0 6px}
+
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:12px 10px;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px;text-align:right}
+    .table th{color:rgba(255,255,255,.78);font-weight:950;font-size:11px}
+    .name-link{color:var(--accent);font-weight:900;cursor:pointer}
+    .row-actions{white-space:nowrap}
+    .row-actions button{margin-left:6px;margin-top:4px}
+
+    .k{color:var(--muted);font-size:12px}
+    .v{font-size:20px;font-weight:950;margin-top:6px}
+    h2{margin:22px 0 10px}
+    .tag{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.10);font-weight:900;font-size:11px}
+    .tag.ok{color:var(--ok)} .tag.bad{color:var(--danger)} .tag.mid{color:var(--warn)}
+
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;
+      align-items:center;justify-content:center;z-index:50;padding:18px;
+    }
+    .modal{
+      width:100%;max-width:430px;
+      background:linear-gradient(180deg,rgba(20,25,40,.95),rgba(10,13,22,.96));
+      border:1px solid rgba(255,255,255,.16);border-radius:18px;box-shadow:var(--shadow);
+      backdrop-filter:blur(16px);padding:18px;
+    }
+    .modal h3{margin:0 0 10px 0}
+    .modal input{
+      width:100%;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
+      background:rgba(0,0,0,.42);color:var(--text);outline:none;
+    }
+
+    #editor-modal{
+      display:none;position:fixed;inset:0;background:rgba(0,0,0,.84);z-index:60;padding:18px;
+    }
+    .editor{
+      height:100%;max-width:1200px;margin:0 auto;border-radius:18px;
+      border:1px solid rgba(255,255,255,.14);background:rgba(10,14,22,.92);
+      backdrop-filter:blur(16px);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;
+    }
+    .editor-top{
+      padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.10);
+      display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    }
+    .editor-top .fn{font-weight:950;color:var(--accent);word-break:break-all;direction:ltr}
+    #ed-area{
+      flex:1;background:transparent;color:rgba(235,245,255,.92);border:0;outline:none;direction:ltr;text-align:left;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+      font-size:13px;padding:14px;resize:none;line-height:1.5;
+    }
+
+    .toast-wrap{
+      position:fixed;bottom:18px;left:18px;z-index:90;display:flex;flex-direction:column;gap:8px;max-width:340px;
+    }
+    .toast{
+      padding:11px 14px;border-radius:12px;border:1px solid var(--border);
+      background:rgba(10,15,28,.94);color:var(--text);font-size:12px;font-weight:800;box-shadow:var(--shadow);
+    }
+    .toast.ok{border-color:rgba(51,255,153,.4);color:var(--ok)}
+    .toast.err{border-color:rgba(255,77,77,.45);color:#ff9b9b}
+  </style>
+</head>
+<body>
+
+  <!-- الشريط العلوي (TOPBAR) -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="logo" role="button" tabindex="0" title="الرئيسية"
+             onclick="navigate('/')"
+             onkeypress="if(event.key==='Enter') navigate('/')">🏠</div>
+        <div>
+          <div class="title">HAMA PANEL · 𝗘𝗛𝗔𝗕𝗔𝗜𝗛𝗔𝗪𝗕𝗔𝗡𝗜</div>
+          <span class="sub" id="pyHostTxt">Python Host: loading...</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a class="btn" href="https://t.me/hama_DEV" target="_blank" rel="noopener noreferrer">📩 تواصل @hama_DEV</a>
+        <button id="loginNavBtn" class="btn" style="display:none" onclick="navigate('/login')">تسجيل الدخول</button>
+        <button id="createNavBtn" class="btn" style="display:none" onclick="navigate('/create')">إنشاء حساب</button>
+        <button id="adminBtn" class="btn" style="display:none" onclick="navigate('/admin')">لوحة الأدمن</button>
+        <button id="homeBtn" class="btn" style="display:none" onclick="goHome()">الرئيسية</button>
+        <button id="newBtn" class="btn btn-primary" style="display:none">+ سيرفر جديد</button>
+        <button id="logoutBtn" class="btn btn-danger" style="display:none" onclick="doLogout()">خروج</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ١. صفحة تسجيل الدخول (/login) -->
+  <div class="auth-shell" id="loginView" style="display:none">
+    <div class="auth-card">
+      <div class="auth-title"><div class="logo" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center">🏠</div> تسجيل الدخول — HOST HAMA PANEL</div>
+      <div class="sub">سجّل الدخول إلى حسابك (حساب الأدمن الافتراضي: <code>admin</code> / <code>admin123</code>)</div>
+
+      <input id="login_u" class="field" placeholder="اسم المستخدم" autocomplete="username">
+      <input id="login_p" class="field" placeholder="كلمة المرور" type="password" autocomplete="current-password">
+
+      <div class="row">
+        <button class="btn btn-primary" onclick="doLogin()">دخول</button>
+        <button class="btn" onclick="navigate('/create')">إنشاء حساب</button>
+      </div>
+
+      <div class="msg" id="login_m"></div>
+      <div class="sub">استخدم بيانات حسابك للدخول. صلاحيات الأدمن مقتصرة على المشرفين · تواصل: <a href="https://t.me/hama_DEV" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@hama_DEV</a></div>
+    </div>
+  </div>
+
+  <!-- ٢. صفحة إنشاء حساب (/create) -->
+  <div class="auth-shell" id="createView" style="display:none">
+    <div class="auth-card">
+      <div class="auth-title"><div class="logo" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center">✨</div> إنشاء حساب جديد</div>
+      <div class="sub">المستخدم العادي يحصل على سيرفر مجاني واحد (المميز = 16 سيرفر). لزيادة الحد تواصل على تيليجرام <a href="https://t.me/hama_DEV" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@hama_DEV</a></div>
+
+      <input id="cr_u" class="field" placeholder="اسم المستخدم (أحرف / أرقام / _ / .)">
+      <input id="cr_e" class="field" placeholder="البريد الإلكتروني">
+      <input id="cr_p" class="field" placeholder="كلمة المرور (6 أحرف فأكثر)" type="password">
+      <input id="cr_p2" class="field" placeholder="تأكيد كلمة المرور" type="password">
+
+      <div class="row">
+        <button class="btn btn-primary" onclick="doCreate()">إنشاء الحساب</button>
+        <button class="btn" onclick="navigate('/login')">العودة للدخول</button>
+      </div>
+
+      <div class="msg" id="cr_m"></div>
+    </div>
+  </div>
+
+  <!-- ٣ أ. الرئيسية (/) -->
+  <div class="container" id="homeView" style="display:none">
+    <div class="grid" id="cardsContainer"></div>
+  </div>
+
+  <!-- ٣ ب. الكونسول وإدارة الملفات -->
+  <div class="container" id="serverView" style="display:none">
+    <div class="header-row">
+      <div class="hleft">
+        <h1 id="srvHeader">السيرفر</h1>
+        <div class="muted" id="srvSub">إدارة السيرفر والملفات</div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" id="tabConsole" onclick="switchTab('console')">الكونسول</button>
+        <button class="tab" id="tabFiles" onclick="switchTab('files')">مدير الملفات</button>
+      </div>
+    </div>
+
+    <!-- الكونسول -->
+    <div class="panel" id="viewConsole">
+      <div class="grid-2">
+        <div class="console" id="logOut">Initializing...</div>
+        <div class="side">
+          <button id="btnStart" class="btn-block primary" onclick="srvAction('start')">تشغيل (START)</button>
+          <button class="btn-block" onclick="srvAction('restart')">إعادة تشغيل (RESTART)</button>
+          <button class="btn-block danger" onclick="srvAction('stop')">إيقاف (STOP)</button>
+
+          <div class="stat"><div class="ico">⚡</div><div><small>الحالة</small><b id="statusTxt">Offline</b></div></div>
+          <div class="stat"><div class="ico">🧠</div><div><small>الذاكرة RAM</small><b id="memTxt">0 MB</b></div></div>
+          <div class="stat"><div class="ico">💿</div><div><small>ملف التشغيل الرئيسي</small><b id="mainFileTxt" onclick="changeStartup()">اضغط للتحديد</b></div></div>
+          <div class="stat"><div class="ico">📡</div><div><small>العنوان IP</small><b id="ipTxt">0.0.0.0</b></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- مدير الملفات -->
+    <div class="panel" id="viewFiles" style="display:none">
+      <div class="fm-top">
+        <div>
+          <div style="font-weight:950;font-size:16px">مدير الملفات</div>
+          <div class="path" id="pathBar"></div>
+        </div>
+        <div class="actions">
+          <button id="btnBack" class="btn btn-mini" onclick="goUp()" style="display:none">⬅ رجوع</button>
+          <button class="btn btn-mini" onclick="newFolder()">📁 إنشاء مجلد</button>
+          <button class="btn btn-mini btn-primary" onclick="document.getElementById('uplFiles').click()">رفع ملفات</button>
+          <button class="btn btn-mini" onclick="document.getElementById('uplFolder').click()">رفع مجلد</button>
+        </div>
+      </div>
+
+      <input type="file" id="uplFiles" multiple hidden onchange="doUploadFiles(this)">
+      <input type="file" id="uplFolder" webkitdirectory directory multiple hidden onchange="doUploadFolder(this)">
+
+      <table class="table">
+        <thead><tr><th>الاسم</th><th>الحجم</th><th>الإجراءات</th></tr></thead>
+        <tbody id="fileList"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ٤. لوحة الأدمن (/admin) -->
+  <div class="container" id="adminView" style="display:none">
+    <div class="grid">
+      <div class="card" style="cursor:default"><div class="k">إجمالي السيرفرات</div><div class="v" id="st_total">0</div></div>
+      <div class="card" style="cursor:default"><div class="k">قيد التشغيل</div><div class="v" id="st_run">0</div></div>
+      <div class="card" style="cursor:default"><div class="k">جاري التثبيت / البدء</div><div class="v" id="st_ins">0</div></div>
+      <div class="card" style="cursor:default"><div class="k">السيرفرات المحظورة</div><div class="v" id="st_ban">0</div></div>
+    </div>
+
+    <div class="grid" style="margin-top:12px">
+      <div class="card" style="cursor:default"><div class="k">إجمالي المستخدمين</div><div class="v" id="u_total">0</div></div>
+      <div class="card" style="cursor:default"><div class="k">المستخدمون النشطون</div><div class="v" id="u_active">0</div></div>
+      <div class="card" style="cursor:default"><div class="k">المستخدمون المميزون</div><div class="v" id="u_premium">0</div></div>
+      <div class="card" style="cursor:default"><div class="k">قواعد الحدود</div><div class="v" style="font-size:13px">عادي = سيرفر 1<br>مميز = 16 سيرفر</div></div>
+    </div>
+
+    <div class="row">
+      <button class="btn btn-primary" onclick="refreshAll()">تحديث البيانات</button>
+      <span class="msg" id="admin_msg"></span>
+    </div>
+
+    <h2>السيرفرات</h2>
+    <div class="panel">
+      <table class="table">
+        <thead><tr><th>المجلد</th><th>الاسم</th><th>المالك</th><th>الملف الرئيسي</th><th>الحالة</th><th>حظر</th></tr></thead>
+        <tbody id="serversT"></tbody>
+      </table>
+    </div>
+
+    <h2 style="margin-top:26px">المستخدمون</h2>
+    <div class="row"><input id="searchUser" class="field" style="max-width:280px;margin-top:0" placeholder="بحث باسم المستخدم..." oninput="filterUsers()"></div>
+    <div class="panel">
+      <table class="table">
+        <thead><tr><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>السيرفرات</th><th>الحالة</th><th>الباقة</th><th>الإجراءات</th></tr></thead>
+        <tbody id="usersT"></tbody>
+      </table>
+    </div>
+
+    <div class="msg">يمكن للأدمن حظر/فك حظر المستخدمين والسيرفرات وتفعيل الباقة المميزة · تواصل: <a href="https://t.me/hama_DEV" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@hama_DEV</a></div>
+  </div>
+
+  <!-- نافذة محرر الملفات -->
+  <div id="editor-modal">
+    <div class="editor">
+      <div class="editor-top">
+        <div class="fn" id="ed-title">file</div>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="saveFile()">حفظ</button>
+          <button class="btn btn-danger" onclick="closeEditor()">إغلاق</button>
+        </div>
+      </div>
+      <textarea id="ed-area" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <!-- نافذة الإدخال -->
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <h3 id="mTitle">العنوان</h3>
+      <input id="mIn" />
+      <div class="actions" style="justify-content:flex-start;margin-top:12px">
+        <button class="btn" onclick="closeM()">إلغاء</button>
+        <button id="mConfirm" class="btn btn-primary">تأكيد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة التأكيد -->
+  <div id="confirmBackdrop" class="modal-backdrop" style="z-index:70">
+    <div class="modal">
+      <h3 id="cTitle">تأكيد العملية</h3>
+      <p class="sub" id="cText"></p>
+      <div class="actions" style="justify-content:flex-start;margin-top:14px">
+        <button class="btn" onclick="closeConfirm(false)">إلغاء</button>
+        <button id="cOk" class="btn btn-danger" onclick="closeConfirm(true)">تأكيد</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* =========================================================================
+   1. HYBRID API ENGINE (Live Backend First + LocalStorage Fallback)
+   ========================================================================= */
+const DB_KEY = 'HAMA_PANEL_DB_V1';
+const SESSION_KEY = 'HAMA_PANEL_SESSION_V1';
+
+function defaultDb(){
+  return {
+    users: [
+      { username: 'admin', email: 'admin@hama.local', passwordHash: btoa('admin123'), active: true, premium: true, is_admin: true },
+      { username: 'user1', email: 'user1@hama.local', passwordHash: btoa('123456'), active: true, premium: false, is_admin: false }
+    ],
+    servers: [
+      {
+        key: 'admin::bot_alpha',
+        folder: 'bot_alpha',
+        display_name: 'Telegram Bot Alpha',
+        title: 'Telegram Bot Alpha',
+        subtitle: 'Python 3.11 · Worker',
+        owner: 'admin',
+        startup_file: 'bot.py',
+        status: 'Offline',
+        banned: false,
+        mem: '0 MB',
+        ip: '127.0.0.1',
+        logs: '[HAMA PANEL] Ready. Click START to run bot.py\n',
+        files: {
+          'bot.py': 'import time\nprint("Bot Alpha started...")\n',
+          'requirements.txt': 'requests\n',
+          'config/settings.json': '{\n  "debug": false,\n  "timeout": 30\n}\n'
+        }
+      },
+      {
+        key: 'user1::api_worker',
+        folder: 'api_worker',
+        display_name: 'API Worker 01',
+        title: 'API Worker 01',
+        subtitle: 'Free Tier · 1 Server Slot',
+        owner: 'user1',
+        startup_file: 'main.py',
+        status: 'Offline',
+        banned: false,
+        mem: '0 MB',
+        ip: '127.0.0.1',
+        logs: '[HAMA PANEL] Worker initialized.\n',
+        files: {
+          'main.py': 'print("Hello from API Worker 01")\n',
+          'README.md': '# API Worker\nManaged via HAMA PANEL.\n'
+        }
+      }
+    ]
+  };
+}
+
+function loadDb(){
+  try{
+    const raw = localStorage.getItem(DB_KEY);
+    if(!raw){ const d = defaultDb(); saveDb(d); return d; }
+    return JSON.parse(raw);
+  }catch{
+    return defaultDb();
+  }
+}
+function saveDb(db){ localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+function getSession(){
+  try{ return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }
+  catch{ return null; }
+}
+function setSession(s){
+  if(s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  else localStorage.removeItem(SESSION_KEY);
+}
+
+function jsonRes(obj, status=200){
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
+function splitFileMap(filesObj, dirPath){
+  const prefix = dirPath ? dirPath.replace(/^\/+|\/+$/g,'') + '/' : '';
+  const dirsMap = new Map();
+  const files = [];
+  for(const [fullPath, content] of Object.entries(filesObj || {})){
+    if(prefix && !fullPath.startsWith(prefix)) continue;
+    const rest = fullPath.slice(prefix.length);
+    if(!rest) continue;
+    const parts = rest.split('/');
+    if(parts.length > 1){
+      const dName = parts[0];
+      if(!dirsMap.has(dName)) dirsMap.set(dName, { name: dName });
+    }else{
+      const bytes = new Blob([content || '']).size;
+      files.push({ name: parts[0], size: bytes < 1024 ? bytes + ' B' : (bytes/1024).toFixed(1) + ' KB' });
+    }
+  }
+  return { dirs: Array.from(dirsMap.values()), files };
+}
+
+const nativeFetch = window.fetch.bind(window);
+async function localFallbackFetch(input, init={}){
+  const urlStr = typeof input === 'string' ? input : input.url;
+  const parsed = new URL(urlStr, location.origin);
+  const path = parsed.pathname;
+  const method = (init.method || 'GET').toUpperCase();
+  const db = loadDb();
+  const sess = getSession();
+
+  if(path === '/api/auth/login' && method === 'POST'){
+    const body = JSON.parse(init.body || '{}');
+    const u = (body.username || '').trim();
+    const p = body.password || '';
+    const user = db.users.find(x => x.username === u && x.passwordHash === btoa(p));
+    if(!user) return jsonRes({ success:false, message:'اسم المستخدم أو كلمة المرور غير صحيحة' }, 401);
+    if(!user.active) return jsonRes({ success:false, message:'الحساب محظور' }, 403);
+    setSession({ username: user.username, is_admin: !!user.is_admin });
+    return jsonRes({ success:true, is_admin: !!user.is_admin, username: user.username });
+  }
+
+  if(path === '/api/auth/create' && method === 'POST'){
+    const body = JSON.parse(init.body || '{}');
+    const u = (body.username || '').trim();
+    const e = (body.email || '').trim();
+    const p = body.password || '';
+    const p2 = body.password2 || '';
+    if(!/^[A-Za-z0-9_.]{3,24}$/.test(u)) return jsonRes({ success:false, message:'اسم المستخدم يجب أن يكون بين 3 و24 حرفاً (أحرف/أرقام/_/.).' }, 400);
+    if(!e.includes('@')) return jsonRes({ success:false, message:'أدخل بريداً إلكترونياً صحيحاً.' }, 400);
+    if(p.length < 6) return jsonRes({ success:false, message:'كلمة المرور يجب أن تكون 6 أحرف على الأقل.' }, 400);
+    if(p !== p2) return jsonRes({ success:false, message:'كلمتا المرور غير متطابقتين.' }, 400);
+    if(db.users.some(x => x.username.toLowerCase() === u.toLowerCase())) return jsonRes({ success:false, message:'اسم المستخدم مستخدم مسبقاً.' }, 409);
+    db.users.push({ username: u, email: e, passwordHash: btoa(p), active: true, premium: false, is_admin: false });
+    saveDb(db);
+    return jsonRes({ success:true, message:'تم إنشاء الحساب' });
+  }
+
+  if(!sess){
+    return jsonRes({ success:false, message:'غير مسجل الدخول' }, 401);
+  }
+
+  const currentUser = db.users.find(x => x.username === sess.username) || { username: sess.username, is_admin: false, premium: false };
+
+  if(path === '/servers' && method === 'GET'){
+    const list = currentUser.is_admin
+      ? db.servers
+      : db.servers.filter(s => s.owner === currentUser.username);
+    return jsonRes({
+      success: true,
+      is_admin: !!currentUser.is_admin,
+      servers: list.map(s => ({
+        key: s.key,
+        folder: s.folder,
+        title: s.display_name || s.folder,
+        subtitle: s.subtitle || `Owner: ${s.owner}`,
+        status: s.banned ? 'Banned' : s.status,
+        startup_file: s.startup_file
+      }))
+    });
+  }
+
+  if(path === '/add' && method === 'POST'){
+    const body = JSON.parse(init.body || '{}');
+    const rawName = (body.name || '').trim();
+    if(!rawName) return jsonRes({ success:false, message:'اسم السيرفر مطلوب.' }, 400);
+    const folder = rawName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || 'server_' + Date.now();
+    const ownedCount = db.servers.filter(s => s.owner === currentUser.username).length;
+    const limit = currentUser.premium || currentUser.is_admin ? 16 : 1;
+    if(!currentUser.is_admin && ownedCount >= limit){
+      return jsonRes({ success:false, message:`تم الوصول للحد الأقصى (${limit} سيرفر للمستخدم العادي).` }, 403);
+    }
+    const key = `${currentUser.username}::${folder}`;
+    if(db.servers.some(s => s.key === key)) return jsonRes({ success:false, message:'السيرفر موجود مسبقاً.' }, 409);
+    db.servers.push({
+      key, folder, display_name: rawName, title: rawName,
+      subtitle: `${currentUser.premium ? 'Premium' : 'Standard'} · ${folder}`,
+      owner: currentUser.username, startup_file: 'main.py',
+      status: 'Offline', banned: false, mem: '0 MB', ip: '127.0.0.1',
+      logs: `[HAMA PANEL] Created server "${rawName}" (${folder})\n`,
+      files: { 'main.py': `print("Running ${rawName}")\n` }
+    });
+    saveDb(db);
+    return jsonRes({ success:true, key });
+  }
+
+  const mStats = path.match(/^\/server\/stats\/(.+)$/);
+  if(mStats && method === 'GET'){
+    const key = decodeURIComponent(mStats[1]);
+    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    if(!srv) return jsonRes({ success:false, message:'السيرفر غير موجود' }, 404);
+    if(srv.banned){ srv.status = 'Banned'; srv.mem = '0 MB'; }
+    else if(srv.status === 'Running'){
+      const randMem = Math.floor(28 + Math.random() * 45);
+      srv.mem = `${randMem} MB`;
+      srv.logs += `[${new Date().toLocaleTimeString()}] [${srv.startup_file}] heartbeat OK (${srv.mem})\n`;
+    }
+    saveDb(db);
+    return jsonRes({
+      success: true,
+      logs: srv.logs,
+      status: srv.banned ? 'Banned' : srv.status,
+      mem: srv.mem || '0 MB',
+      ip: srv.ip || '127.0.0.1'
+    });
+  }
+
+  const mAct = path.match(/^\/server\/action\/([^/]+)\/(start|restart|stop)$/);
+  if(mAct && method === 'POST'){
+    const key = decodeURIComponent(mAct[1]);
+    const act = mAct[2];
+    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    if(!srv) return jsonRes({ success:false, message:'السيرفر غير موجود' }, 404);
+    if(srv.banned) return jsonRes({ success:false, message:'السيرفر محظور' }, 403);
+    if(act === 'start' || act === 'restart'){
+      srv.status = 'Running';
+      srv.mem = '34 MB';
+      srv.logs += `\n[${new Date().toLocaleTimeString()}] >>> ${act.toUpperCase()} ${srv.startup_file || 'main.py'}\n`;
+    }else if(act === 'stop'){
+      srv.status = 'Offline';
+      srv.mem = '0 MB';
+      srv.logs += `\n[${new Date().toLocaleTimeString()}] <<< STOPPED\n`;
+    }
+    saveDb(db);
+    return jsonRes({ success:true, status: srv.status });
+  }
+
+  const mStartup = path.match(/^\/server\/set-startup\/(.+)$/);
+  if(mStartup && method === 'POST'){
+    const key = decodeURIComponent(mStartup[1]);
+    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    if(!srv) return jsonRes({ success:false, message:'السيرفر غير موجود' }, 404);
+    const body = JSON.parse(init.body || '{}');
+    srv.startup_file = (body.file || '').trim() || 'main.py';
+    saveDb(db);
+    return jsonRes({ success:true, startup_file: srv.startup_file });
+  }
+
+  const mFilesList = path.match(/^\/files\/list\/(.+)$/);
+  if(mFilesList && method === 'GET'){
+    const key = decodeURIComponent(mFilesList[1]);
+    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    if(!srv) return jsonRes({ success:false, message:'السيرفر غير موجود' }, 404);
+    const relPath = (parsed.searchParams.get('path') || '').replace(/^\/+|\/+$/g, '');
+    const listed = splitFileMap(srv.files, relPath);
+    return jsonRes({ success:true, path: relPath, dirs: listed.dirs, files: listed.files });
+  }
+
+  const mMkdir = path.match(/^\/files\/mkdir\/(.+)$/);
+  if(mMkdir && method === 'POST'){
+    const key = decodeURIComponent(mMkdir[1]);
+    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    if(!srv) return jsonRes({ success:false }, 404);
+    const body = JSON.parse(init.body || '{}');
+    const base = (body.path || '').replace(/^\/+|\/+$/g, '');
+    const name = (body.name || '').trim().replace(/^\/+|\/+$/g, '');
+    if(!name) return jsonRes({ success:false, message:'اسم المجلد مطلوب' }, 400);
+    const keepKey = `${base ? base + '/' : ''}${name}/.gitkeep`;
+    srv.files[keepKey] = '';
+    saveDb(db);
+    return jsonRes({ success:true });
+  }
+
+  const mRename = path.match(/^\/files\/rename\/(.+)$/);
+  if(mRename && method === 'POST'){
+    const key = decodeURIComponent(mRename[1]);
+    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    if(!srv) return jsonRes({ success:false }, 404);
+    const body = JSON.parse(init.body || '{}');
+    const base = (body.path || '').replace(/^\/+|\/+$/g, '');
+    const oldName = (body.old || '').trim();
+    const newName = (body.new || '').trim();
+    if(!oldName || !newName || oldName === newName) return jsonRes({ success:true });
+    const oldPrefix = `${base ? base + '/' : ''}${oldName}`;
+    const newPrefix = `${base ? base + '/' : ''}${newName}`;
+    const updated = {};
+    for(const [k, v] of Object.entries(srv.files)){
+      if(k === oldPrefix) updated[newPrefix] = v;
+      else if(k.startsWith(oldPrefix + '/')) updated[newPrefix + k.slice(oldPrefix.length)] = v;
+      else updated[k] = v;
+    }
+    srv.files = updated;
+    saveDb(db);
+    return jsonRes({ success:true });
+  }
+
+  const mDelete = path.match(/^\/files\/delete\/(.+)$/);
+  if(mDelete && method === 'POST'){
+    const key = decodeURIComponent(mDelete[1]);
+    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    if(!srv) return jsonRes({ success:false }, 404);
+    const body = JSON.parse(init.body || '{}');
+    const base = (body.path || '').replace(/^\/+|\/+$/g, '');
+    const name = (body.name || '').trim();
+    const target = `${base ? base + '/' : ''}${name}`;
+    for(const k of Object.keys(srv.files)){
+      if(k === target || k.startsWith(target + '/')) delete srv.files[k];
+    }
+    saveDb(db);
+    return jsonRes({ success:true });
+  }
+
+  const mUpload = path.match(/^\/files\/upload\/(.+)$/);
+  if(mUpload && method === 'POST'){
+    const key = decodeURIComponent(mUpload[1]);
+    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    if(!srv) return jsonRes({ success:false }, 404);
+    const base = (parsed.searchParams.get('path') || '').replace(/^\/+|\/+$/g, '');
+    const fd = init.body;
+    const files = fd.getAll('files');
+    const rels = fd.getAll('relpaths');
+    for(let i = 0; i < files.length; i++){
+      const f = files[i];
+      const rel = (rels[i] || f.name).replace(/^\/+/, '');
+      const full = `${base ? base + '/' : ''}${rel}`;
+      srv.files[full] = await f.text();
+    }
+    saveDb(db);
+    return jsonRes({ success:true });
+  }
+
+  const mContent = path.match(/^\/files\/content\/(.+)$/);
+  if(mContent && method === 'GET'){
+    const key = decodeURIComponent(mContent[1]);
+    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    if(!srv) return jsonRes({ success:false, content:'' }, 404);
+    const file = (parsed.searchParams.get('file') || '').replace(/^\/+/, '');
+    return jsonRes({ success:true, content: srv.files[file] ?? '' });
+  }
+
+  const mSave = path.match(/^\/files\/save\/(.+)$/);
+  if(mSave && method === 'POST'){
+    const key = decodeURIComponent(mSave[1]);
+    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    if(!srv) return jsonRes({ success:false }, 404);
+    const body = JSON.parse(init.body || '{}');
+    const file = (body.file || '').replace(/^\/+/, '');
+    srv.files[file] = body.content ?? '';
+    saveDb(db);
+    return jsonRes({ success:true });
+  }
+
+  if(!currentUser.is_admin && path.startsWith('/api/admin')){
+    return jsonRes({ success:false, message:'Forbidden' }, 403);
+  }
+
+  if(path === '/api/admin/quickstats' && method === 'GET'){
+    return jsonRes({
+      success: true,
+      stats: {
+        servers_total: db.servers.length,
+        servers_running: db.servers.filter(s => !s.banned && s.status === 'Running').length,
+        servers_installing: db.servers.filter(s => !s.banned && (s.status === 'Installing' || s.status === 'Starting')).length,
+        servers_banned: db.servers.filter(s => s.banned).length,
+        users_total: db.users.length,
+        users_active: db.users.filter(u => u.active).length,
+        users_premium: db.users.filter(u => u.premium).length
+      }
+    });
+  }
+
+  if(path === '/api/admin/servers' && method === 'GET'){
+    return jsonRes({
+      success: true,
+      servers: db.servers.map(s => ({
+        key: s.key,
+        folder: s.folder,
+        display_name: s.display_name || s.folder,
+        owner: s.owner,
+        startup_file: s.startup_file,
+        status: s.banned ? 'Banned' : s.status,
+        banned: !!s.banned
+      }))
+    });
+  }
+
+  if(path === '/api/admin/server/ban' && method === 'POST'){
+    const body = JSON.parse(init.body || '{}');
+    const srv = db.servers.find(s => s.folder === body.folder || s.key === body.folder || s.key === body.key);
+    if(!srv) return jsonRes({ success:false }, 404);
+    srv.banned = !!body.banned;
+    if(srv.banned){ srv.status = 'Banned'; srv.mem = '0 MB'; }
+    else if(srv.status === 'Banned'){ srv.status = 'Offline'; }
+    saveDb(db);
+    return jsonRes({ success:true });
+  }
+
+  if(path === '/api/admin/users' && method === 'GET'){
+    return jsonRes({
+      success: true,
+      users: db.users.map(u => ({
+        username: u.username,
+        email: u.email,
+        servers: db.servers.filter(s => s.owner === u.username).length,
+        active: !!u.active,
+        premium: !!u.premium
+      }))
+    });
+  }
+
+  if(path === '/api/admin/user/update' && method === 'POST'){
+    const body = JSON.parse(init.body || '{}');
+    const u = db.users.find(x => x.username === body.username);
+    if(!u) return jsonRes({ success:false }, 404);
+    if(typeof body.active === 'boolean') u.active = body.active;
+    if(typeof body.premium === 'boolean') u.premium = body.premium;
+    saveDb(db);
+    return jsonRes({ success:true });
+  }
+
+  return jsonRes({ success:false, message:'Not found' }, 404);
+}
+
+window.fetch = async (input, init={}) => {
+  try{
+    const res = await nativeFetch(input, init);
+    if(res.status >= 500){
+      return await localFallbackFetch(input, init);
+    }
+    return res;
+  }catch(_err){
+    return await localFallbackFetch(input, init);
+  }
+};
+
+/* =========================================================================
+   2. ROUTER & VIEW CONTROLLER (/login, /create, /, /admin, /logout)
+   ========================================================================= */
+let currentSrv = null, poll = null, currentFile = null, currentPath = '';
+let confirmResolver = null;
+
+function stopPoll(){
+  if(poll){ clearInterval(poll); poll = null; }
+}
+
+function toast(msg, type='info'){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type === 'ok' ? 'ok' : type === 'err' ? 'err' : ''}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function showConfirm(title, text){
+  return new Promise(resolve => {
+    confirmResolver = resolve;
+    document.getElementById('cTitle').textContent = title;
+    document.getElementById('cText').textContent = text;
+    document.getElementById('confirmBackdrop').style.display = 'flex';
+  });
+}
+function closeConfirm(res){
+  document.getElementById('confirmBackdrop').style.display = 'none';
+  if(confirmResolver){ const fn = confirmResolver; confirmResolver = null; fn(res); }
+}
+
+function navigate(route){
+  stopPoll();
+  if(route === '/logout'){
+    doLogout();
+    return;
+  }
+  if(window.location.pathname !== route){
+    try{ history.pushState({}, '', route); }catch{}
+  }
+  renderRoute(route);
+}
+
+function hideAllViews(){
+  ['loginView','createView','homeView','serverView','adminView'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  ['loginNavBtn','createNavBtn','adminBtn','homeBtn','newBtn','logoutBtn'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+}
+
+function renderRoute(route = window.location.pathname){
+  stopPoll();
+  hideAllViews();
+  const sess = getSession();
+
+  if(route === '/create'){
+    document.getElementById('createView').style.display = 'grid';
+    document.getElementById('loginNavBtn').style.display = 'inline-block';
+    return;
+  }
+
+  if(route === '/login' || !sess){
+    document.getElementById('loginView').style.display = 'grid';
+    document.getElementById('createNavBtn').style.display = 'inline-block';
+    return;
+  }
+
+  document.getElementById('logoutBtn').style.display = 'inline-block';
+  if(sess.is_admin) document.getElementById('adminBtn').style.display = 'inline-block';
+
+  if(route === '/admin'){
+    if(!sess.is_admin){
+      toast('صلاحيات الأدمن مطلوبة', 'err');
+      navigate('/');
+      return;
+    }
+    document.getElementById('adminView').style.display = 'block';
+    document.getElementById('homeBtn').style.display = 'inline-block';
+    refreshAll();
+    return;
+  }
+
+  document.getElementById('homeView').style.display = 'block';
+  document.getElementById('newBtn').style.display = 'inline-block';
+  loadServers();
+  loadPythonHost();
+}
+
+window.addEventListener('popstate', () => renderRoute(window.location.pathname));
+window.addEventListener('beforeunload', stopPoll);
+
+/* =========================================================================
+   3. AUTH ACTIONS (/login, /create & /logout)
+   ========================================================================= */
+async function doLogin(){
+  const m = document.getElementById('login_m');
+  m.textContent = 'جاري تسجيل الدخول...';
+  const username = document.getElementById('login_u').value.trim();
+  const password = document.getElementById('login_p').value;
+  const r = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+  const d = await r.json().catch(() => ({ success:false, message:'خطأ في الخادم' }));
+  if(!r.ok || !d.success){ m.textContent = d.message || 'فشل تسجيل الدخول'; return; }
+  setSession({ username: d.username || username, is_admin: !!d.is_admin });
+  m.textContent = 'تم الدخول بنجاح ✅';
+  navigate(d.is_admin ? '/admin' : '/');
+}
+
+async function doCreate(){
+  const m = document.getElementById('cr_m');
+  m.textContent = 'جاري إنشاء الحساب...';
+  const username = document.getElementById('cr_u').value.trim();
+  const email = document.getElementById('cr_e').value.trim();
+  const password = document.getElementById('cr_p').value;
+  const password2 = document.getElementById('cr_p2').value;
+
+  const r = await fetch('/api/auth/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, email, password, password2 })
+  });
+  const d = await r.json().catch(() => ({ success:false, message:'خطأ في الخادم' }));
+  if(!r.ok || !d.success){ m.textContent = d.message || 'تعذر إنشاء الحساب'; return; }
+  m.textContent = 'تم إنشاء الحساب ✅ جاري التحويل لصفحة الدخول...';
+  setTimeout(() => navigate('/login'), 800);
+}
+
+async function doLogout(){
+  try{ await nativeFetch('/logout'); }catch{}
+  setSession(null);
+  navigate('/login');
+}
+
+/* =========================================================================
+   4. HOME & SERVER CONSOLE / FILE MANAGER
+   ========================================================================= */
+function statusClass(st){
+  st = (st || '').toLowerCase();
+  if(st === 'running') return 'running';
+  if(st === 'installing' || st === 'starting') return 'installing';
+  if(st === 'banned') return 'banned';
+  return 'offline';
+}
+
+async function loadPythonHost(){
+  const ipTxt = document.getElementById('pyHostTxt');
+  const port = location.port || 5000;
+  try{
+    const r = await fetch('/servers');
+    if(!r.ok){ ipTxt.textContent = `Python Host: ${location.hostname}:${port}`; return; }
+    const d = await r.json();
+    if(!d.servers || d.servers.length === 0){
+      ipTxt.textContent = `Python Host: ${location.hostname}:${port}`;
+      return;
+    }
+    const key = d.servers[0].key || d.servers[0].folder;
+    const s = await fetch(`/server/stats/${encodeURIComponent(key)}`);
+    if(!s.ok){ ipTxt.textContent = `Python Host: ${location.hostname}:${port}`; return; }
+    const sd = await s.json();
+    ipTxt.textContent = `Python Host: ${sd.ip || location.hostname}:${port}`;
+  }catch{
+    ipTxt.textContent = `Python Host: ${location.hostname}:${port}`;
+  }
+}
+
+async function loadServers(){
+  const r = await fetch('/servers');
+  if(!r.ok){ navigate('/login'); return; }
+  const d = await r.json();
+  const cont = document.getElementById('cardsContainer');
+  cont.innerHTML = '';
+
+  const sess = getSession();
+  if(sess && sess.is_admin) document.getElementById('adminBtn').style.display = 'inline-block';
+
+  (d.servers || []).forEach(s => {
+    s.key = s.key || s.folder;
+    const div = document.createElement('div');
+    div.className = 'card';
+    const cls = statusClass(s.status);
+    const label = (s.status || 'Offline').toUpperCase();
+    div.innerHTML = `
+      <div class="srv-title">${escapeHtml(s.title)}</div>
+      <div class="srv-sub">${escapeHtml(s.subtitle || '')}</div>
+      <div class="pill ${cls}"><span class="dot"></span>${escapeHtml(label)}</div>
+    `;
+    div.onclick = () => openServer(s);
+    cont.appendChild(div);
+  });
+}
+
+function openServer(s){
+  stopPoll();
+  currentSrv = s;
+  currentPath = '';
+  document.getElementById('homeView').style.display = 'none';
+  document.getElementById('serverView').style.display = 'block';
+  document.getElementById('homeBtn').style.display = 'inline-block';
+  document.getElementById('newBtn').style.display = 'none';
+
+  document.getElementById('srvHeader').textContent = s.title;
+  document.getElementById('srvSub').textContent = s.subtitle || '';
+  document.getElementById('mainFileTxt').textContent = s.startup_file || 'اضغط للتحديد';
+
+  switchTab('console');
+}
+
+function goHome(){
+  stopPoll();
+  currentSrv = null;
+  document.getElementById('homeView').style.display = 'block';
+  document.getElementById('serverView').style.display = 'none';
+  document.getElementById('homeBtn').style.display = 'none';
+  document.getElementById('newBtn').style.display = 'inline-block';
+  loadServers();
+}
+
+function switchTab(t){
+  stopPoll();
+  document.getElementById('tabConsole').classList.toggle('active', t === 'console');
+  document.getElementById('tabFiles').classList.toggle('active', t === 'files');
+  document.getElementById('viewConsole').style.display = t === 'console' ? 'block' : 'none';
+  document.getElementById('viewFiles').style.display = t === 'files' ? 'block' : 'none';
+  if(t === 'console') startPolling();
+  else loadFiles();
+}
+
+async function startPolling(){
+  stopPoll();
+  if(!currentSrv) return;
+  const fn = async () => {
+    if(!currentSrv) return;
+    try{
+      const r = await fetch(`/server/stats/${encodeURIComponent(currentSrv.key)}`);
+      if(!r.ok) return;
+      const d = await r.json();
+      document.getElementById('logOut').textContent = d.logs || 'No logs';
+      document.getElementById('statusTxt').textContent = d.status || 'Offline';
+      document.getElementById('memTxt').textContent = d.mem || '0 MB';
+      document.getElementById('ipTxt').textContent = d.ip || '';
+      const running = (d.status === 'Running' || d.status === 'Installing' || d.status === 'Starting');
+      document.getElementById('btnStart').disabled = running;
+      const lo = document.getElementById('logOut');
+      lo.scrollTop = lo.scrollHeight;
+    }catch{}
+  };
+  await fn();
+  poll = setInterval(fn, 2000);
+}
+
+async function srvAction(act){
+  if(!currentSrv) return;
+  const r = await fetch(`/server/action/${encodeURIComponent(currentSrv.key)}/${act}`, { method: 'POST' });
+  const d = await r.json().catch(() => ({}));
+  if(!r.ok || d.success === false){ toast(d.message || 'فشل تنفيذ الأمر', 'err'); return; }
+  toast(`تم إرسال أمر "${act.toUpperCase()}"`, 'ok');
+  startPolling();
+}
+
+function changeStartup(){
+  if(!currentSrv) return;
+  openM('تحديد ملف التشغيل الرئيسي (مثال: bot.py)', currentSrv.startup_file || '', async (v) => {
+    const r = await fetch(`/server/set-startup/${encodeURIComponent(currentSrv.key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: v })
+    });
+    if(!r.ok){ toast('فشل تحديث ملف التشغيل', 'err'); return; }
+    currentSrv.startup_file = v || 'main.py';
+    document.getElementById('mainFileTxt').textContent = currentSrv.startup_file;
+    toast('تم تحديث ملف التشغيل', 'ok');
+    closeM();
+  });
+}
+
+async function loadFiles(){
+  if(!currentSrv) return;
+  const r = await fetch(`/files/list/${encodeURIComponent(currentSrv.key)}?path=${encodeURIComponent(currentPath)}`);
+  if(!r.ok){ toast('فشل تحميل الملفات', 'err'); return; }
+  const data = await r.json();
+  if(!data.success){ currentPath = ''; return loadFiles(); }
+
+  document.getElementById('btnBack').style.display = (currentPath && currentPath.length > 0) ? 'inline-block' : 'none';
+
+  const parts = (data.path || '').split('/').filter(Boolean);
+  let acc = '';
+  const crumbs = [`<span class="crumb"><a href="javascript:void(0)" onclick="jumpPath('')">root</a></span>`];
+  for(const p of parts){
+    acc = acc ? (acc + '/' + p) : p;
+    crumbs.push(`<span class="sep">/</span><span class="crumb"><a href="javascript:void(0)" onclick="jumpPath('${escapeAttr(acc)}')">${escapeHtml(p)}</a></span>`);
+  }
+  document.getElementById('pathBar').innerHTML = crumbs.join('');
+
+  const rows = [];
+  for(const d of (data.dirs || [])){
+    const name = d.name;
+    rows.push(`
+      <tr>
+        <td><span class="name-link" onclick="openFolder('${escapeAttr(name)}')">📁 ${escapeHtml(name)}</span></td>
+        <td style="color:var(--muted)">—</td>
+        <td class="row-actions">
+          <button class="btn btn-mini" onclick="openFolder('${escapeAttr(name)}')">فتح</button>
+          <button class="btn btn-mini" onclick="renameDir('${escapeAttr(name)}')">إعادة تسمية</button>
+          <button class="btn btn-mini btn-danger" onclick="deleteDir('${escapeAttr(name)}')">حذف</button>
+        </td>
+      </tr>
+    `);
+  }
+  for(const f of (data.files || [])){
+    const relFile = currentPath ? `${currentPath}/${f.name}` : f.name;
+    rows.push(`
+      <tr>
+        <td><span class="name-link" onclick="openEditor('${escapeAttr(relFile)}')">📄 ${escapeHtml(f.name)}</span></td>
+        <td>${escapeHtml(f.size || '')}</td>
+        <td class="row-actions">
+          <button class="btn btn-mini" onclick="renameFilePrompt('${escapeAttr(f.name)}')">إعادة تسمية</button>
+          <button class="btn btn-mini btn-danger" onclick="deleteFilePrompt('${escapeAttr(f.name)}')">حذف</button>
+        </td>
+      </tr>
+    `);
+  }
+  document.getElementById('fileList').innerHTML = rows.join('');
+}
+
+function openFolder(name){ currentPath = currentPath ? (currentPath + '/' + name) : name; loadFiles(); }
+function jumpPath(p){ currentPath = p || ''; loadFiles(); }
+function goUp(){
+  if(!currentPath) return;
+  const parts = currentPath.split('/').filter(Boolean);
+  parts.pop();
+  currentPath = parts.join('/');
+  loadFiles();
+}
+
+function newFolder(){
+  openM('إنشاء مجلد جديد', '', async (v) => {
+    const r = await fetch(`/files/mkdir/${encodeURIComponent(currentSrv.key)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: currentPath, name: v })
+    });
+    if(!r.ok){ toast('فشل إنشاء المجلد', 'err'); return; }
+    toast('تم إنشاء المجلد', 'ok');
+    loadFiles(); closeM();
+  });
+}
+
+function renameDir(oldName){
+  openM('إعادة تسمية المجلد', oldName, async (v) => {
+    const r = await fetch(`/files/rename/${encodeURIComponent(currentSrv.key)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: currentPath, old: oldName, new: v })
+    });
+    if(!r.ok){ toast('فشلت إعادة التسمية', 'err'); return; }
+    toast('تمت إعادة تسمية المجلد', 'ok');
+    loadFiles(); closeM();
+  });
+}
+
+async function deleteDir(name){
+  const ok = await showConfirm('حذف مجلد', `هل تريد حذف المجلد "${name}" وجميع محتوياته؟`);
+  if(!ok) return;
+  const r = await fetch(`/files/delete/${encodeURIComponent(currentSrv.key)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: currentPath, name, kind: 'dir' })
+  });
+  if(!r.ok){ toast('فشل الحذف', 'err'); return; }
+  toast('تم حذف المجلد', 'ok');
+  loadFiles();
+}
+
+function renameFilePrompt(oldName){
+  openM('إعادة تسمية الملف', oldName, async (v) => {
+    const r = await fetch(`/files/rename/${encodeURIComponent(currentSrv.key)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: currentPath, old: oldName, new: v })
+    });
+    if(!r.ok){ toast('فشلت إعادة التسمية', 'err'); return; }
+    toast('تمت إعادة تسمية الملف', 'ok');
+    loadFiles(); closeM();
+  });
+}
+
+async function deleteFilePrompt(name){
+  const ok = await showConfirm('حذف ملف', `هل تريد حذف "${name}"؟`);
+  if(!ok) return;
+  const r = await fetch(`/files/delete/${encodeURIComponent(currentSrv.key)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path: currentPath, name, kind: 'file' })
+  });
+  if(!r.ok){ toast('فشل الحذف', 'err'); return; }
+  toast('تم حذف الملف', 'ok');
+  loadFiles();
+}
+
+async function doUploadFiles(input){
+  if(!input.files || !input.files.length) return;
+  const fd = new FormData();
+  for(const f of input.files) fd.append('files', f);
+  const r = await fetch(`/files/upload/${encodeURIComponent(currentSrv.key)}?path=${encodeURIComponent(currentPath)}`, { method: 'POST', body: fd });
+  input.value = '';
+  if(!r.ok){ toast('فشل رفع الملفات', 'err'); return; }
+  toast('تم رفع الملفات', 'ok');
+  loadFiles();
+}
+
+async function doUploadFolder(input){
+  if(!input.files || !input.files.length) return;
+  const fd = new FormData();
+  for(const f of input.files){
+    fd.append('files', f);
+    fd.append('relpaths', f.webkitRelativePath || f.name);
+  }
+  const r = await fetch(`/files/upload/${encodeURIComponent(currentSrv.key)}?path=${encodeURIComponent(currentPath)}`, { method: 'POST', body: fd });
+  input.value = '';
+  if(!r.ok){ toast('فشل رفع المجلد', 'err'); return; }
+  toast('تم رفع المجلد', 'ok');
+  loadFiles();
+}
+
+async function openEditor(name){
+  currentFile = name;
+  document.getElementById('ed-title').textContent = name;
+  const res = await fetch(`/files/content/${encodeURIComponent(currentSrv.key)}?file=${encodeURIComponent(name)}`);
+  if(!res.ok){ toast('تعذر فتح الملف', 'err'); return; }
+  const data = await res.json();
+  document.getElementById('ed-area').value = data.content || '';
+  document.getElementById('editor-modal').style.display = 'block';
+}
+
+async function saveFile(){
+  const r = await fetch(`/files/save/${encodeURIComponent(currentSrv.key)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file: currentFile, content: document.getElementById('ed-area').value })
+  });
+  if(!r.ok){ toast('فشل الحفظ', 'err'); return; }
+  toast('تم الحفظ ✅', 'ok');
+  loadFiles();
+}
+
+function closeEditor(){ document.getElementById('editor-modal').style.display = 'none'; }
+
+function openM(t, v, cb){
+  document.getElementById('modalBackdrop').style.display = 'flex';
+  document.getElementById('mTitle').textContent = t;
+  const inp = document.getElementById('mIn');
+  inp.value = v || '';
+  inp.focus();
+  document.getElementById('mConfirm').onclick = () => cb(inp.value);
+}
+function closeM(){ document.getElementById('modalBackdrop').style.display = 'none'; }
+
+document.getElementById('newBtn').onclick = () => openM('اسم السيرفر الجديد', '', async (v) => {
+  const res = await fetch('/add', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: v })
+  });
+  const d = await res.json().catch(() => ({ success:false, message:'خطأ' }));
+  if(!res.ok || !d.success){ toast(d.message || 'فشل إنشاء السيرفر', 'err'); return; }
+  toast('تم إنشاء السيرفر ✅', 'ok');
+  closeM();
+  loadServers();
+  loadPythonHost();
+});
+
+/* =========================================================================
+   5. ADMIN PANEL (/admin) — XSS-Safe & Checked Responses
+   ========================================================================= */
+let usersCache = [];
+
+function tagStatus(s){
+  const st = (s || '').toLowerCase();
+  if(st === 'running') return '<span class="tag ok">RUNNING</span>';
+  if(st === 'installing' || st === 'starting') return '<span class="tag mid">INSTALLING</span>';
+  if(st === 'banned') return '<span class="tag bad">BANNED</span>';
+  return '<span class="tag">OFFLINE</span>';
+}
+
+async function refreshStats(){
+  const r = await fetch('/api/admin/quickstats');
+  if(!r.ok) throw new Error('فشل جلب الإحصائيات');
+  const d = await r.json();
+  const s = d.stats || {};
+  document.getElementById('st_total').textContent = s.servers_total || 0;
+  document.getElementById('st_run').textContent = s.servers_running || 0;
+  document.getElementById('st_ins').textContent = s.servers_installing || 0;
+  document.getElementById('st_ban').textContent = s.servers_banned || 0;
+  document.getElementById('u_total').textContent = s.users_total || 0;
+  document.getElementById('u_active').textContent = s.users_active || 0;
+  document.getElementById('u_premium').textContent = s.users_premium || 0;
+}
+
+async function refreshServers(){
+  const r = await fetch('/api/admin/servers');
+  if(!r.ok) throw new Error('فشل جلب قائمة السيرفرات');
+  const d = await r.json();
+  const t = document.getElementById('serversT');
+  t.innerHTML = '';
+  (d.servers || []).forEach(s => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(s.folder)}</td>
+      <td>${escapeHtml(s.display_name)}</td>
+      <td>${escapeHtml(s.owner)}</td>
+      <td>${escapeHtml(s.startup_file || '')}</td>
+      <td>${tagStatus(s.status)}</td>
+      <td class="actions"></td>
+    `;
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-mini';
+    if(s.banned){
+      btn.textContent = 'فك الحظر';
+      btn.onclick = () => banServer(s.key || s.folder, s.folder, false);
+    }else{
+      btn.textContent = 'حظر';
+      btn.style.borderColor = 'rgba(255,107,107,.35)';
+      btn.style.color = 'var(--danger)';
+      btn.onclick = () => banServer(s.key || s.folder, s.folder, true);
+    }
+    tr.querySelector('.actions').appendChild(btn);
+    t.appendChild(tr);
+  });
+}
+
+async function banServer(key, folder, banned){
+  const r = await fetch('/api/admin/server/ban', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, folder, banned })
+  });
+  if(!r.ok){ toast('فشل تحديث حالة حظر السيرفر', 'err'); return; }
+  toast(banned ? 'تم حظر السيرفر' : 'تم فك حظر السيرفر', 'ok');
+  refreshAll();
+}
+
+async function refreshUsers(){
+  const r = await fetch('/api/admin/users');
+  if(!r.ok) throw new Error('فشل جلب قائمة المستخدمين');
+  const d = await r.json();
+  usersCache = d.users || [];
+  renderUsers(usersCache);
+}
+
+function renderUsers(arr){
+  const t = document.getElementById('usersT');
+  t.innerHTML = '';
+  arr.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(u.username)}</td>
+      <td>${escapeHtml(u.email || '')}</td>
+      <td>${escapeHtml(String(u.servers ?? 0))}</td>
+      <td>${u.active ? '<span class="tag ok">نشط</span>' : '<span class="tag bad">محظور</span>'}</td>
+      <td>${u.premium ? '<span class="tag ok">مميز</span>' : '<span class="tag">عادي</span>'}</td>
+      <td class="actions"></td>
+    `;
+    const actTd = tr.querySelector('.actions');
+
+    const b1 = document.createElement('button');
+    b1.className = 'btn btn-mini';
+    b1.textContent = u.active ? 'حظر' : 'فك الحظر';
+    b1.onclick = () => setActive(u.username, !u.active);
+
+    const b2 = document.createElement('button');
+    b2.className = 'btn btn-mini';
+    b2.textContent = u.premium ? 'إلغاء المميز' : 'ترقية لمميز';
+    b2.onclick = () => setPremium(u.username, !u.premium);
+
+    actTd.append(b1, b2);
+    t.appendChild(tr);
+  });
+}
+
+async function setActive(username, active){
+  const r = await fetch('/api/admin/user/update', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, active })
+  });
+  if(!r.ok){ toast('فشل تحديث حالة المستخدم', 'err'); return; }
+  toast('تم تحديث حالة المستخدم', 'ok');
+  refreshUsers(); refreshStats();
+}
+
+async function setPremium(username, premium){
+  const r = await fetch('/api/admin/user/update', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, premium })
+  });
+  if(!r.ok){ toast('فشل تحديث الباقة المميزة', 'err'); return; }
+  toast('تم تحديث الباقة المميزة', 'ok');
+  refreshUsers(); refreshStats();
+}
+
+function filterUsers(){
+  const q = (document.getElementById('searchUser').value || '').toLowerCase().trim();
+  if(!q) return renderUsers(usersCache);
+  renderUsers(usersCache.filter(u => (u.username || '').toLowerCase().includes(q)));
+}
+
+async function refreshAll(){
+  const msg = document.getElementById('admin_msg');
+  msg.textContent = 'جاري التحديث...';
+  try{
+    await Promise.all([refreshStats(), refreshServers(), refreshUsers()]);
+    msg.textContent = 'تم التحديث ✅';
+  }catch(e){
+    msg.textContent = 'حدث خطأ أثناء تحميل بيانات الأدمن';
+    toast(e.message || 'فشل تحديث بيانات الأدمن', 'err');
+  }
+}
+
+function escapeHtml(s){
+  return String(s || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+function escapeAttr(s){ return escapeHtml(s).replaceAll('\\', '\\\\'); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const tabMap = { login: '/login', create: '/create', admin: '/admin', home: '/' };
+  const initialRoute = window.__INITIAL_TAB__ && tabMap[window.__INITIAL_TAB__]
+    ? tabMap[window.__INITIAL_TAB__]
+    : (['/login','/create','/admin','/'].includes(window.location.pathname)
+      ? window.location.pathname
+      : (getSession() ? '/' : '/login'));
+  renderRoute(initialRoute);
+});
+</script>
+</body>
+</html>
