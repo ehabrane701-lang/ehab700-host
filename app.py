@@ -22,7 +22,7 @@ import uuid
 import logging
 import asyncio
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timezone
 
 import psutil
 import requests
@@ -46,6 +46,10 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger("MERO_HOST_APP")
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 # ==============================================================================
@@ -72,15 +76,19 @@ os.makedirs(SERVICES_STORAGE_DIR, exist_ok=True)
 PANEL_PORT_PRIMARY = int(os.environ.get("PORT", os.environ.get("SERVER_PORT", 8008)))
 PANEL_PORT_SECONDARY = int(os.environ.get("SECONDARY_SERVER_PORT", 3004))
 
-ADMIN_USERNAME = os.environ.get("ADMIN_USER", "Y_20_20")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASS", "1002670694")
+ADMIN_USERNAME = os.environ.get("ADMIN_USER", "admin")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASS", "")
 
 # إعدادات بوت تيليجرام والمطور
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "9294301891:AAG4oWwRlxxnyCIe3yIutxr_NSELsgBic68")
-API_BASE_URL = os.environ.get("API_BASE_URL", f"http://127.0.0.1:{PANEL_PORT_PRIMARY}")
-PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "https://ehab700-host.onrender.com")
-ADMIN_TELEGRAM_IDS = [1002670694]
-LOG_CHANNEL_ID = os.environ.get("LOG_CHANNEL_ID", "")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
+API_BASE_URL = os.environ.get("API_BASE_URL", f"http://127.0.0.1:{PANEL_PORT_PRIMARY}").rstrip("/")
+PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "").strip()
+
+_admin_ids_raw = os.environ.get("ADMIN_TELEGRAM_IDS", "1002670694")
+ADMIN_TELEGRAM_IDS = [
+    int(x.strip()) for x in _admin_ids_raw.split(",") if x.strip().isdigit()
+]
+LOG_CHANNEL_ID = os.environ.get("LOG_CHANNEL_ID", "").strip()
 
 DEVELOPER_INFO = (
     "<b><blockquote>🛠 طُوِّر بواسطة: 𝗘𝗛𝗔𝗕𝗔𝗜𝗛𝗔𝗪𝗕𝗔𝗡𝗜</blockquote></b>\n"
@@ -133,7 +141,7 @@ SERVICES_CATALOG = {
 ) = range(6)
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("PANEL_SECRET_KEY", "MERO_HOST_SECURE_" + os.urandom(16).hex())
+app.secret_key = os.environ.get("PANEL_SECRET_KEY") or ("MERO_HOST_SECURE_" + os.urandom(16).hex())
 
 running_procs = {}   # key -> (Popen, log_file_handle)
 server_states = {}   # key -> Offline/Installing/Starting/Running/Banned
@@ -343,7 +351,7 @@ def find_user_by_api_key(api_key: str):
     key = (api_key or "").strip()
     if not key:
         return None
-    if key == ADMIN_USERNAME or key == f"ADMIN_{ADMIN_USERNAME}":
+    if ADMIN_PASSWORD and (key == ADMIN_USERNAME or key == f"ADMIN_{ADMIN_USERNAME}"):
         return {"username": ADMIN_USERNAME, "is_admin": True, "active": True, "premium": True}
     db = load_users()
     for u in db.get("users", []):
@@ -407,7 +415,7 @@ def record_order(user_key: str, service_id: str, amount: float, details: str, st
             "details": details,
             "status": status,
             "result": result_msg,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": _utc_now_iso(),
         }
         db["orders"].append(entry)
         _atomic_write_json(ORDERS_DB, db)
@@ -428,7 +436,7 @@ def update_order_status(order_id: str, status: str, result_msg: str = ""):
                 item["status"] = status
                 if result_msg:
                     item["result"] = result_msg
-                item["updated_at"] = datetime.utcnow().isoformat()
+                item["updated_at"] = _utc_now_iso()
                 break
         _atomic_write_json(ORDERS_DB, db)
 
@@ -461,7 +469,7 @@ def execute_paid_service_order(user_key: str, service_id: str, details: str) -> 
             "service": svc["name"],
             "details": details.strip(),
             "route": f"/web/{order_id}",
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": _utc_now_iso(),
         })
 
         delivered_msg = f"تم استلام وتجهيز الطلب رقم {order_id} على المسار /web/{order_id}"
@@ -739,7 +747,7 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
         <button onclick="saveStartup()">💾 حفظ ملف التشغيل</button>
         <button class="success" onclick="serverAct('start')">▶️ تشغيل</button>
         <button class="danger" onclick="serverAct('stop')">⏹ إيقاف</button>
-        <button onclick="serverAct('restart')">🔄 إعادة تشغيل</button>
+        <button class="danger" onclick="serverAct('restart')">🔄 إعادة تشغيل</button>
         <h5>الملفات والمجلدات:</h5>
         <div id="filesList"></div>
         <input id="editFilePath" placeholder="مسار الملف للتعديل أو الحفظ (مثال: main.py)" />
@@ -1007,7 +1015,7 @@ def api_ping():
     return jsonify({
         "success": True,
         "status": "alive",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": _utc_now_iso(),
     }), 200
 
 
@@ -1130,7 +1138,7 @@ def api_login():
     username = (data.get("username") or "").strip()
     password = data.get("password") or ""
 
-    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+    if ADMIN_PASSWORD and username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
         session["user"] = {"username": ADMIN_USERNAME, "is_admin": True}
         return jsonify({"success": True, "is_admin": True, "username": ADMIN_USERNAME})
 
@@ -1191,7 +1199,7 @@ def api_create():
         "username": username,
         "email": email,
         "api_key": generated_api_key,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": _utc_now_iso(),
     })
     _atomic_write_json(PENDING_DB, pending)
     return jsonify({"success": True, "api_key": generated_api_key})
@@ -2424,7 +2432,7 @@ async def receive_topup_info(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "user_id": uid,
         "info": info_txt,
         "status": "pending_payment_confirmation",
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": _utc_now_iso(),
     })
     _atomic_write_json(topup_file, db)
 
