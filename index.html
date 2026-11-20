@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>𝗘𝗛𝗔𝗕𝗔𝗜𝗛𝗔𝗪𝗕𝗔𝗡𝗜 — لوحة التحكم والاستضافة</title>
+  <title> — لوحة التحكم والاستضافة</title>
   <style>
     :root{
       --bg0:#f1f5fb;
@@ -356,6 +356,28 @@
       color:#ffffff;border:0;
       box-shadow:0 8px 20px rgba(128,0,32,.22);
     }
+
+    .guide-section{
+      margin-top:28px;
+      padding:22px;
+      border-radius:20px;
+      background:rgba(255,255,255,.92);
+      border:1px solid rgba(29,78,216,.16);
+      border-top:4px solid var(--accent);
+      box-shadow:var(--shadow);
+    }
+    .guide-section h2{margin:0 0 12px 0;font-size:20px;font-weight:950;color:var(--burgundy)}
+    .guide-section h3{margin:18px 0 8px 0;font-size:15px;font-weight:900;color:var(--royal-blue)}
+    .guide-list{margin:8px 0 0 0;padding-right:20px;line-height:1.8;font-size:13px;color:var(--text)}
+    .guide-list li{margin-bottom:8px}
+    .guide-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:12px}
+    @media (max-width:760px){.guide-grid{grid-template-columns:1fr}}
+    .guide-box{
+      border:1px solid rgba(29,78,216,.14);
+      background:#f8fbff;
+      border-radius:14px;
+      padding:14px;
+    }
   </style>
 </head>
 <body>
@@ -368,7 +390,7 @@
              onclick="navigate('/')"
              onkeypress="if(event.key==='Enter') navigate('/')">🏠</div>
         <div>
-          <div class="title">HAMA PANEL · 𝗘𝗛𝗔𝗕𝗔𝗜𝗛𝗔𝗪𝗕𝗔𝗡𝗜</div>
+          <div class="title">𝗘𝗛𝗔𝗕</div>
           <span class="sub" id="pyHostTxt">Python Host: loading...</span>
         </div>
       </div>
@@ -388,7 +410,7 @@
   <!-- ١. صفحة تسجيل الدخول (/login) -->
   <div class="auth-shell" id="loginView" style="display:none">
     <div class="auth-card">
-      <div class="auth-title"><div class="logo" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center">🏠</div> تسجيل الدخول — HOST HAMA PANEL</div>
+      <div class="auth-title"><div class="logo" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center">🏠</div> تسجيل الدخول — HOST 𝗘𝗛𝗔𝗕</div>
       <div class="sub">سجّل الدخول إلى حسابك (حساب الأدمن الافتراضي: <code>admin</code> / <code>admin123</code>)</div>
 
       <input id="login_u" class="field" placeholder="اسم المستخدم" autocomplete="username">
@@ -511,6 +533,69 @@
           <button class="btn btn-mini" onclick="openPaidServiceModal('srv_web_request', 'طلب موقع إلكتروني / ربط مسار مخصص', '10.00 USD')">طلب الخدمة المدفوعة</button>
         </div>
       </div>
+    </div>
+
+    <!-- دليل الاستضافة الشامل (أولاً • ثانياً • ثالثاً • رابعاً) -->
+    <div class="guide-section" id="hostingGuideSection">
+      <h2>أولاً: أهم مميزات استضافة وتشغيل المشاريع على استضافه</h2>
+      <ul class="guide-list">
+        <li><b>العمل الفوري من المتصفح (Zero Setup):</b> افتح مشروعك وابدأ البرمجة فوراً بأي لغة برمجة مدعومة، مع بيئة جاهزة ومضبوطة مسبقاً.</li>
+        <li><b>الاستضافة والنشر السريع (Hosting &amp; Deployments):</b> يمكنك تحويل مشروعك إلى موقع أو تطبيق حي برابط مباشر (ويمكن ربطه بدومين مخصص حسب الخطة)، مع إمكانية اختيار أنواع نشر تناسب طبيعة مشروعك (مثل المواقع الثابتة، أو الخوادم المستمرة، أو المهام المجدولة).</li>
+        <li><b>تعدد لغات البرمجة والأطر (Multi-Language Support):</b> تدعم عشرات اللغات والأطر الشهيرة مثل Python، Node.js، HTML/CSS/JS، C++، Java، Go، وغيرها، مع إمكانية دمج قواعد بيانات وأدوات مساعدة.</li>
+        <li><b>المساعد الذكي والبرمجة بالذكاء الاصطناعي:</b> توفر ميزات ذكاء اصطناعي تساعد في توليد الأكواد، شرح الأخطاء، تعديل الملفات، وبناء مشاريع كاملة انطلاقاً من وصف نصي.</li>
+        <li><b>التعاون الفوري (Real-time Collaboration):</b> يمكنك مشاركة مساحة العمل مع فريقك أو معلمك/زميلك لتعديل الكود ومشاهدة التغييرات والطرفية (Terminal) في الوقت الفعلي، أشبه بالعمل الجماعي على مستند مشترك.</li>
+        <li><b>إدارة الحزم والبيئة (Packages &amp; Secrets):</b> تثبيت المكتبات بسهولة، وتخزين المتغيرات الحساسة ومفاتيح API بأمان عبر Secrets بدلاً من كتابتها داخل الكود.</li>
+        <li><b>سجل التعديلات والنسخ الاحتياطي (History / Version Control):</b> تتبع التغييرات والعودة إلى نقاط سابقة، بالإضافة إلى التكامل مع Git / GitHub لاستيراد المشاريع أو رفعها.</li>
+        <li><b>تطبيقات الهواتف (Mobile App):</b> إمكانية متابعة الأكواد وتشغيلها وتعديلها البسيط من الهاتف أثناء التنقل.</li>
+      </ul>
+
+      <h3>ثانياً: كيف تعمل المنصة؟ (نظرة شاملة)</h3>
+      <div class="guide-grid">
+        <div class="guide-box">
+          <b>مساحة العمل (Workspace):</b> تتكون عادةً من:
+          <ul class="guide-list">
+            <li><b>مستكشف الملفات (Files):</b> لإدارة ملفات ومجلدات المشروع.</li>
+            <li><b>محرر الأكواد (Editor):</b> لكتابة وتعديل الكود.</li>
+            <li><b>الطرفية (Shell / Console):</b> لتنفيذ الأوامر، تثبيت الحزم، ومراقبة السجلات (Logs).</li>
+            <li><b>المعاينة (Preview / Webview):</b> لعرض واجهة موقعك أو تطبيقك مباشرة أثناء التطوير.</li>
+          </ul>
+        </div>
+        <div class="guide-box">
+          <b>التشغيل مقابل النشر (Run vs. Deploy):</b>
+          <ul class="guide-list">
+            <li><b>زر Run</b> مخصص للتجربة والتطوير داخل بيئة العمل.</li>
+            <li><b>النشر (Deploy)</b> مخصص لإتاحة المشروع للزوار والمستخدمين بشكل مستقر ومستمر وفق خطة الاستضافة المختارة.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>ثالثاً: لمن تناسب استضافه؟ ولمن قد لا تكون الخيار الأنسب؟</h3>
+      <div class="guide-grid">
+        <div class="guide-box">
+          <b>مناسبة جداً لـ:</b>
+          <ul class="guide-list">
+            <li><b>المبتدئين والطلاب:</b> لأنها تزيل تعقيدات إعداد البيئة البرمجية وتسرّع التعلم والتجريب.</li>
+            <li><b>النماذج الأولية (MVPs) والهاكاثونات:</b> لبناء فكرة واختبارها ومشاركتها بسرعة كبيرة.</li>
+            <li><b>الفرق الصغيرة والمشاريع التعليمية:</b> بفضل التحرير التعاوني المباشر وسهولة مشاركة الرابط.</li>
+            <li><b>العمل من أكثر من جهاز:</b> لأن مشاريعك محفوظة في السحابة.</li>
+          </ul>
+        </div>
+        <div class="guide-box">
+          <b>قد لا تكون الخيار الأنسب لـ:</b>
+          <ul class="guide-list">
+            <li><b>المشاريع الضخمة ذات الأحمال العالية جداً أو المتطلبات المعقدة للبنية التحتية:</b> حيث تفضل الشركات الكبرى عادةً بنى سحابية مخصصة أو خوادم مستقلة تحكمها بالكامل.</li>
+            <li><b>التطبيقات التي تتطلب وصولاً منخفضاً جداً للعتاد أو بيئات مغلقة صارمة:</b> لأسباب أمنية أو تنظيمية أو تقنية.</li>
+            <li><b>المشاريع ذات الاستخدام المستمر والموارد العالية في الخطط المجانية:</b> إذ تخضع الخطط المجانية لحدود موارد وقواعد تشغيل مقارنة بالخطط المدفوعة.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>رابعاً: نصائح مهمة عند استخدامها</h3>
+      <ul class="guide-list">
+        <li><b>لا تضع المفاتيح السرية في الكود:</b> استخدم Secrets دائماً لحماية كلمات المرور ومفاتيح الربط.</li>
+        <li><b>راقب السجلات (Logs) والموارد:</b> عند تشغيل بوتات أو خوادم، راقب استهلاك الموارد وسجلات الأخطاء لتفادي توقف الخدمة المفاجئ.</li>
+        <li><b>اربط بـ GitHub:</b> يُستحسن ربط مشاريعك المهمة بمستودع Git كنسخة احتياطية إضافية وإدارة احترافية للإصدارات.</li>
+      </ul>
     </div>
   </div>
 
@@ -683,7 +768,7 @@ function defaultDb(){
         banned: false,
         mem: '0 MB',
         ip: '127.0.0.1',
-        logs: '[HAMA PANEL] Ready. Click START to run bot.py\n',
+        logs: '[𝗘𝗛𝗔𝗕] Ready. Click START to run bot.py\n',
         files: {
           'bot.py': 'import time\nprint("Bot Alpha started...")\n',
           'requirements.txt': 'requests\n',
@@ -702,10 +787,10 @@ function defaultDb(){
         banned: false,
         mem: '0 MB',
         ip: '127.0.0.1',
-        logs: '[HAMA PANEL] Worker initialized.\n',
+        logs: '[𝗘𝗛𝗔𝗕] Worker initialized.\n',
         files: {
           'main.py': 'print("Hello from API Worker 01")\n',
-          'README.md': '# API Worker\nManaged via HAMA PANEL.\n'
+          'README.md': '# API Worker\nManaged via 𝗘𝗛𝗔𝗕.\n'
         }
       }
     ]
@@ -841,7 +926,7 @@ async function localFallbackFetch(input, init={}){
       subtitle: `${srvType} · ${folder}`,
       owner: currentUser.username, startup_file: defaultStartup,
       status: 'Offline', banned: false, mem: '0 MB', ip: '127.0.0.1',
-      logs: `[HAMA PANEL] Created ${srvType} server "${rawName}" (${folder})\n`,
+      logs: `[𝗘𝗛𝗔𝗕] Created ${srvType} server "${rawName}" (${folder})\n`,
       files: filesMap
     });
     saveDb(db);
