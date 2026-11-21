@@ -723,7 +723,7 @@
           <div class="stat"><div class="ico">⚡</div><div><small>الحالة</small><b id="statusTxt">Offline</b></div></div>
           <div class="stat"><div class="ico">🧠</div><div><small>الذاكرة RAM</small><b id="memTxt">0 MB</b></div></div>
           <div class="stat"><div class="ico">💿</div><div><small>ملف التشغيل الرئيسي</small><b id="mainFileTxt" onclick="changeStartup()">اضغط للتحديد</b></div></div>
-          <div class="stat"><div class="ico">📡</div><div><small>العنوان IP</small><b id="ipTxt">0.0.0.0</b></div></div>
+          <div class="stat"><div class="ico">📡</div><div><small>العنوان / الرابط المولّد</small><b id="ipTxt">0.0.0.0</b></div></div>
         </div>
       </div>
     </div>
@@ -843,10 +843,22 @@
 
 <script>
 /* =========================================================================
-   1. HYBRID API ENGINE (Live Backend First + Network-Failure Fallback Only)
+   1. HYBRID API ENGINE + ATOMIC-SAFE STORAGE & BOT-TO-SITE SYNC
    ========================================================================= */
 const DB_KEY = 'HAMA_PANEL_DB_V1';
 const SESSION_KEY = 'HAMA_PANEL_SESSION_V1';
+const BOT_BRIDGE_KEY = 'HAMA_BOT_SYNC_EVENT_V1';
+const SYNC_CHANNEL_NAME = 'EHAB_HOST_SYNC_CHANNEL_V1';
+
+const syncChannel = (typeof BroadcastChannel !== 'undefined')
+  ? new BroadcastChannel(SYNC_CHANNEL_NAME)
+  : null;
+
+function buildGeneratedUrl(folder){
+  const safeFolder = String(folder || 'server').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const origin = (location.origin && location.origin !== 'null') ? location.origin : `http://127.0.0.1:${location.port || 5000}`;
+  return `${origin}/srv/${encodeURIComponent(safeFolder)}`;
+}
 
 function defaultDb(){
   return {
@@ -867,6 +879,7 @@ function defaultDb(){
         banned: false,
         mem: '0 MB',
         ip: '127.0.0.1',
+        generated_url: buildGeneratedUrl('bot_alpha'),
         logs: '[𝗘𝗛𝗔𝗕] Ready. Click START to run bot.py\n',
         files: {
           'bot.py': 'import time\nprint("Bot Alpha started...")\n',
@@ -886,6 +899,7 @@ function defaultDb(){
         banned: false,
         mem: '0 MB',
         ip: '127.0.0.1',
+        generated_url: buildGeneratedUrl('api_worker'),
         logs: '[𝗘𝗛𝗔𝗕] Worker initialized.\n',
         files: {
           'main.py': 'print("Hello from API Worker 01")\n',
@@ -896,16 +910,67 @@ function defaultDb(){
   };
 }
 
+function normalizeServerRecord(s){
+  const folder = s.folder || (s.key && s.key.includes('::') ? s.key.split('::')[1] : s.key) || 'server';
+  const key = s.key || `${s.owner || 'admin'}::${folder}`;
+  const displayName = s.display_name || s.title || folder;
+  return {
+    ...s,
+    key,
+    folder,
+    display_name: displayName,
+    title: s.title || displayName,
+    subtitle: s.subtitle || `Owner: ${s.owner || 'admin'} · ${folder}`,
+    startup_file: s.startup_file || 'main.py',
+    status: s.banned ? 'Banned' : (s.status || 'Offline'),
+    banned: !!s.banned,
+    mem: s.mem || '0 MB',
+    ip: s.ip || '127.0.0.1',
+    generated_url: s.generated_url || buildGeneratedUrl(folder),
+    logs: typeof s.logs === 'string' ? s.logs : '',
+    files: (s.files && typeof s.files === 'object') ? s.files : {}
+  };
+}
+
 function loadDb(){
   try{
     const raw = localStorage.getItem(DB_KEY);
-    if(!raw){ const d = defaultDb(); saveDb(d); return d; }
-    return JSON.parse(raw);
+    if(!raw){
+      const d = defaultDb();
+      saveDb(d, { silent: true });
+      return d;
+    }
+    const parsed = JSON.parse(raw);
+    const db = {
+      users: Array.isArray(parsed.users) ? parsed.users : defaultDb().users,
+      servers: Array.isArray(parsed.servers) ? parsed.servers.map(normalizeServerRecord) : defaultDb().servers
+    };
+    return db;
   }catch{
     return defaultDb();
   }
 }
-function saveDb(db){ localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+
+function saveDb(db, opts = {}){
+  const serialized = JSON.stringify({
+    users: Array.isArray(db.users) ? db.users : [],
+    servers: Array.isArray(db.servers) ? db.servers.map(normalizeServerRecord) : []
+  });
+  localStorage.setItem(DB_KEY, serialized);
+  if(!opts.silent){
+    notifyExternalSync({ type: 'db_updated', at: Date.now(), source: opts.source || 'web' });
+  }
+}
+
+function notifyExternalSync(payload){
+  try{
+    localStorage.setItem(BOT_BRIDGE_KEY, JSON.stringify({ ...payload, nonce: Math.random().toString(36).slice(2) }));
+  }catch{}
+  try{
+    if(syncChannel) syncChannel.postMessage(payload);
+  }catch{}
+}
+
 function getSession(){
   try{ return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }
   catch{ return null; }
@@ -934,12 +999,22 @@ function splitFileMap(filesObj, dirPath){
     if(parts.length > 1){
       const dName = parts[0];
       if(!dirsMap.has(dName)) dirsMap.set(dName, { name: dName });
-    }else{
+    }else if(parts[0] !== '.gitkeep'){
       const bytes = new Blob([content || '']).size;
       files.push({ name: parts[0], size: bytes < 1024 ? bytes + ' B' : (bytes/1024).toFixed(1) + ' KB' });
     }
   }
   return { dirs: Array.from(dirsMap.values()), files };
+}
+
+function findServerRecord(db, keyOrFolder){
+  const target = String(keyOrFolder || '').trim();
+  return db.servers.find(s =>
+    s.key === target ||
+    s.folder === target ||
+    s.key.endsWith('::' + target) ||
+    s.folder.toLowerCase() === target.toLowerCase()
+  );
 }
 
 const nativeFetch = window.fetch.bind(window);
@@ -974,7 +1049,7 @@ async function localFallbackFetch(input, init={}){
     if(p !== p2) return jsonRes({ success:false, message:'كلمتا المرور غير متطابقتين.' }, 400);
     if(db.users.some(x => x.username.toLowerCase() === u.toLowerCase())) return jsonRes({ success:false, message:'اسم المستخدم مستخدم مسبقاً.' }, 409);
     db.users.push({ username: u, email: e, passwordHash: btoa(p), active: true, premium: false, is_admin: false });
-    saveDb(db);
+    saveDb(db, { source: 'auth_create' });
     return jsonRes({ success:true, message:'تم إنشاء الحساب' });
   }
 
@@ -997,7 +1072,9 @@ async function localFallbackFetch(input, init={}){
         title: s.display_name || s.folder,
         subtitle: s.subtitle || `Owner: ${s.owner}`,
         status: s.banned ? 'Banned' : s.status,
-        startup_file: s.startup_file
+        startup_file: s.startup_file,
+        generated_url: s.generated_url || buildGeneratedUrl(s.folder),
+        ip: s.ip || '127.0.0.1'
       }))
     });
   }
@@ -1007,63 +1084,79 @@ async function localFallbackFetch(input, init={}){
     const rawName = (body.name || '').trim();
     const srvType = (body.server_type || 'Python').trim();
     const isJs = srvType.toLowerCase().includes('js') || srvType.toLowerCase().includes('node');
-    const defaultStartup = isJs ? 'index.js' : 'main.py';
+    const defaultStartup = (body.startup_file || '').trim() || (isJs ? 'index.js' : 'main.py');
     if(!rawName) return jsonRes({ success:false, message:'اسم السيرفر مطلوب.' }, 400);
     const folder = rawName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || 'server_' + Date.now();
-    const ownedCount = db.servers.filter(s => s.owner === currentUser.username).length;
+    const ownerName = (body.owner || currentUser.username || 'admin').trim();
+    const ownedCount = db.servers.filter(s => s.owner === ownerName).length;
     const limit = currentUser.premium || currentUser.is_admin ? 16 : 1;
     if(!currentUser.is_admin && ownedCount >= limit){
       return jsonRes({ success:false, message:`تم الوصول للحد الأقصى (${limit} سيرفر للمستخدم العادي).` }, 403);
     }
-    const key = `${currentUser.username}::${folder}`;
+    const key = `${ownerName}::${folder}`;
     if(db.servers.some(s => s.key === key)) return jsonRes({ success:false, message:'السيرفر موجود مسبقاً.' }, 409);
+    const genUrl = body.generated_url || buildGeneratedUrl(folder);
     const filesMap = isJs
       ? { 'index.js': `console.log("Running ${rawName} (JS)");\n` }
       : { 'main.py': `print("Running ${rawName} (PY)")\n` };
-    db.servers.push({
-      key, folder, display_name: rawName, title: rawName,
+    const newSrv = normalizeServerRecord({
+      key,
+      folder,
+      display_name: rawName,
+      title: rawName,
       subtitle: `${srvType} · ${folder}`,
-      owner: currentUser.username, startup_file: defaultStartup,
-      status: 'Offline', banned: false, mem: '0 MB', ip: '127.0.0.1',
-      logs: `[𝗘𝗛𝗔𝗕] Created ${srvType} server "${rawName}" (${folder})\n`,
+      owner: ownerName,
+      startup_file: defaultStartup,
+      status: 'Offline',
+      banned: false,
+      mem: '0 MB',
+      ip: '127.0.0.1',
+      generated_url: genUrl,
+      logs: `[𝗘𝗛𝗔𝗕] Created ${srvType} server "${rawName}" (${folder})\n[𝗘𝗛𝗔𝗕] Generated URL: ${genUrl}\n`,
       files: filesMap
     });
-    saveDb(db);
-    return jsonRes({ success:true, key });
+    db.servers.push(newSrv);
+    saveDb(db, { source: body.source || 'web_add' });
+    return jsonRes({ success:true, key, folder, generated_url: genUrl, server: newSrv });
   }
 
   const mDeleteSrv = path.match(/^\/server\/delete\/(.+)$/);
   if(mDeleteSrv && (method === 'POST' || method === 'DELETE')){
     const key = decodeURIComponent(mDeleteSrv[1]);
-    const idx = db.servers.findIndex(s => s.key === key || s.folder === key);
+    const idx = db.servers.findIndex(s => s.key === key || s.folder === key || s.key.endsWith('::' + key));
     if(idx === -1) return jsonRes({ success:false, message:'السيرفر غير موجود' }, 404);
     const target = db.servers[idx];
     if(!currentUser.is_admin && target.owner !== currentUser.username){
       return jsonRes({ success:false, message:'غير مصرح بحذف هذا السيرفر' }, 403);
     }
     db.servers.splice(idx, 1);
-    saveDb(db);
+    saveDb(db, { source: 'web_delete' });
     return jsonRes({ success:true, message:'تم حذف السيرفر' });
   }
 
   const mStats = path.match(/^\/server\/stats\/(.+)$/);
   if(mStats && method === 'GET'){
     const key = decodeURIComponent(mStats[1]);
-    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    const srv = findServerRecord(db, key);
     if(!srv) return jsonRes({ success:false, message:'السيرفر غير موجود' }, 404);
-    if(srv.banned){ srv.status = 'Banned'; srv.mem = '0 MB'; }
-    else if(srv.status === 'Running'){
+    srv.generated_url = srv.generated_url || buildGeneratedUrl(srv.folder);
+    if(srv.banned){
+      srv.status = 'Banned';
+      srv.mem = '0 MB';
+    }else if(srv.status === 'Running'){
       const randMem = Math.floor(28 + Math.random() * 45);
       srv.mem = `${randMem} MB`;
       srv.logs += `[${new Date().toLocaleTimeString()}] [${srv.startup_file}] heartbeat OK (${srv.mem})\n`;
+      saveDb(db, { silent: true });
     }
-    saveDb(db);
     return jsonRes({
       success: true,
       logs: srv.logs,
       status: srv.banned ? 'Banned' : srv.status,
       mem: srv.mem || '0 MB',
-      ip: srv.ip || '127.0.0.1'
+      ip: srv.ip || '127.0.0.1',
+      generated_url: srv.generated_url,
+      startup_file: srv.startup_file
     });
   }
 
@@ -1071,37 +1164,39 @@ async function localFallbackFetch(input, init={}){
   if(mAct && method === 'POST'){
     const key = decodeURIComponent(mAct[1]);
     const act = mAct[2];
-    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    const srv = findServerRecord(db, key);
     if(!srv) return jsonRes({ success:false, message:'السيرفر غير موجود' }, 404);
     if(srv.banned) return jsonRes({ success:false, message:'السيرفر محظور' }, 403);
+    srv.generated_url = srv.generated_url || buildGeneratedUrl(srv.folder);
     if(act === 'start' || act === 'restart'){
       srv.status = 'Running';
       srv.mem = '34 MB';
-      srv.logs += `\n[${new Date().toLocaleTimeString()}] >>> ${act.toUpperCase()} ${srv.startup_file || 'main.py'}\n`;
+      srv.logs += `\n[${new Date().toLocaleTimeString()}] >>> ${act.toUpperCase()} ${srv.startup_file || 'main.py'} (${srv.generated_url})\n`;
     }else if(act === 'stop'){
       srv.status = 'Offline';
       srv.mem = '0 MB';
       srv.logs += `\n[${new Date().toLocaleTimeString()}] <<< STOPPED\n`;
     }
-    saveDb(db);
-    return jsonRes({ success:true, status: srv.status });
+    saveDb(db, { source: 'server_action' });
+    return jsonRes({ success:true, status: srv.status, generated_url: srv.generated_url });
   }
 
   const mStartup = path.match(/^\/server\/set-startup\/(.+)$/);
   if(mStartup && method === 'POST'){
     const key = decodeURIComponent(mStartup[1]);
-    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    const srv = findServerRecord(db, key);
     if(!srv) return jsonRes({ success:false, message:'السيرفر غير موجود' }, 404);
     const body = JSON.parse(init.body || '{}');
     srv.startup_file = (body.file || '').trim() || 'main.py';
-    saveDb(db);
+    srv.logs += `[${new Date().toLocaleTimeString()}] Startup file set to: ${srv.startup_file}\n`;
+    saveDb(db, { source: 'set_startup' });
     return jsonRes({ success:true, startup_file: srv.startup_file });
   }
 
   const mFilesList = path.match(/^\/files\/list\/(.+)$/);
   if(mFilesList && method === 'GET'){
     const key = decodeURIComponent(mFilesList[1]);
-    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    const srv = findServerRecord(db, key);
     if(!srv) return jsonRes({ success:false, message:'السيرفر غير موجود' }, 404);
     const relPath = (parsed.searchParams.get('path') || '').replace(/^\/+|\/+$/g, '');
     const listed = splitFileMap(srv.files, relPath);
@@ -1111,7 +1206,7 @@ async function localFallbackFetch(input, init={}){
   const mMkdir = path.match(/^\/files\/mkdir\/(.+)$/);
   if(mMkdir && method === 'POST'){
     const key = decodeURIComponent(mMkdir[1]);
-    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    const srv = findServerRecord(db, key);
     if(!srv) return jsonRes({ success:false }, 404);
     const body = JSON.parse(init.body || '{}');
     const base = (body.path || '').replace(/^\/+|\/+$/g, '');
@@ -1119,14 +1214,14 @@ async function localFallbackFetch(input, init={}){
     if(!name) return jsonRes({ success:false, message:'اسم المجلد مطلوب' }, 400);
     const keepKey = `${base ? base + '/' : ''}${name}/.gitkeep`;
     srv.files[keepKey] = '';
-    saveDb(db);
+    saveDb(db, { source: 'files_mkdir' });
     return jsonRes({ success:true });
   }
 
   const mRename = path.match(/^\/files\/rename\/(.+)$/);
   if(mRename && method === 'POST'){
     const key = decodeURIComponent(mRename[1]);
-    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    const srv = findServerRecord(db, key);
     if(!srv) return jsonRes({ success:false }, 404);
     const body = JSON.parse(init.body || '{}');
     const base = (body.path || '').replace(/^\/+|\/+$/g, '');
@@ -1141,15 +1236,16 @@ async function localFallbackFetch(input, init={}){
       else if(k.startsWith(oldPrefix + '/')) updated[newPrefix + k.slice(oldPrefix.length)] = v;
       else updated[k] = v;
     }
+    if(srv.startup_file === oldPrefix) srv.startup_file = newPrefix;
     srv.files = updated;
-    saveDb(db);
+    saveDb(db, { source: 'files_rename' });
     return jsonRes({ success:true });
   }
 
   const mDelete = path.match(/^\/files\/delete\/(.+)$/);
   if(mDelete && method === 'POST'){
     const key = decodeURIComponent(mDelete[1]);
-    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    const srv = findServerRecord(db, key);
     if(!srv) return jsonRes({ success:false }, 404);
     const body = JSON.parse(init.body || '{}');
     const base = (body.path || '').replace(/^\/+|\/+$/g, '');
@@ -1158,14 +1254,14 @@ async function localFallbackFetch(input, init={}){
     for(const k of Object.keys(srv.files)){
       if(k === target || k.startsWith(target + '/')) delete srv.files[k];
     }
-    saveDb(db);
+    saveDb(db, { source: 'files_delete' });
     return jsonRes({ success:true });
   }
 
   const mUpload = path.match(/^\/files\/upload\/(.+)$/);
   if(mUpload && method === 'POST'){
     const key = decodeURIComponent(mUpload[1]);
-    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    const srv = findServerRecord(db, key);
     if(!srv) return jsonRes({ success:false }, 404);
     const base = (parsed.searchParams.get('path') || '').replace(/^\/+|\/+$/g, '');
     const fd = init.body;
@@ -1177,14 +1273,14 @@ async function localFallbackFetch(input, init={}){
       const full = `${base ? base + '/' : ''}${rel}`;
       srv.files[full] = await f.text();
     }
-    saveDb(db);
+    saveDb(db, { source: 'files_upload' });
     return jsonRes({ success:true });
   }
 
   const mContent = path.match(/^\/files\/content\/(.+)$/);
   if(mContent && method === 'GET'){
     const key = decodeURIComponent(mContent[1]);
-    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    const srv = findServerRecord(db, key);
     if(!srv) return jsonRes({ success:false, content:'' }, 404);
     const file = (parsed.searchParams.get('file') || '').replace(/^\/+/, '');
     return jsonRes({ success:true, content: srv.files[file] ?? '' });
@@ -1193,12 +1289,13 @@ async function localFallbackFetch(input, init={}){
   const mSave = path.match(/^\/files\/save\/(.+)$/);
   if(mSave && method === 'POST'){
     const key = decodeURIComponent(mSave[1]);
-    const srv = db.servers.find(s => s.key === key || s.folder === key);
+    const srv = findServerRecord(db, key);
     if(!srv) return jsonRes({ success:false }, 404);
     const body = JSON.parse(init.body || '{}');
     const file = (body.file || '').replace(/^\/+/, '');
     srv.files[file] = body.content ?? '';
-    saveDb(db);
+    srv.logs += `[${new Date().toLocaleTimeString()}] Saved file: ${file}\n`;
+    saveDb(db, { source: 'files_save' });
     return jsonRes({ success:true });
   }
 
@@ -1231,19 +1328,20 @@ async function localFallbackFetch(input, init={}){
         owner: s.owner,
         startup_file: s.startup_file,
         status: s.banned ? 'Banned' : s.status,
-        banned: !!s.banned
+        banned: !!s.banned,
+        generated_url: s.generated_url || buildGeneratedUrl(s.folder)
       }))
     });
   }
 
   if(path === '/api/admin/server/ban' && method === 'POST'){
     const body = JSON.parse(init.body || '{}');
-    const srv = db.servers.find(s => s.folder === body.folder || s.key === body.folder || s.key === body.key);
+    const srv = findServerRecord(db, body.key || body.folder);
     if(!srv) return jsonRes({ success:false }, 404);
     srv.banned = !!body.banned;
     if(srv.banned){ srv.status = 'Banned'; srv.mem = '0 MB'; }
     else if(srv.status === 'Banned'){ srv.status = 'Offline'; }
-    saveDb(db);
+    saveDb(db, { source: 'admin_ban' });
     return jsonRes({ success:true });
   }
 
@@ -1266,7 +1364,7 @@ async function localFallbackFetch(input, init={}){
     if(!u) return jsonRes({ success:false }, 404);
     if(typeof body.active === 'boolean') u.active = body.active;
     if(typeof body.premium === 'boolean') u.premium = body.premium;
-    saveDb(db);
+    saveDb(db, { source: 'admin_user_update' });
     return jsonRes({ success:true });
   }
 
@@ -1281,6 +1379,124 @@ window.fetch = async (input, init={}) => {
     return await localFallbackFetch(input, opts);
   }
 };
+
+/* =========================================================================
+   BOT BRIDGE API (تلقائي من البوت إلى الموقع عند اختيار أو إنشاء سيرفر)
+   ========================================================================= */
+window.EHAB_BOT_BRIDGE = {
+  selectOrCreateServerFromBot: async function(payload = {}){
+    const db = loadDb();
+    const sess = getSession() || { username: 'admin', is_admin: true };
+    const owner = (payload.owner || sess.username || 'admin').trim();
+    const rawName = (payload.name || payload.server_name || payload.folder || '').trim();
+    const kind = (payload.kind || payload.server_type || 'py').toLowerCase();
+    const isJs = kind.includes('js') || kind.includes('node');
+    const serverType = isJs ? 'Node.js/JS' : 'Python';
+    const startupFile = (payload.startup_file || '').trim() || (isJs ? 'index.js' : 'main.py');
+
+    if(!rawName) return { success: false, message: 'اسم السيرفر مطلوب' };
+    const folder = (payload.folder || rawName).toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || ('srv_' + Date.now());
+    const key = payload.key || `${owner}::${folder}`;
+    let srv = findServerRecord(db, key) || findServerRecord(db, folder);
+
+    if(!srv){
+      const genUrl = payload.generated_url || buildGeneratedUrl(folder);
+      const starterCode = payload.code || (isJs
+        ? `console.log("Bot created JS server: ${rawName}");\nsetInterval(() => {}, 60000);\n`
+        : `print("Bot created PY server: ${rawName}")\n`);
+      srv = normalizeServerRecord({
+        key,
+        folder,
+        display_name: rawName,
+        title: rawName,
+        subtitle: `${serverType} · Bot Sync`,
+        owner,
+        startup_file: startupFile,
+        status: payload.auto_start !== false ? 'Running' : 'Offline',
+        banned: false,
+        mem: payload.auto_start !== false ? '32 MB' : '0 MB',
+        ip: '127.0.0.1',
+        generated_url: genUrl,
+        logs: `[${new Date().toLocaleTimeString()}] [BOT SYNC] Created & selected "${rawName}"\n[URL] ${genUrl}\n`,
+        files: {
+          [startupFile]: starterCode
+        }
+      });
+      db.servers.push(srv);
+    }else{
+      srv.startup_file = startupFile;
+      srv.generated_url = payload.generated_url || srv.generated_url || buildGeneratedUrl(srv.folder);
+      if(payload.auto_start !== false && !srv.banned){
+        srv.status = 'Running';
+        srv.mem = '34 MB';
+      }
+      if(payload.log_line){
+        srv.logs += `[${new Date().toLocaleTimeString()}] [BOT] ${payload.log_line}\n`;
+      }
+      if(payload.file_name && typeof payload.file_content === 'string'){
+        srv.files[payload.file_name] = payload.file_content;
+      }
+    }
+
+    saveDb(db, { source: 'bot_bridge' });
+    await loadServers();
+    if(currentSrv && (currentSrv.key === srv.key || currentSrv.folder === srv.folder)){
+      currentSrv = { ...currentSrv, ...srv };
+      document.getElementById('srvHeader').textContent = currentSrv.title;
+      document.getElementById('srvSub').textContent = currentSrv.subtitle || '';
+      document.getElementById('mainFileTxt').textContent = currentSrv.startup_file || 'main.py';
+      startPolling();
+      if(document.getElementById('viewFiles').style.display === 'block') loadFiles();
+    }else if(document.getElementById('homeView').style.display !== 'none' && payload.open_in_ui !== false){
+      openServer(srv);
+    }
+    await loadPythonHost();
+    return { success: true, server: srv };
+  }
+};
+
+function handleExternalSyncEvent(evData){
+  if(!evData || evData.source === 'web_self') return;
+  const sess = getSession();
+  if(!sess) return;
+  if(document.getElementById('homeView').style.display !== 'none'){
+    loadServers();
+    loadPythonHost();
+    refreshWalletBadge();
+  }
+  if(currentSrv && document.getElementById('serverView').style.display !== 'none'){
+    const db = loadDb();
+    const fresh = findServerRecord(db, currentSrv.key || currentSrv.folder);
+    if(fresh){
+      currentSrv = { ...currentSrv, ...fresh };
+      document.getElementById('srvHeader').textContent = currentSrv.title;
+      document.getElementById('srvSub').textContent = currentSrv.subtitle || '';
+      document.getElementById('mainFileTxt').textContent = currentSrv.startup_file || 'main.py';
+      startPolling();
+      if(document.getElementById('viewFiles').style.display === 'block') loadFiles();
+    }else{
+      goHome();
+    }
+  }
+  if(document.getElementById('adminView').style.display !== 'none' && sess.is_admin){
+    refreshAll();
+  }
+}
+
+window.addEventListener('storage', (e) => {
+  if(e.key === DB_KEY || e.key === BOT_BRIDGE_KEY){
+    try{
+      const parsed = e.key === BOT_BRIDGE_KEY && e.newValue ? JSON.parse(e.newValue) : { type: 'storage' };
+      handleExternalSyncEvent(parsed);
+    }catch{
+      handleExternalSyncEvent({ type: 'storage' });
+    }
+  }
+});
+
+if(syncChannel){
+  syncChannel.onmessage = (ev) => handleExternalSyncEvent(ev.data);
+}
 
 /* =========================================================================
    2. ROUTER & VIEW CONTROLLER (/login, /create, /, /admin, /logout)
@@ -1472,9 +1688,10 @@ async function orderFreeService(kind){
     return;
   }
   const srvKey = d.key || srvName;
+  const genUrl = d.generated_url || buildGeneratedUrl(srvName);
   const sampleCode = isJs
-    ? `console.log("𝗘𝗛𝗔𝗕 Free JS Service (${srvName}) Running!");\nsetInterval(() => {}, 60000);\n`
-    : `import time\nprint("𝗘𝗛𝗔𝗕 Free PY Service (${srvName}) Running!")\ntime.sleep(2)\n`;
+    ? `console.log("𝗘𝗛𝗔𝗕 Free JS Service (${srvName}) Running at ${genUrl}");\nsetInterval(() => {}, 60000);\n`
+    : `import time\nprint("𝗘𝗛𝗔𝗕 Free PY Service (${srvName}) Running at ${genUrl}")\ntime.sleep(2)\n`;
 
   await fetch(`/files/save/${encodeURIComponent(srvKey)}`, {
     method: 'POST',
@@ -1490,12 +1707,14 @@ async function orderFreeService(kind){
 
   toast(`تم إنشاء وتشغيل الخدمة المجانية (${kind.toUpperCase()}) ✅`, 'ok');
   await loadServers();
+  await loadPythonHost();
   openServer({
     key: srvKey,
     folder: srvName,
     title: srvName,
     subtitle: `${srvType} · Free Service`,
     startup_file: defaultFile,
+    generated_url: genUrl,
     status: 'Running'
   });
 }
@@ -1637,7 +1856,7 @@ function handleFeatureAction(actionKey){
 
     case 'preview_tab':
       loadPythonHost();
-      toast('تم تحديث عنوان المعاينة والمنفذ', 'ok');
+      toast('تم تحديث عنوان المعاينة والرابط المولّد', 'ok');
       break;
 
     case 'suitable_for':
@@ -1670,11 +1889,15 @@ async function loadPythonHost(){
       ipTxt.textContent = `Python Host: ${location.hostname}:${port}`;
       return;
     }
-    const key = d.servers[0].key || d.servers[0].folder;
+    const targetSrv = currentSrv
+      ? (d.servers.find(x => x.key === currentSrv.key || x.folder === currentSrv.folder) || d.servers[0])
+      : d.servers[0];
+    const key = targetSrv.key || targetSrv.folder;
     const s = await fetch(`/server/stats/${encodeURIComponent(key)}`);
-    if(!s.ok){ ipTxt.textContent = `Python Host: ${location.hostname}:${port}`; return; }
+    if(!s.ok){ ipTxt.textContent = `Python Host: ${targetSrv.generated_url || (location.hostname + ':' + port)}`; return; }
     const sd = await s.json();
-    ipTxt.textContent = `Python Host: ${sd.ip || location.hostname}:${port}`;
+    const genUrl = sd.generated_url || targetSrv.generated_url || buildGeneratedUrl(targetSrv.folder);
+    ipTxt.textContent = `Host: ${sd.ip || location.hostname}:${port} · ${genUrl}`;
   }catch{
     ipTxt.textContent = `Python Host: ${location.hostname}:${port}`;
   }
@@ -1684,40 +1907,57 @@ async function loadServers(){
   const r = await fetch('/servers');
   if(!r.ok){ navigate('/login'); return; }
   const d = await r.json();
-  serversCache = (d.servers || []).map(s => ({ ...s, key: s.key || s.folder }));
+  serversCache = (d.servers || []).map(s => ({
+    ...s,
+    key: s.key || s.folder,
+    generated_url: s.generated_url || buildGeneratedUrl(s.folder)
+  }));
   const cont = document.getElementById('cardsContainer');
   cont.innerHTML = '';
 
   const sess = getSession();
   if(sess && sess.is_admin) document.getElementById('adminBtn').style.display = 'inline-block';
 
-  serversCache.forEach(s => {
+  serversCache.forEach((s, idx) => {
     const div = document.createElement('div');
     div.className = 'card';
+    div.setAttribute('data-key', s.key);
+    div.setAttribute('data-folder', s.folder);
+    div.setAttribute('data-startup', s.startup_file || 'main.py');
+    div.setAttribute('data-idx', String(idx));
     const cls = statusClass(s.status);
     const label = (s.status || 'Offline').toUpperCase();
     div.innerHTML = `
       <div class="srv-title">${escapeHtml(s.title)}</div>
       <div class="srv-sub">${escapeHtml(s.subtitle || '')}</div>
+      <div class="srv-sub" style="direction:ltr;text-align:right;font-size:11px;color:var(--accent)">${escapeHtml(s.generated_url || '')}</div>
       <div class="pill ${cls}"><span class="dot"></span>${escapeHtml(label)}</div>
     `;
-    div.onclick = () => openServer(s);
+    div.onclick = () => {
+      const latest = serversCache[idx] || s;
+      openServer(latest);
+    };
     cont.appendChild(div);
   });
 }
 
 function openServer(s){
   stopPoll();
-  currentSrv = s;
+  currentSrv = {
+    ...s,
+    key: s.key || s.folder,
+    generated_url: s.generated_url || buildGeneratedUrl(s.folder)
+  };
   currentPath = '';
   document.getElementById('homeView').style.display = 'none';
   document.getElementById('serverView').style.display = 'block';
   document.getElementById('homeBtn').style.display = 'inline-block';
   document.getElementById('newBtn').style.display = 'none';
 
-  document.getElementById('srvHeader').textContent = s.title;
-  document.getElementById('srvSub').textContent = s.subtitle || '';
-  document.getElementById('mainFileTxt').textContent = s.startup_file || 'اضغط للتحديد';
+  document.getElementById('srvHeader').textContent = currentSrv.title;
+  document.getElementById('srvSub').textContent = `${currentSrv.subtitle || ''} · ${currentSrv.generated_url}`;
+  document.getElementById('mainFileTxt').textContent = currentSrv.startup_file || 'اضغط للتحديد';
+  loadPythonHost();
 
   switchTab('console');
 }
@@ -1730,6 +1970,7 @@ function goHome(){
   document.getElementById('homeBtn').style.display = 'none';
   document.getElementById('newBtn').style.display = 'inline-block';
   loadServers();
+  loadPythonHost();
   refreshWalletBadge();
 }
 
@@ -1755,7 +1996,13 @@ async function startPolling(){
       document.getElementById('logOut').textContent = d.logs || 'No logs';
       document.getElementById('statusTxt').textContent = d.status || 'Offline';
       document.getElementById('memTxt').textContent = d.mem || '0 MB';
-      document.getElementById('ipTxt').textContent = d.ip || '';
+      const genUrl = d.generated_url || currentSrv.generated_url || buildGeneratedUrl(currentSrv.folder);
+      currentSrv.generated_url = genUrl;
+      if(d.startup_file){
+        currentSrv.startup_file = d.startup_file;
+        document.getElementById('mainFileTxt').textContent = d.startup_file;
+      }
+      document.getElementById('ipTxt').textContent = `${d.ip || '127.0.0.1'} · ${genUrl}`;
       const running = (d.status === 'Running' || d.status === 'Installing' || d.status === 'Starting');
       document.getElementById('btnStart').disabled = running;
       const lo = document.getElementById('logOut');
@@ -1773,21 +2020,25 @@ async function srvAction(act){
   if(!r.ok || d.success === false){ toast(d.message || 'فشل تنفيذ الأمر', 'err'); return; }
   toast(`تم إرسال أمر "${act.toUpperCase()}"`, 'ok');
   startPolling();
+  loadServers();
 }
 
 function changeStartup(){
   if(!currentSrv) return;
   openM('تحديد ملف التشغيل الرئيسي (مثال: bot.py أو index.js)', currentSrv.startup_file || '', async (v) => {
+    const cleanFile = (v || '').trim() || 'main.py';
     const r = await fetch(`/server/set-startup/${encodeURIComponent(currentSrv.key)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ file: v })
+      body: JSON.stringify({ file: cleanFile })
     });
     if(!r.ok){ toast('فشل تحديث ملف التشغيل', 'err'); return; }
-    currentSrv.startup_file = v || 'main.py';
+    currentSrv.startup_file = cleanFile;
     document.getElementById('mainFileTxt').textContent = currentSrv.startup_file;
     toast('تم تحديث ملف التشغيل', 'ok');
     closeM();
+    startPolling();
+    loadServers();
   });
 }
 
@@ -1802,42 +2053,95 @@ async function loadFiles(){
 
   const parts = (data.path || '').split('/').filter(Boolean);
   let acc = '';
-  const crumbs = [`<span class="crumb"><a href="javascript:void(0)" onclick="jumpPath('')">root</a></span>`];
+  const crumbs = [`<span class="crumb"><a href="javascript:void(0)" data-path="">root</a></span>`];
   for(const p of parts){
     acc = acc ? (acc + '/' + p) : p;
-    crumbs.push(`<span class="sep">/</span><span class="crumb"><a href="javascript:void(0)" onclick="jumpPath('${escapeAttr(acc)}')">${escapeHtml(p)}</a></span>`);
+    crumbs.push(`<span class="sep">/</span><span class="crumb"><a href="javascript:void(0)" data-path="${escapeAttr(acc)}">${escapeHtml(p)}</a></span>`);
   }
-  document.getElementById('pathBar').innerHTML = crumbs.join('');
+  const pathBarEl = document.getElementById('pathBar');
+  pathBarEl.innerHTML = crumbs.join('');
+  pathBarEl.querySelectorAll('a[data-path]').forEach(a => {
+    a.onclick = () => jumpPath(a.getAttribute('data-path') || '');
+  });
 
-  const rows = [];
+  const tbody = document.getElementById('fileList');
+  tbody.innerHTML = '';
+
   for(const d of (data.dirs || [])){
     const name = d.name;
-    rows.push(`
-      <tr>
-        <td><span class="name-link" onclick="openFolder('${escapeAttr(name)}')">📁 ${escapeHtml(name)}</span></td>
-        <td style="color:var(--muted)">—</td>
-        <td class="row-actions">
-          <button class="btn btn-mini" onclick="openFolder('${escapeAttr(name)}')">فتح</button>
-          <button class="btn btn-mini" onclick="renameDir('${escapeAttr(name)}')">إعادة تسمية</button>
-          <button class="btn btn-mini btn-danger" onclick="deleteDir('${escapeAttr(name)}')">حذف</button>
-        </td>
-      </tr>
-    `);
+    const tr = document.createElement('tr');
+    tr.setAttribute('data-entry-name', name);
+    tr.setAttribute('data-entry-kind', 'dir');
+
+    const nameTd = document.createElement('td');
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'name-link';
+    nameSpan.textContent = `📁 ${name}`;
+    nameSpan.onclick = () => openFolder(name);
+    nameTd.appendChild(nameSpan);
+
+    const sizeTd = document.createElement('td');
+    sizeTd.style.color = 'var(--muted)';
+    sizeTd.textContent = '—';
+
+    const actTd = document.createElement('td');
+    actTd.className = 'row-actions';
+
+    const openBtn = document.createElement('button');
+    openBtn.className = 'btn btn-mini';
+    openBtn.textContent = 'فتح';
+    openBtn.onclick = () => openFolder(name);
+
+    const renBtn = document.createElement('button');
+    renBtn.className = 'btn btn-mini';
+    renBtn.textContent = 'إعادة تسمية';
+    renBtn.onclick = () => renameDir(name);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-mini btn-danger';
+    delBtn.textContent = 'حذف';
+    delBtn.onclick = () => deleteDir(name);
+
+    actTd.append(openBtn, renBtn, delBtn);
+    tr.append(nameTd, sizeTd, actTd);
+    tbody.appendChild(tr);
   }
+
   for(const f of (data.files || [])){
-    const relFile = currentPath ? `${currentPath}/${f.name}` : f.name;
-    rows.push(`
-      <tr>
-        <td><span class="name-link" onclick="openEditor('${escapeAttr(relFile)}')">📄 ${escapeHtml(f.name)}</span></td>
-        <td>${escapeHtml(f.size || '')}</td>
-        <td class="row-actions">
-          <button class="btn btn-mini" onclick="renameFilePrompt('${escapeAttr(f.name)}')">إعادة تسمية</button>
-          <button class="btn btn-mini btn-danger" onclick="deleteFilePrompt('${escapeAttr(f.name)}')">حذف</button>
-        </td>
-      </tr>
-    `);
+    const name = f.name;
+    const relFile = currentPath ? `${currentPath}/${name}` : name;
+    const tr = document.createElement('tr');
+    tr.setAttribute('data-entry-name', name);
+    tr.setAttribute('data-entry-path', relFile);
+    tr.setAttribute('data-entry-kind', 'file');
+
+    const nameTd = document.createElement('td');
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'name-link';
+    nameSpan.textContent = `📄 ${name}`;
+    nameSpan.onclick = () => openEditor(relFile);
+    nameTd.appendChild(nameSpan);
+
+    const sizeTd = document.createElement('td');
+    sizeTd.textContent = f.size || '';
+
+    const actTd = document.createElement('td');
+    actTd.className = 'row-actions';
+
+    const renBtn = document.createElement('button');
+    renBtn.className = 'btn btn-mini';
+    renBtn.textContent = 'إعادة تسمية';
+    renBtn.onclick = () => renameFilePrompt(name);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-mini btn-danger';
+    delBtn.textContent = 'حذف';
+    delBtn.onclick = () => deleteFilePrompt(name);
+
+    actTd.append(renBtn, delBtn);
+    tr.append(nameTd, sizeTd, actTd);
+    tbody.appendChild(tr);
   }
-  document.getElementById('fileList').innerHTML = rows.join('');
 }
 
 function openFolder(name){ currentPath = currentPath ? (currentPath + '/' + name) : name; loadFiles(); }
@@ -1953,6 +2257,7 @@ async function saveFile(){
   if(!r.ok){ toast('فشل الحفظ', 'err'); return; }
   toast('تم الحفظ ✅', 'ok');
   loadFiles();
+  if(document.getElementById('viewConsole').style.display === 'block') startPolling();
 }
 
 function closeEditor(){ document.getElementById('editor-modal').style.display = 'none'; }
@@ -1979,18 +2284,23 @@ document.getElementById('newBtn').onclick = () => openM('اسم السيرفر �
   const isJs = kind === 'js';
   const serverType = isJs ? 'Node.js/JS' : 'Python';
   const startupFile = isJs ? 'index.js' : 'main.py';
+  const folderSlug = cleanName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || ('server_' + Date.now());
+  const genUrl = buildGeneratedUrl(folderSlug);
   const starterCode = isJs
-    ? `console.log("𝗘𝗛𝗔𝗕 JS Server (${cleanName}) Started!");\nsetInterval(() => {}, 60000);\n`
-    : `import time\nprint("𝗘𝗛𝗔𝗕 PY Server (${cleanName}) Started!")\ntime.sleep(2)\n`;
+    ? `console.log("𝗘𝗛𝗔𝗕 JS Server (${cleanName}) Started! URL: ${genUrl}");\nsetInterval(() => {}, 60000);\n`
+    : `import time\nprint("𝗘𝗛𝗔𝗕 PY Server (${cleanName}) Started! URL: ${genUrl}")\ntime.sleep(2)\n`;
 
   const res = await fetch('/add', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: cleanName, server_type: serverType })
+    body: JSON.stringify({ name: cleanName, server_type: serverType, generated_url: genUrl })
   });
   const d = await res.json().catch(() => ({ success:false, message:'خطأ' }));
   if(!res.ok || !d.success){ toast(d.message || 'فشل إنشاء السيرفر', 'err'); return; }
 
   const srvKey = d.key || cleanName;
+  const finalFolder = d.folder || folderSlug;
+  const finalUrl = d.generated_url || genUrl;
+
   await fetch(`/files/save/${encodeURIComponent(srvKey)}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ file: startupFile, content: starterCode })
@@ -2007,16 +2317,17 @@ document.getElementById('newBtn').onclick = () => openM('اسم السيرفر �
   await loadPythonHost();
   openServer({
     key: srvKey,
-    folder: cleanName,
+    folder: finalFolder,
     title: cleanName,
     subtitle: `${serverType} · ${startupFile}`,
     startup_file: startupFile,
+    generated_url: finalUrl,
     status: 'Running'
   });
 }, true);
 
 /* =========================================================================
-   5. ADMIN PANEL (/admin) — XSS-Safe & Checked Responses
+   5. ADMIN PANEL (/admin) — XSS-Safe, Data-Attr Safe & Checked Responses
    ========================================================================= */
 let usersCache = [];
 
@@ -2049,12 +2360,19 @@ async function refreshServers(){
   const t = document.getElementById('serversT');
   t.innerHTML = '';
   (d.servers || []).forEach(s => {
+    const srvKey = s.key || s.folder;
+    const srvFolder = s.folder || srvKey;
+    const srvTitle = s.display_name || srvFolder;
+    const srvStartup = s.startup_file || 'main.py';
+
     const tr = document.createElement('tr');
+    tr.setAttribute('data-key', srvKey);
+    tr.setAttribute('data-startup', srvStartup);
     tr.innerHTML = `
-      <td>${escapeHtml(s.folder)}</td>
-      <td>${escapeHtml(s.display_name)}</td>
+      <td>${escapeHtml(srvFolder)}</td>
+      <td>${escapeHtml(srvTitle)}</td>
       <td>${escapeHtml(s.owner)}</td>
-      <td>${escapeHtml(s.startup_file || '')}</td>
+      <td>${escapeHtml(srvStartup)}</td>
       <td>${tagStatus(s.status)}</td>
       <td class="actions"></td>
     `;
@@ -2062,21 +2380,26 @@ async function refreshServers(){
 
     const banBtn = document.createElement('button');
     banBtn.className = 'btn btn-mini';
+    banBtn.setAttribute('data-key', srvKey);
+    banBtn.setAttribute('data-startup', srvStartup);
     if(s.banned){
       banBtn.textContent = 'فك الحظر';
-      banBtn.onclick = () => banServer(s.key || s.folder, s.folder, false);
+      banBtn.onclick = () => banServer(srvKey, srvFolder, false);
     }else{
       banBtn.textContent = 'حظر';
       banBtn.style.borderColor = 'rgba(128,0,32,.4)';
       banBtn.style.color = 'var(--burgundy)';
-      banBtn.onclick = () => banServer(s.key || s.folder, s.folder, true);
+      banBtn.onclick = () => banServer(srvKey, srvFolder, true);
     }
 
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-mini btn-danger';
+    delBtn.classList.add('btn-del-srv');
+    delBtn.setAttribute('data-key', srvKey);
+    delBtn.setAttribute('data-startup', srvStartup);
     delBtn.textContent = 'حذف السيرفر';
     delBtn.onclick = async () => {
-      const done = await deleteServerByKey(s.key || s.folder, s.display_name || s.folder);
+      const done = await deleteServerByKey(srvKey, srvTitle);
       if(done) refreshAll();
     };
 
@@ -2108,6 +2431,7 @@ function renderUsers(arr){
   t.innerHTML = '';
   arr.forEach(u => {
     const tr = document.createElement('tr');
+    tr.setAttribute('data-key', u.username);
     tr.innerHTML = `
       <td>${escapeHtml(u.username)}</td>
       <td>${escapeHtml(u.email || '')}</td>
