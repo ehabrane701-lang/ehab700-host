@@ -1,31 +1,10 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 𝗘𝗛𝗔𝗕 - النظام الموحد للاستضافة والتحكم وإدارة البوتات والخدمات (app.py)
 طُوِّر بواسطة: 𝗘𝗛𝗔𝗕𝗔𝗜𝗛𝗔𝗪𝗕𝗔𝗡𝗜 | @Y_20_20
 
-أولاً: أهم مميزات استضافة وتشغيل المشاريع على استضافه
-- العمل الفوري من المتصفح (Zero Setup): افتح مشروعك وابدأ البرمجة فوراً بأي لغة برمجة مدعومة، مع بيئة جاهزة ومضبوطة مسبقاً.
-- الاستضافة والنشر السريع (Hosting & Deployments): يمكنك تحويل مشروعك إلى موقع أو تطبيق حي برابط مباشر (ويمكن ربطه بدومين مخصص حسب الخطة)، مع إمكانية اختيار أنواع نشر تناسب طبيعة مشروعك (مثل المواقع الثابتة، أو الخوادم المستمرة، أو المهام المجدولة).
-- تعدد لغات البرمجة والأطر (Multi-Language Support): تدعم عشرات اللغات والأطر الشهيرة مثل Python، Node.js، HTML/CSS/JS، C++، Java، Go، وغيرها، مع إمكانية دمج قواعد بيانات وأدوات مساعدة.
-- المساعد الذكي والبرمجة بالذكاء الاصطناعي: توفر ميزات ذكاء اصطناعي تساعد في توليد الأكواد، شرح الأخطاء، تعديل الملفات، وبناء مشاريع كاملة انطلاقاً من وصف نصي.
-- التعاون الفوري (Real-time Collaboration): يمكنك مشاركة مساحة العمل مع فريقك أو معلمك/زميلك لتعديل الكود ومشاهدة التغييرات والطرفية (Terminal) في الوقت الفعلي، أشبه بالعمل الجماعي على مستند مشترك.
-- إدارة الحزم والبيئة (Packages & Secrets): تثبيت المكتبات بسهولة، وتخزين المتغيرات الحساسة ومفاتيح API بأمان عبر Secrets بدلاً من كتابتها داخل الكود.
-- سجل التعديلات والنسخ الاحتياطي (History / Version Control): تتبع التغييرات والعودة إلى نقاط سابقة، بالإضافة إلى التكامل مع Git / GitHub لاستيراد المشاريع أو رفعها.
-- تطبيقات الهواتف (Mobile App): إمكانية متابعة الأكواد وتشغيلها وتعديلها البسيط من الهاتف أثناء التنقل.
-
-ثانياً: كيف تعمل المنصة؟ (نظرة شاملة)
-- مساحة العمل (Workspace): مستكشف الملفات (Files)، محرر الأكواد (Editor)، الطرفية (Shell / Console)، المعاينة (Preview / Webview).
-- التشغيل مقابل النشر (Run vs. Deploy): Run للتجربة والتطوير داخل بيئة العمل، والنشر (Deploy) لإتاحة المشروع للزوار والمستخدمين بشكل مستقر ومستمر وفق خطة الاستضافة المختارة.
-
-ثالثاً: لمن تناسب استضافه؟ ولمن قد لا تكون الخيار الأنسب؟
-- مناسبة جداً لـ: المبتدئين والطلاب، النماذج الأولية (MVPs) والهاكاثونات، الفرق الصغيرة والمشاريع التعليمية، العمل من أكثر من جهاز.
-- قد لا تكون الخيار الأنسب لـ: المشاريع الضخمة ذات الأحمال العالية جداً أو المتطلبات المعقدة للبنية التحتية، التطبيقات التي تتطلب وصولاً منخفضاً جداً للعتاد أو بيئات مغلقة صارمة، المشاريع ذات الاستخدام المستمر والموارد العالية في الخطط المجانية.
-
-رابعاً: نصائح مهمة عند استخدامها
-- لا تضع المفاتيح السرية في الكود: استخدم Secrets دائماً لحماية كلمات المرور ومفاتيح الربط.
-- راقب السجلات (Logs) والموارد: عند تشغيل بوتات أو خوادم، راقب استهلاك الموارد وسجلات الأخطاء لتفادي توقف الخدمة المفاجئ.
-- اربط بـ GitHub: يُستحسن ربط مشاريعك المهمة بمستودع Git كنسخة احتياطية إضافية وإدارة احترافية للإصدارات.
 """
 
 # ==============================================================================
@@ -104,10 +83,10 @@ ADMIN_USERNAME = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASS", "1002670694")
 
 # إعدادات بوت تيليجرام والمطور
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8641088295:AAEPtjkMkn8kcGLpOgiud2SkHEc43XoLO9c").strip()
 API_BASE_URL = os.environ.get("API_BASE_URL", f"http://127.0.0.1:{PANEL_PORT_PRIMARY}").rstrip("/")
-PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "https://ehab700-host-3.onrender.com").strip()
-GOOGLE_REDIRECT_URL = os.environ.get("GOOGLE_REDIRECT_URL", "https://ehab700-host-3.onrender.com").strip() or "https://ehab700-host-3.onrender.com"
+PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "https://ehab700-host.onrender.com").strip()
+GOOGLE_REDIRECT_URL = os.environ.get("GOOGLE_REDIRECT_URL", "https://ehab700-host.onrender.com").strip() or "https://ehab700-host-3.onrender.com"
 
 _admin_ids_raw = os.environ.get("ADMIN_TELEGRAM_IDS", "1002670694")
 ADMIN_TELEGRAM_IDS = [
@@ -124,7 +103,7 @@ DEVELOPER_INFO = (
 PLATFORM_GUIDE_OVERVIEW = (
     "<b>أولاً: أهم مميزات استضافة وتشغيل المشاريع على استضافه</b>\n"
     "• <b>العمل الفوري من المتصفح (Zero Setup):</b> افتح مشروعك وابدأ البرمجة فوراً بأي لغة برمجة مدعومة، مع بيئة جاهزة ومضبوطة مسبقاً.\n"
-    "• <b>الاستضافة والنشر السريع (Hosting &amp; Deployments):</b> تحويل المشروع إلى موقع أو تطبيق حي برابط مباشر (ويمكن ربطه بدومين مخصص حسب الخطة)، مع اختيار أنواع نشر تناسب طبيعة المشروع (المواقع الثابتة، الخوادم المستمرة، المهام المجدولة).\n"
+    "• <b>الاستضافة والنشر السريع (Hosting &amp; Deployments):</b> تحويل المشروع إلى موقع أو تطبيق حي برابط مباشر (ويمكن ربطه بدومين مخصص حسب الخطة)، مع إمكانية اختيار أنواع نشر تناسب طبيعة المشروع (المواقع الثابتة، الخوادم المستمرة، المهام المجدولة).\n"
     "• <b>تعدد لغات البرمجة والأطر (Multi-Language Support):</b> Python، Node.js، HTML/CSS/JS، C++، Java، Go، وغيرها، مع إمكانية دمج قواعد بيانات وأدوات مساعدة.\n"
     "• <b>المساعد الذكي والبرمجة بالذكاء الاصطناعي:</b> توليد الأكواد، شرح الأخطاء، تعديل الملفات، وبناء مشاريع كاملة انطلاقاً من وصف نصي.\n"
     "• <b>التعاون الفوري (Real-time Collaboration):</b> مشاركة مساحة العمل مع الفريق أو المعلم/الزميل لتعديل الكود ومشاهدة التغييرات والطرفية (Terminal) في الوقت الفعلي.\n"
@@ -610,11 +589,12 @@ def execute_paid_service_order(user_key: str, service_id: str, details: str) -> 
         return {"success": False, "message": "الخدمة غير موجودة"}
 
     price = float(svc["price"])
+    curr = svc["currency"]
     ok, balance_after_deduct = deduct_balance_safe(user_key, price)
     if not ok:
         return {
             "success": False,
-            "message": f"رصيدك الحالي ({balance_after_deduct:.2f} {svc['currency']}) غير كافٍ لإتمام الدفع ({price:.2f} {svc['currency']}).",
+            "message": f"رصيدك الحالي ({balance_after_deduct:.2f} {curr}) غير كافٍ لإتمام الدفع ({price:.2f} {curr}).",
         }
 
     order_id = record_order(user_key, service_id, price, details, "paid_pending", "تم حجز المبلغ وجاري التنفيذ")
@@ -856,33 +836,33 @@ def start_with_autoinstall(owner: str, folder: str, startup_file: str):
             raise RuntimeError("Node.js (node) غير مثبت على الخادم لتشغيل ملفات JavaScript")
 
         js_wrapper_code = r"""
-const { spawnSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
+const { spawnSync } = require("child_process");
+const path = require("path");
+const fs = require("fs");
 
 const script = process.argv[1];
-const npmBin = process.argv[2] || 'npm';
+const npmBin = process.argv[2] || "npm";
 const cwd = process.cwd();
 
 function logSys(msg) {
   const line = `[AUTO-INSTALL-JS] ${msg}\n`;
   process.stdout.write(line);
   try {
-    fs.appendFileSync(path.join(cwd, 'server.log'), line, 'utf8');
+    fs.appendFileSync(path.join(cwd, "server.log"), line, "utf8");
   } catch (_) {}
 }
 
 function appendInstalled(pkg) {
   try {
-    const p = path.join(cwd, '.installed');
+    const p = path.join(cwd, ".installed");
     let existing = new Set();
     if (fs.existsSync(p)) {
-      fs.readFileSync(p, 'utf8').split(/\r?\n/).forEach(l => {
+      fs.readFileSync(p, "utf8").split(/\r?\n/).forEach(l => {
         if (l.trim()) existing.add(l.trim());
       });
     }
     if (pkg && !existing.has(pkg)) {
-      fs.appendFileSync(p, pkg + '\n', 'utf8');
+      fs.appendFileSync(p, pkg + "\n", "utf8");
     }
   } catch (_) {}
 }
@@ -891,8 +871,8 @@ function parseMissingModule(outputText) {
   const m1 = outputText.match(/Cannot find module '([^']+)'/);
   if (m1 && m1[1]) {
     const raw = m1[1];
-    if (raw.startsWith('.') || raw.startsWith('/')) return null;
-    return raw.startsWith('@') ? raw.split('/').slice(0, 2).join('/') : raw.split('/')[0];
+    if (raw.startsWith(".") || raw.startsWith("/")) return null;
+    return raw.startsWith("@") ? raw.split("/").slice(0, 2).join("/") : raw.split("/")[0];
   }
   const m2 = outputText.match(/ERR_MODULE_NOT_FOUND[\s\S]*?package '([^']+)'/);
   if (m2 && m2[1]) return m2[1];
@@ -905,12 +885,12 @@ const tried = new Set();
 while (true) {
   const res = spawnSync(process.execPath, [script], {
     cwd,
-    env: Object.assign({}, process.env, { FORCE_COLOR: '0' }),
-    encoding: 'utf8',
+    env: Object.assign({}, process.env, { FORCE_COLOR: "0" }),
+    encoding: "utf8",
     maxBuffer: 10 * 1024 * 1024
   });
 
-  const out = (res.stdout || '') + (res.stderr || '');
+  const out = (res.stdout || "") + (res.stderr || "");
   if (res.stdout) process.stdout.write(res.stdout);
   if (res.stderr) process.stderr.write(res.stderr);
 
@@ -920,7 +900,7 @@ while (true) {
   }
 
   if (res.status === 0) {
-    logSys('Script exited cleanly (code 0).');
+    logSys("Script exited cleanly (code 0).");
     break;
   }
 
@@ -928,10 +908,10 @@ while (true) {
   if (missingPkg && !tried.has(missingPkg)) {
     tried.add(missingPkg);
     logSys(`Missing module: ${missingPkg} -> installing via ${npmBin}...`);
-    const inst = spawnSync(npmBin, ['install', '--no-save', '--no-audit', '--no-fund', missingPkg], {
+    const inst = spawnSync(npmBin, ["install", "--no-save", "--no-audit", "--no-fund", missingPkg], {
       cwd,
       env: process.env,
-      encoding: 'utf8',
+      encoding: "utf8",
       maxBuffer: 10 * 1024 * 1024
     });
     if (inst.stdout) process.stdout.write(inst.stdout);
@@ -1244,7 +1224,7 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
         const div = document.createElement("div");
         div.className = "card";
         const linkHtml = s.generated_url ? `<br/>🔗 الرابط المولّد: <a class="link-pill" href="${s.generated_url}" target="_blank">${s.generated_url}</a>` : "";
-        div.innerHTML = `<b>${s.title}</b> (${s.status}) - ${s.subtitle}${linkHtml}<br/><br/><button onclick="openServer('${s.key}', '${s.startup_file || ""}')">⚙️ إدارة</button>`;
+        div.innerHTML = `<b>${s.title}</b> (${s.status}) - ${s.subtitle}${linkHtml}<br/><br/><button onclick='openServer(${JSON.stringify(s.key)}, ${JSON.stringify(s.startup_file || "")})'>⚙️ إدارة</button>`;
         box.appendChild(div);
       }
     }
@@ -2925,26 +2905,32 @@ async def show_servers_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if go_url:
             link_lines += f"\n🌐 <b>تحويل جوجل:</b> <code>{go_url}</code>"
 
+        srv_name = srv.get("name") or srv.get("title") or "ملف"
+        srv_status = srv.get("status") or "نشط"
+        srv_port = srv.get("port") or "متصل"
+
         text = (
             "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-            f"{status_emoji} <b>{srv.get('name', srv.get('title', 'ملف'))}</b>\n"
+            f"{status_emoji} <b>{srv_name}</b>\n"
             "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
             f"{type_icon} <b>نوع البيئة:</b> <code>{srv_type}</code>\n"
-            f"<b>📊 الحالة:</b> <code>{srv.get('status', 'نشط')}</code>\n"
-            f"<b>🔌 المنفذ/الرابط:</b> <code>{srv.get('port', 'متصل')}</code>"
+            f"<b>📊 الحالة:</b> <code>{srv_status}</code>\n"
+            f"<b>🔌 المنفذ/الرابط:</b> <code>{srv_port}</code>"
             f"{link_lines}"
         )
         folder = srv.get("id", srv.get("folder", ""))
         keyboard = [
             [
-                InlineKeyboardButton("▶️ تشغيل", callback_data=f"srv_start|{folder}"),
+                InlineKeyboardButton("▶️ تشغيل البوت / السيرفر", callback_data=f"srv_start|{folder}"),
                 InlineKeyboardButton("⏹ إيقاف", callback_data=f"srv_stop|{folder}"),
+            ],
+            [
                 InlineKeyboardButton("🔄 إعادة تشغيل", callback_data=f"srv_restart|{folder}"),
+                InlineKeyboardButton("🗑 حذف السيرفر", callback_data=f"srv_delete|{folder}"),
             ],
             [
                 InlineKeyboardButton("🖥 كونسول السيرفر", callback_data=f"console|{folder}"),
                 InlineKeyboardButton("⚠️ الأخطاء", callback_data=f"errors|{folder}"),
-                InlineKeyboardButton("🗑 حذف", callback_data=f"srv_delete|{folder}"),
             ],
             [InlineKeyboardButton("📦 تثبيت الحزم والمكتبات", callback_data=f"install|{folder}")],
         ]
@@ -2989,7 +2975,8 @@ async def show_admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
     )
     for u in users[:10]:
-        text += f"• <code>{u.get('username')}</code> | الحالة: <b>{'نشط' if u.get('active') else 'موقوف'}</b>\n"
+        st_lbl = "نشط" if u.get("active") else "موقوف"
+        text += f"• <code>{u.get('username')}</code> | الحالة: <b>{st_lbl}</b>\n"
     if len(users) > 10:
         text += f"<i>... و {len(users) - 10} مستخدمين آخرين</i>\n"
 
@@ -3046,13 +3033,15 @@ async def show_admin_notifications(update: Update, context: ContextTypes.DEFAULT
         )
 
     for req in requests_list:
+        req_user = req.get("username")
+        req_date = str(req.get("created_at", ""))[:19]
         text = (
-            f"<b>👤 اسم المستخدم:</b> <code>{req.get('username')}</code>\n"
-            f"<b>📅 التاريخ:</b> <code>{str(req.get('created_at', ''))[:19]}</code>"
+            f"<b>👤 اسم المستخدم:</b> <code>{req_user}</code>\n"
+            f"<b>📅 التاريخ:</b> <code>{req_date}</code>"
         )
         keyboard = [[
-            InlineKeyboardButton("✅ قبول الحساب", callback_data=f"approve|{req.get('username')}"),
-            InlineKeyboardButton("❌ رفض الحساب", callback_data=f"reject|{req.get('username')}"),
+            InlineKeyboardButton("✅ قبول الحساب", callback_data=f"approve|{req_user}"),
+            InlineKeyboardButton("❌ رفض الحساب", callback_data=f"reject|{req_user}"),
         ]]
         if query and query.message:
             await query.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -3178,8 +3167,9 @@ async def receive_server_type(update: Update, context: ContextTypes.DEFAULT_TYPE
             parse_mode=ParseMode.HTML,
         )
     else:
+        err_msg = result.get("message", "خطأ غير معروف") if result else "خطأ"
         await query.edit_message_text(
-            f"<b>❌ فشل إعداد السيرفر!</b>\n<i>{result.get('message', 'خطأ غير معروف') if result else 'خطأ'}</i>",
+            f"<b>❌ فشل إعداد السيرفر!</b>\n<i>{err_msg}</i>",
             parse_mode=ParseMode.HTML,
         )
 
@@ -3301,7 +3291,8 @@ async def admin_delete_user_confirm(update: Update, context: ContextTypes.DEFAUL
     if result and result.get("success"):
         await update.message.reply_text(f"<b>✅ تم حذف المستخدم</b> <code>{username}</code> <b>وجميع ملفاته بنجاح</b>", parse_mode=ParseMode.HTML)
     else:
-        await update.message.reply_text(f"<b>❌ فشل الحذف:</b> <i>{result.get('message', 'خطأ غير متوقع') if result else 'خطأ'}</i>", parse_mode=ParseMode.HTML)
+        err_msg = result.get("message", "خطأ غير متوقع") if result else "خطأ"
+        await update.message.reply_text(f"<b>❌ فشل الحذف:</b> <i>{err_msg}</i>", parse_mode=ParseMode.HTML)
     await show_main_menu(update, context)
     return ConversationHandler.END
 
@@ -3454,7 +3445,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     msg += f"\nالرابط: {result.get('generated_url')}"
                 await query.answer(msg[:200], show_alert=True)
             else:
-                await query.answer(f"❌ {result.get('message', 'فشل التنفيذ') if result else 'خطأ'}"[:200], show_alert=True)
+                err_msg = result.get("message", "فشل التنفيذ") if result else "خطأ"
+                await query.answer(f"❌ {err_msg}"[:200], show_alert=True)
             await show_servers_list(update, context)
 
         elif cmd == "console":
@@ -3468,7 +3460,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "api_key": api_key,
                 "folder": value,
             })
-            msg = result.get("message", "✅ جاري تثبيت الحزم المطلوبة") if result and result.get("success") else f"❌ {result.get('message', 'فشل التثبيت') if result else 'خطأ'}"
+            if result and result.get("success"):
+                msg = result.get("message", "✅ جاري تثبيت الحزم المطلوبة")
+            else:
+                err_msg = result.get("message", "فشل التثبيت") if result else "خطأ"
+                msg = f"❌ {err_msg}"
             await query.edit_message_text(
                 f"<b>📦 إدارة الحزم والمكتبات</b>\n\n<i>{msg}</i>",
                 parse_mode=ParseMode.HTML,
