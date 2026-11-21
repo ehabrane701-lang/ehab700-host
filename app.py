@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -81,6 +80,7 @@ PANEL_PORT_SECONDARY = int(os.environ.get("SECONDARY_SERVER_PORT", 3004))
 
 ADMIN_USERNAME = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASS", "1002670694")
+ADMIN_FREE_MODE = True  # الأدمن مجاني بالكامل بدون خصم رصيد
 
 # إعدادات بوت تيليجرام والمطور
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8641088295:AAEPtjkMkn8kcGLpOgiud2SkHEc43XoLO9c").strip()
@@ -97,29 +97,7 @@ LOG_CHANNEL_ID = os.environ.get("LOG_CHANNEL_ID", "1002670694").strip()
 DEVELOPER_INFO = (
     "<b><blockquote>🛠 طُوِّر بواسطة: 𝗘𝗛𝗔𝗕𝗔𝗜𝗛𝗔𝗪𝗕𝗔𝗡𝗜</blockquote></b>\n"
     "<b>📬 تواصل:</b> <code>@Y_20_20</code>\n"
-    "<tg-spoiler>نسخة مدفوعة ومحمية بالكامل - جميع الحقوق محفوظة</tg-spoiler>"
-)
-
-PLATFORM_GUIDE_OVERVIEW = (
-    "<b>أولاً: أهم مميزات استضافة وتشغيل المشاريع على استضافه</b>\n"
-    "• <b>العمل الفوري من المتصفح (Zero Setup):</b> افتح مشروعك وابدأ البرمجة فوراً بأي لغة برمجة مدعومة، مع بيئة جاهزة ومضبوطة مسبقاً.\n"
-    "• <b>الاستضافة والنشر السريع (Hosting &amp; Deployments):</b> تحويل المشروع إلى موقع أو تطبيق حي برابط مباشر (ويمكن ربطه بدومين مخصص حسب الخطة)، مع إمكانية اختيار أنواع نشر تناسب طبيعة المشروع (المواقع الثابتة، الخوادم المستمرة، المهام المجدولة).\n"
-    "• <b>تعدد لغات البرمجة والأطر (Multi-Language Support):</b> Python، Node.js، HTML/CSS/JS، C++، Java، Go، وغيرها، مع إمكانية دمج قواعد بيانات وأدوات مساعدة.\n"
-    "• <b>المساعد الذكي والبرمجة بالذكاء الاصطناعي:</b> توليد الأكواد، شرح الأخطاء، تعديل الملفات، وبناء مشاريع كاملة انطلاقاً من وصف نصي.\n"
-    "• <b>التعاون الفوري (Real-time Collaboration):</b> مشاركة مساحة العمل مع الفريق أو المعلم/الزميل لتعديل الكود ومشاهدة التغييرات والطرفية (Terminal) في الوقت الفعلي.\n"
-    "• <b>إدارة الحزم والبيئة (Packages &amp; Secrets):</b> تثبيت المكتبات بسهولة، وتخزين المتغيرات الحساسة ومفاتيح API بأمان عبر Secrets بدلاً من كتابتها داخل الكود.\n"
-    "• <b>سجل التعديلات والنسخ الاحتياطي (History / Version Control):</b> تتبع التغييرات والعودة إلى نقاط سابقة، بالإضافة إلى التكامل مع Git / GitHub.\n"
-    "• <b>تطبيقات الهواتف (Mobile App):</b> متابعة الأكواد وتشغيلها وتعديلها البسيط من الهاتف أثناء التنقل.\n\n"
-    "<b>ثانياً: كيف تعمل المنصة؟ (نظرة شاملة)</b>\n"
-    "• <b>مساحة العمل (Workspace):</b> مستكشف الملفات (Files)، محرر الأكواد (Editor)، الطرفية (Shell / Console)، المعاينة (Preview / Webview).\n"
-    "• <b>التشغيل مقابل النشر (Run vs. Deploy):</b> زر Run للتجربة والتطوير داخل بيئة العمل، والنشر (Deploy) لإتاحة المشروع للزوار والمستخدمين بشكل مستقر ومستمر وفق خطة الاستضافة المختارة.\n\n"
-    "<b>ثالثاً: لمن تناسب استضافه؟ ولمن قد لا تكون الخيار الأنسب؟</b>\n"
-    "• <b>مناسبة جداً لـ:</b> المبتدئين والطلاب، النماذج الأولية (MVPs) والهاكاثونات، الفرق الصغيرة والمشاريع التعليمية، العمل من أكثر من جهاز.\n"
-    "• <b>قد لا تكون الخيار الأنسب لـ:</b> المشاريع الضخمة ذات الأحمال العالية جداً أو المتطلبات المعقدة للبنية التحتية، التطبيقات التي تتطلب وصولاً منخفضاً جداً للعتاد أو بيئات مغلقة صارمة، المشاريع ذات الاستخدام المستمر والموارد العالية في الخطط المجانية.\n\n"
-    "<b>رابعاً: نصائح مهمة عند استخدامها</b>\n"
-    "• لا تضع المفاتيح السرية في الكود: استخدم Secrets دائماً لحماية كلمات المرور ومفاتيح الربط.\n"
-    "• راقب السجلات (Logs) والموارد: عند تشغيل بوتات أو خوادم، راقب استهلاك الموارد وسجلات الأخطاء لتفادي توقف الخدمة المفاجئ.\n"
-    "• اربط بـ GitHub: يُستحسن ربط مشاريعك المهمة بمستودع Git كنسخة احتياطية إضافية وإدارة احترافية للإصدارات."
+    "<tg-spoiler>نسخة الأدمن مجانية ومحمية بالكامل - جميع الحقوق محفوظة</tg-spoiler>"
 )
 
 SERVICES_CATALOG = {
@@ -189,22 +167,6 @@ def is_path_safe(base_dir: str, target_path: str) -> bool:
         return common == real_base
     except (ValueError, OSError):
         return False
-
-
-def secure_join(base_dir: str, *paths) -> str:
-    base_dir = os.path.realpath(base_dir)
-    current_path = base_dir
-    for path in paths:
-        parts = str(path).replace("\\", "/").split("/")
-        for part in parts:
-            if part == "..":
-                raise ValueError("Path traversal attempt detected")
-            if part in (".", ""):
-                continue
-            current_path = os.path.join(current_path, part)
-            if not is_path_safe(base_dir, current_path):
-                raise ValueError("Security violation: Attempted to access outside secure root")
-    return os.path.abspath(current_path)
 
 
 def get_ip():
@@ -389,6 +351,15 @@ def get_site_base_url(req=None) -> str:
     return f"http://{get_ip()}:{PANEL_PORT_PRIMARY}"
 
 
+def _clean_subpath(subpath: str) -> str:
+    parts = [
+        quote(p)
+        for p in (subpath or "").replace("\\", "/").split("/")
+        if p and p not in (".", "..")
+    ]
+    return "/".join(parts)
+
+
 def build_generated_server_url(
     owner: str,
     folder: str,
@@ -397,23 +368,27 @@ def build_generated_server_url(
     req=None,
     auto_redirect_google: bool = False,
 ) -> dict:
-    safe_o = re.sub(r"[^a-zA-Z0-9_.-]", "", owner or "")
-    safe_f = re.sub(r"[^a-zA-Z0-9_.-]", "", folder or "")
+    safe_o = re.sub(r"[^a-zA-Z0-9_.-]", "", owner or "") or ADMIN_USERNAME
+    safe_f = re.sub(r"[^a-zA-Z0-9_.-]", "", folder or "") or "server"
     base_url = get_site_base_url(req)
-    clean_sub = (subpath or "").replace("\\", "/").strip("/")
+    clean_sub = _clean_subpath(subpath)
+
     route_path = f"/js/{quote(safe_o)}/{quote(safe_f)}"
     if clean_sub:
-        route_path += f"/{quote(clean_sub)}"
+        route_path += f"/{clean_sub}"
 
     params = []
-    if startup_file:
-        params.append(f"file={quote(startup_file.strip())}")
+    cleaned_file = (startup_file or "").strip().replace("\\", "/").lstrip("/")
+    if cleaned_file and ".." not in cleaned_file.split("/"):
+        params.append(f"file={quote(cleaned_file)}")
     if auto_redirect_google:
         params.append("redirect_google=1")
     query_str = ("?" + "&".join(params)) if params else ""
 
     generated_url = f"{base_url}{route_path}{query_str}"
-    google_jump_url = f"{base_url}/js/go/{quote(safe_o)}/{quote(safe_f)}" + (f"/{quote(clean_sub)}" if clean_sub else "") + (f"?file={quote(startup_file.strip())}" if startup_file else "")
+    go_path = f"/js/go/{quote(safe_o)}/{quote(safe_f)}" + (f"/{clean_sub}" if clean_sub else "")
+    go_query = f"?file={quote(cleaned_file)}" if cleaned_file else ""
+    google_jump_url = f"{base_url}{go_path}{go_query}"
 
     return {
         "generated_url": generated_url,
@@ -491,8 +466,8 @@ def find_user_by_api_key(api_key: str):
     key = (api_key or "").strip()
     if not key:
         return None
-    if ADMIN_PASSWORD and (key == ADMIN_USERNAME or key == f"ADMIN_{ADMIN_USERNAME}"):
-        return {"username": ADMIN_USERNAME, "is_admin": True, "active": True, "premium": True}
+    if key in (ADMIN_USERNAME, f"ADMIN_{ADMIN_USERNAME}", ADMIN_PASSWORD):
+        return {"username": ADMIN_USERNAME, "is_admin": True, "active": True, "premium": True, "free_admin": True}
     db = load_users()
     for u in db.get("users", []):
         if u.get("api_key") == key:
@@ -501,7 +476,7 @@ def find_user_by_api_key(api_key: str):
 
 
 def get_user_limit(username: str) -> int:
-    if is_admin_session():
+    if is_admin_session() or (username or "").strip().lower() == ADMIN_USERNAME.lower():
         return 999999
     db = load_users()
     u = find_user(db, username)
@@ -511,6 +486,8 @@ def get_user_limit(username: str) -> int:
 
 
 def get_balance(user_key: str) -> float:
+    if str(user_key).strip().lower() in (ADMIN_USERNAME.lower(), f"user:{ADMIN_USERNAME.lower()}") or str(user_key).strip() in [str(i) for i in ADMIN_TELEGRAM_IDS]:
+        return 999999.0
     with finance_lock:
         db = _read_json(BALANCES_DB, {"balances": {}})
         return float(db.get("balances", {}).get(str(user_key), 0.0))
@@ -529,7 +506,9 @@ def add_balance(user_key: str, amount: float) -> float:
         return new_bal
 
 
-def deduct_balance_safe(user_key: str, amount: float) -> tuple[bool, float]:
+def deduct_balance_safe(user_key: str, amount: float, is_free_admin: bool = False) -> tuple[bool, float]:
+    if is_free_admin and ADMIN_FREE_MODE:
+        return True, get_balance(user_key)
     with finance_lock:
         amt = float(amount)
         if amt <= 0:
@@ -583,21 +562,21 @@ def update_order_status(order_id: str, status: str, result_msg: str = ""):
         _atomic_write_json(ORDERS_DB, db)
 
 
-def execute_paid_service_order(user_key: str, service_id: str, details: str) -> dict:
+def execute_paid_service_order(user_key: str, service_id: str, details: str, is_free_admin: bool = False) -> dict:
     svc = SERVICES_CATALOG.get(service_id)
     if not svc:
         return {"success": False, "message": "الخدمة غير موجودة"}
 
-    price = float(svc["price"])
+    charged_price = 0.0 if (is_free_admin and ADMIN_FREE_MODE) else float(svc["price"])
     curr = svc["currency"]
-    ok, balance_after_deduct = deduct_balance_safe(user_key, price)
+    ok, balance_after_deduct = deduct_balance_safe(user_key, charged_price, is_free_admin=is_free_admin)
     if not ok:
         return {
             "success": False,
-            "message": f"رصيدك الحالي ({balance_after_deduct:.2f} {curr}) غير كافٍ لإتمام الدفع ({price:.2f} {curr}).",
+            "message": f"رصيدك الحالي ({balance_after_deduct:.2f} {curr}) غير كافٍ لإتمام الدفع ({charged_price:.2f} {curr}).",
         }
 
-    order_id = record_order(user_key, service_id, price, details, "paid_pending", "تم حجز المبلغ وجاري التنفيذ")
+    order_id = record_order(user_key, service_id, charged_price, details, "paid_pending", "مجاني للأدمن" if charged_price == 0.0 else "تم حجز المبلغ وجاري التنفيذ")
 
     try:
         if not details or len(details.strip()) < 2:
@@ -614,6 +593,7 @@ def execute_paid_service_order(user_key: str, service_id: str, details: str) -> 
             "service": svc["name"],
             "details": details.strip(),
             "route": f"/web/{order_id}",
+            "free_admin": bool(is_free_admin and ADMIN_FREE_MODE),
             "created_at": _utc_now_iso(),
         })
 
@@ -626,13 +606,16 @@ def execute_paid_service_order(user_key: str, service_id: str, details: str) -> 
             "message": delivered_msg,
         }
     except Exception as e:
-        refunded_bal = add_balance(user_key, price)
+        if charged_price > 0:
+            refunded_bal = add_balance(user_key, charged_price)
+        else:
+            refunded_bal = get_balance(user_key)
         update_order_status(order_id, "refunded", f"تم الاسترجاع تلقائياً بسبب: {e}")
         return {
             "success": False,
             "order_id": order_id,
             "balance": refunded_bal,
-            "message": f"تعذر إتمام التسليم وتم إرجاع المبلغ ({price:.2f}) إلى رصيدك تلقائياً. السبب: {e}",
+            "message": f"تعذر إتمام التسليم وتم إرجاع المبلغ ({charged_price:.2f}) إلى رصيدك تلقائياً. السبب: {e}",
         }
 
 
@@ -1078,7 +1061,7 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
 </head>
 <body>
   <div class="container">
-    <h2>🚀 𝗘𝗛𝗔𝗕 — اللوحة الموحدة (دخول • إنشاء حساب • سيرفرات • أدمن)</h2>
+    <h2>🚀 𝗘𝗛𝗔𝗕 — اللوحة الموحدة (أدمن مجاني • سيرفرات • توليد روابط)</h2>
     <div id="statusMsg" class="msg hidden"></div>
 
     <div class="nav">
@@ -1128,8 +1111,8 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
         <button class="danger" onclick="serverAct('stop')">⏹ إيقاف</button>
         <button class="danger" onclick="serverAct('restart')">🔄 إعادة تشغيل</button>
         <div id="generatedLinkBox" class="card hidden" style="margin-top:12px;">
-          <div><b>🔗 الرابط المولّد لملف JavaScript:</b> <a id="genUrlAnchor" class="link-pill" target="_blank"></a></div>
-          <div style="margin-top:8px;"><b>🌐 رابط التحويل المباشر إلى جوجل وتشغيل البوت:</b> <a id="goUrlAnchor" class="link-pill" target="_blank"></a></div>
+          <div><b>🔗 الرابط المولّد:</b> <a id="genUrlAnchor" class="link-pill" target="_blank"></a></div>
+          <div style="margin-top:8px;"><b>🌐 رابط التحويل المباشر:</b> <a id="goUrlAnchor" class="link-pill" target="_blank"></a></div>
         </div>
         <h5>الملفات والمجلدات:</h5>
         <div id="filesList"></div>
@@ -1143,7 +1126,7 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
     </div>
 
     <div id="tab-admin" class="hidden">
-      <h3>👑 لوحة إدارة الأدمن</h3>
+      <h3>👑 لوحة إدارة الأدمن (مجانية بالكامل)</h3>
       <button onclick="loadAdminData()">🔄 تحديث بيانات الأدمن</button>
       <div id="adminStats" class="card"></div>
       <h4>المستخدمون</h4>
@@ -1555,12 +1538,11 @@ def _render_js_runner_page(owner: str, folder: str, startup_file: str = "", subp
     google_url = links["google_target"]
     gen_url = links["generated_url"]
 
-    # تشغيل السيرفر تلقائياً إذا لم يكن قيد التشغيل بالفعل
     state_key = normalize_state_key(owner, folder)
     cur_state = _lookup_running_state([state_key, folder], bool(meta.get("banned", False)))
     if not meta.get("banned", False) and cur_state != "Running":
         log_append(state_key, f"[JS-LINK] Auto-starting server for file: {resolved_file} | URL: {gen_url}\n")
-        t = threading.Thread(target=background_start, args=(state_key, owner, folder, resolved_file), daemon=True)
+        t = threading.Thread(target=background_start, args=(state_key, owner, folder, resolved_file, subpath), daemon=True)
         t.start()
 
     if auto_google:
@@ -1738,8 +1720,9 @@ def api_login():
     password = data.get("password") or ""
 
     if ADMIN_PASSWORD and username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
-        session["user"] = {"username": ADMIN_USERNAME, "is_admin": True}
-        return jsonify({"success": True, "is_admin": True, "username": ADMIN_USERNAME})
+        session["user"] = {"username": ADMIN_USERNAME, "is_admin": True, "free_admin": True}
+        ensure_user_dirs(ADMIN_USERNAME)
+        return jsonify({"success": True, "is_admin": True, "free_admin": True, "username": ADMIN_USERNAME})
 
     db = load_users()
     u = find_user(db, username)
@@ -1822,7 +1805,7 @@ def add_server():
     if not folder:
         return jsonify({"success": False, "message": "Invalid server name"}), 400
 
-    owner = current_username()
+    owner = current_username() or ADMIN_USERNAME
     ensure_user_dirs(owner)
 
     if not is_admin_session():
@@ -1979,7 +1962,7 @@ def server_action(key, act):
 
     meta = read_meta(owner, folder)
     state_key = normalize_state_key(owner, folder)
-    if meta.get("banned", False):
+    if meta.get("banned", False) and not is_admin_session():
         set_state(state_key, "Banned")
         return jsonify({"success": False, "message": "Server is banned by admin"}), 403
 
@@ -2108,112 +2091,6 @@ def file_save(key):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-@app.route("/files/mkdir/<path:key>", methods=["POST"])
-@api_login_required
-def file_mkdir(key):
-    if not can_access_key(key):
-        return jsonify({"success": False, "message": "Forbidden"}), 403
-    data = request.get_json(silent=True) or {}
-    rel = data.get("path", "") or ""
-    name = safe_name(data.get("name", ""))
-    if not name:
-        return jsonify({"success": False, "message": "Bad name"}), 400
-    try:
-        target = safe_join_server_path(key, os.path.join(rel, name))
-        os.makedirs(target, exist_ok=False)
-        return jsonify({"success": True})
-    except FileExistsError:
-        return jsonify({"success": False, "message": "Already exists"}), 409
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
-
-
-@app.route("/files/rename/<path:key>", methods=["POST"])
-@api_login_required
-def file_rename(key):
-    if not can_access_key(key):
-        return jsonify({"success": False, "message": "Forbidden"}), 403
-    data = request.get_json(silent=True) or {}
-    rel = data.get("path", "") or ""
-    old = safe_name(data.get("old", ""))
-    new = safe_name(data.get("new", ""))
-    if not old or not new:
-        return jsonify({"success": False, "message": "Bad name"}), 400
-    try:
-        src = safe_join_server_path(key, os.path.join(rel, old))
-        dst = safe_join_server_path(key, os.path.join(rel, new))
-        os.rename(src, dst)
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
-
-
-@app.route("/files/delete/<path:key>", methods=["POST"])
-@api_login_required
-def file_delete(key):
-    if not can_access_key(key):
-        return jsonify({"success": False, "message": "Forbidden"}), 403
-    data = request.get_json(silent=True) or {}
-    rel = data.get("path", "") or ""
-    name = safe_name(data.get("name", ""))
-    kind = (data.get("kind") or "file").lower()
-    if not name:
-        return jsonify({"success": False, "message": "Bad name"}), 400
-    try:
-        target = safe_join_server_path(key, os.path.join(rel, name))
-        owner, folder = parse_server_key(key, allow_admin=True)
-        if os.path.abspath(target) == os.path.abspath(get_server_dir(owner, folder)):
-            return jsonify({"success": False, "message": "Cannot delete server root"}), 400
-        if kind == "dir":
-            shutil.rmtree(target)
-        else:
-            os.remove(target)
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
-
-
-@app.route("/files/upload/<path:key>", methods=["POST"])
-@api_login_required
-def file_upload(key):
-    if not can_access_key(key):
-        return jsonify({"success": False, "message": "Forbidden"}), 403
-
-    rel = request.args.get("path", "") or ""
-    try:
-        base_dir = safe_join_server_path(key, rel)
-    except Exception:
-        return jsonify({"success": False, "message": "Invalid path"}), 400
-    os.makedirs(base_dir, exist_ok=True)
-
-    files = request.files.getlist("files") or []
-    if not files:
-        one = request.files.get("file")
-        if one:
-            files = [one]
-    if not files:
-        return jsonify({"success": False, "message": "No file"}), 400
-
-    relpaths = request.form.getlist("relpaths")
-    saved = 0
-    for i, f in enumerate(files):
-        if not f or not f.filename:
-            continue
-        filename = safe_name(os.path.basename(f.filename))
-        if not filename:
-            continue
-        rp = (relpaths[i] or "").replace("\\", "/").lstrip("/") if (relpaths and i < len(relpaths)) else ""
-        try:
-            target_dir = safe_join_server_path(key, os.path.join(rel, os.path.dirname(rp))) if rp else base_dir
-        except Exception:
-            continue
-        os.makedirs(target_dir, exist_ok=True)
-        f.save(os.path.join(target_dir, filename))
-        saved += 1
-
-    return jsonify({"success": True, "saved": saved})
-
-
 @app.route("/api/bot/verify", methods=["POST"])
 def api_bot_verify():
     data = request.get_json(silent=True) or {}
@@ -2227,6 +2104,7 @@ def api_bot_verify():
         "success": True,
         "username": user_info.get("username"),
         "is_admin": bool(user_info.get("is_admin", False)),
+        "free_admin": bool(user_info.get("is_admin", False) and ADMIN_FREE_MODE),
     })
 
 
@@ -2282,7 +2160,7 @@ def api_bot_create_server():
     if not folder:
         return jsonify({"success": False, "message": "اسم السيرفر غير صالح"}), 400
 
-    owner = user_info.get("username")
+    owner = user_info.get("username") or ADMIN_USERNAME
     ensure_user_dirs(owner)
     target = get_server_dir(owner, folder)
     if not is_path_safe(USERS_ROOT, target):
@@ -2367,7 +2245,7 @@ def api_bot_server_action():
         shutil.rmtree(server_dir, ignore_errors=True)
         return jsonify({"success": True, "message": "تم حذف السيرفر بنجاح"})
 
-    if meta.get("banned"):
+    if meta.get("banned") and not user_info.get("is_admin"):
         return jsonify({"success": False, "message": "السيرفر محظور من الإدارة"}), 403
 
     if action in ("stop", "restart"):
@@ -2392,7 +2270,7 @@ def api_bot_server_action():
     t.start()
     return jsonify({
         "success": True,
-        "message": "تم إرسال أمر التشغيل بنجاح",
+        "message": "تم إرسال أمر التشغيل وتوليد الرابط بنجاح",
         "generated_url": links["generated_url"],
         "google_jump_url": links["google_jump_url"],
     })
@@ -2482,30 +2360,6 @@ def api_system_metrics():
 @api_admin_required
 def admin_servers():
     return jsonify({"success": True, "servers": list_all_servers_for_admin()})
-
-
-@app.route("/api/admin/server/ban", methods=["POST"])
-@api_admin_required
-def admin_server_ban():
-    data = request.get_json(silent=True) or {}
-    key = (data.get("key") or "").strip()
-    banned = bool(data.get("banned", True))
-    owner, folder = parse_server_key(key, allow_admin=True)
-    server_dir = get_server_dir(owner, folder)
-    if not os.path.isdir(server_dir):
-        return jsonify({"success": False, "message": "Server not found"}), 404
-    meta = read_meta(owner, folder)
-    meta["banned"] = banned
-    write_meta(owner, folder, meta)
-    state_key = normalize_state_key(owner, folder)
-    if banned:
-        stop_proc(key, owner, folder)
-        set_state(state_key, "Banned")
-        log_append(state_key, "[ADMIN] Server banned.\n")
-    else:
-        set_state(state_key, "Offline")
-        log_append(state_key, "[ADMIN] Server unbanned.\n")
-    return jsonify({"success": True})
 
 
 @app.route("/api/admin/users")
@@ -2603,25 +2457,6 @@ def admin_delete_user():
     return jsonify({"success": True})
 
 
-@app.route("/api/admin/user/update", methods=["POST"])
-@api_admin_required
-def admin_user_update():
-    data = request.get_json(silent=True) or {}
-    username = (data.get("username") or "").strip()
-    if not username:
-        return jsonify({"success": False, "message": "Username required"}), 400
-    db = load_users()
-    u = find_user(db, username)
-    if not u:
-        return jsonify({"success": False, "message": "User not found"}), 404
-    if "active" in data:
-        u["active"] = bool(data["active"])
-    if "premium" in data:
-        u["premium"] = bool(data["premium"])
-    save_users(db)
-    return jsonify({"success": True})
-
-
 @app.route("/api/admin/quickstats")
 @api_admin_required
 def admin_quickstats():
@@ -2648,6 +2483,7 @@ def admin_quickstats():
         "users_total": total_users,
         "users_active": active_users,
         "users_premium": premium_users,
+        "admin_free": ADMIN_FREE_MODE,
     }})
 
 
@@ -2691,6 +2527,8 @@ def pop_nav_state(context: ContextTypes.DEFAULT_TYPE) -> str:
 
 
 def _wallet_owner_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+    if is_admin_tg(update) and ADMIN_FREE_MODE:
+        return f"user:{ADMIN_USERNAME}"
     uname = (context.user_data.get("username") or "").strip()
     if uname:
         return f"user:{uname}"
@@ -2700,14 +2538,14 @@ def _wallet_owner_key(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str
 
 async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, edit=False):
     context.user_data["nav_stack"] = ["main_menu"]
-    api_key = context.user_data.get("api_key")
-    username = context.user_data.get("username", "")
+    is_adm = is_admin_tg(update)
+    api_key = context.user_data.get("api_key") or (ADMIN_USERNAME if is_adm else None)
+    username = context.user_data.get("username") or (ADMIN_USERNAME if is_adm else "")
     uid = update.effective_user.id if update.effective_user else 0
     wkey = _wallet_owner_key(update, context)
-    bal = get_balance(wkey)
-    if bal == 0.0 and wkey != str(uid):
+    bal = 0.0 if (is_adm and ADMIN_FREE_MODE) else get_balance(wkey)
+    if bal == 0.0 and wkey != str(uid) and not (is_adm and ADMIN_FREE_MODE):
         bal = get_balance(uid)
-    is_adm = is_admin_tg(update)
 
     keyboard = []
     if api_key:
@@ -2717,7 +2555,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, edi
         ])
         keyboard.append([
             InlineKeyboardButton("🛒 الخدمات وطلب موقع", callback_data="services_menu"),
-            InlineKeyboardButton(f"💰 رصيدي: {bal:.2f}$", callback_data="wallet_menu"),
+            InlineKeyboardButton("👑 أدمن مجاني (∞)" if (is_adm and ADMIN_FREE_MODE) else f"💰 رصيدي: {bal:.2f}$", callback_data="wallet_menu"),
         ])
         keyboard.append([
             InlineKeyboardButton("🔑 تغيير API Key", callback_data="change_api"),
@@ -2732,7 +2570,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, edi
 
     if is_adm:
         pending_count = 0
-        result = api_request("/api/admin/pending", api_key=api_key or f"ADMIN_{ADMIN_USERNAME}")
+        result = api_request("/api/admin/pending", api_key=api_key or ADMIN_USERNAME)
         if result and result.get("success"):
             pending_count = len(result.get("requests", []))
         bell = f"🔔 إشعارات الحسابات ({pending_count})" if pending_count > 0 else "🔕 لا إشعارات"
@@ -2750,7 +2588,10 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, edi
     )
     if username:
         text += f"<b>👤 أهلاً بك:</b> <code>{username}</code>\n"
-    text += f"<b>💰 الرصيد الحالي:</b> <code>{bal:.2f} USD</code>\n"
+    if is_adm and ADMIN_FREE_MODE:
+        text += "<b>👑 صلاحية الأدمن:</b> <code>مجاني بالكامل (بدون رسوم)</code>\n"
+    else:
+        text += f"<b>💰 الرصيد الحالي:</b> <code>{bal:.2f} USD</code>\n"
     text += ("<b>✅ متصل بسيرفر المنصة بنجاح</b>\n" if api_key else "<b>⚠️ ربط API Key اختياري أو للتحكم الكامل بالسيرفرات</b>\n")
     text += f"\n{DEVELOPER_INFO}"
 
@@ -2772,19 +2613,22 @@ async def show_services_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if query:
         await query.answer()
 
+    is_adm = is_admin_tg(update) and ADMIN_FREE_MODE
     rows = []
     lines = [
         "<b>━━━━━━━━━━━━━━━━━━━━</b>",
         "   <b>🛒 الخدمات وطلبات المواقع</b>",
         "<b>━━━━━━━━━━━━━━━━━━━━</b>",
-        "<i>يتم حجز المبلغ ولا يُثبّت التسليم إلا بعد اكتمال الطلب، وإلا يُعاد الرصيد تلقائياً.</i>\n",
+        "<b>👑 الأدمن:</b> <i>جميع الخدمات مجانية بالكامل (0.00 USD).</i>\n" if is_adm else "<i>يتم حجز المبلغ ولا يُثبّت التسليم إلا بعد اكتمال الطلب، وإلا يُعاد الرصيد تلقائياً.</i>\n",
     ]
     for svc_id, svc in SERVICES_CATALOG.items():
+        price_lbl = "مجاني (أدمن)" if is_adm else f"{svc['price']:.2f} {svc['currency']}"
+        btn_lbl = f"🆓 طلب مجاني: {svc['name']}" if is_adm else f"💳 طلب: {svc['name']} ({svc['price']:.0f}$)"
         lines.append(
-            f"<b>• {svc['name']}</b> — <code>{svc['price']:.2f} {svc['currency']}</code>\n"
+            f"<b>• {svc['name']}</b> — <code>{price_lbl}</code>\n"
             f"  <i>{svc['desc']}</i>"
         )
-        rows.append([InlineKeyboardButton(f"💳 طلب: {svc['name']} ({svc['price']:.0f}$)", callback_data=f"buy_svc|{svc_id}")])
+        rows.append([InlineKeyboardButton(btn_lbl, callback_data=f"buy_svc|{svc_id}")])
 
     rows.append([InlineKeyboardButton("🔙 رجوع خطوة للخلف", callback_data="go_back")])
     rows.append([InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="main_menu")])
@@ -2800,31 +2644,18 @@ async def show_wallet_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query:
         await query.answer()
 
+    is_adm = is_admin_tg(update) and ADMIN_FREE_MODE
     uid = update.effective_user.id if update.effective_user else 0
     wkey = _wallet_owner_key(update, context)
-    bal = get_balance(wkey)
-    if bal == 0.0 and wkey != str(uid):
+    bal = 0.0 if is_adm else get_balance(wkey)
+    if not is_adm and bal == 0.0 and wkey != str(uid):
         bal = get_balance(uid)
-    orders_db = _read_json(ORDERS_DB, {"orders": []})
-    user_orders = [
-        o for o in orders_db.get("orders", [])
-        if str(o.get("user_key")) in (str(uid), wkey)
-    ][-5:]
-
-    orders_txt = ""
-    if user_orders:
-        orders_txt = "\n<b>🧾 آخر الطلبات:</b>\n" + "\n".join(
-            f"• <code>{o['order_id']}</code> | <b>{o['status']}</b> | {o['amount']:.2f}$"
-            for o in user_orders
-        )
 
     text = (
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         "        <b>💰 المحفظة والرصيد</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-        f"<b>الرصيد المتاح:</b> <code>{bal:.2f} USD</code>\n"
-        "<b>قاعدة الأمان:</b> لا يتم خصم رصيدك نهائياً إلا عند إتمام الدفع والاستلام.\n"
-        f"{orders_txt}"
+        + ("<b>الوضع الحالي:</b> <code>أدمن مجاني بالكامل (بدون خصم)</code>\n" if is_adm else f"<b>الرصيد المتاح:</b> <code>{bal:.2f} USD</code>\n")
     )
     keyboard = [
         [InlineKeyboardButton("➕ طلب شحن رصيد", callback_data="topup_request")],
@@ -2841,7 +2672,7 @@ async def show_servers_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query:
         await query.answer()
 
-    api_key = context.user_data.get("api_key")
+    api_key = context.user_data.get("api_key") or (ADMIN_USERNAME if is_admin_tg(update) else None)
     if not api_key:
         if query:
             await query.edit_message_text(
@@ -2889,14 +2720,6 @@ async def show_servers_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for srv in servers:
         status_emoji = "🟢" if srv.get("status", "Running") == "Running" else "⚫"
         srv_type = str(srv.get("type", "html")).upper()
-        type_icon = "🌐"
-        if "JS" in srv_type:
-            type_icon = "🟨"
-        elif "PHP" in srv_type:
-            type_icon = "🐘"
-        elif "PY" in srv_type:
-            type_icon = "🐍"
-
         gen_url = srv.get("generated_url", "")
         go_url = srv.get("google_jump_url", "")
         link_lines = ""
@@ -2913,7 +2736,7 @@ async def show_servers_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
             f"{status_emoji} <b>{srv_name}</b>\n"
             "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-            f"{type_icon} <b>نوع البيئة:</b> <code>{srv_type}</code>\n"
+            f"<b>نوع البيئة:</b> <code>{srv_type}</code>\n"
             f"<b>📊 الحالة:</b> <code>{srv_status}</code>\n"
             f"<b>🔌 المنفذ/الرابط:</b> <code>{srv_port}</code>"
             f"{link_lines}"
@@ -2921,7 +2744,7 @@ async def show_servers_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
         folder = srv.get("id", srv.get("folder", ""))
         keyboard = [
             [
-                InlineKeyboardButton("▶️ تشغيل البوت / السيرفر", callback_data=f"srv_start|{folder}"),
+                InlineKeyboardButton("▶️ تشغيل وتوليد الرابط", callback_data=f"srv_start|{folder}"),
                 InlineKeyboardButton("⏹ إيقاف", callback_data=f"srv_stop|{folder}"),
             ],
             [
@@ -2959,7 +2782,7 @@ async def show_admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("<b>❌ غير مصرح لك بالدخول إلى لوحة الإدارة.</b>", parse_mode=ParseMode.HTML)
         return
 
-    api_key = context.user_data.get("api_key") or f"ADMIN_{ADMIN_USERNAME}"
+    api_key = context.user_data.get("api_key") or ADMIN_USERNAME
     result = api_request("/api/admin/users", api_key=api_key)
     users = result.get("users", []) if result and result.get("success") else []
 
@@ -2968,18 +2791,12 @@ async def show_admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = (
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-        "  <b>👑 لوحة إدارة 𝗘𝗛𝗔𝗕</b>\n"
+        "  <b>👑 لوحة إدارة 𝗘𝗛𝗔𝗕 (مجانية)</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         f"<b>👥 إجمالي المستخدمين:</b> <code>{len(users)}</code>\n"
         f"<b>🔔 طلبات الحسابات المعلقة:</b> <code>{pending_count}</code>\n"
-        "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
+        f"<b>🔑 مفتاح الأدمن المجاني:</b> <code>{ADMIN_USERNAME}</code>\n"
     )
-    for u in users[:10]:
-        st_lbl = "نشط" if u.get("active") else "موقوف"
-        text += f"• <code>{u.get('username')}</code> | الحالة: <b>{st_lbl}</b>\n"
-    if len(users) > 10:
-        text += f"<i>... و {len(users) - 10} مستخدمين آخرين</i>\n"
-
     bell = f"🔔 الطلبات ({pending_count})" if pending_count > 0 else "🔕 لا طلبات"
     keyboard = [
         [
@@ -3005,7 +2822,7 @@ async def show_admin_notifications(update: Update, context: ContextTypes.DEFAULT
             await query.edit_message_text("<b>❌ غير مصرح.</b>", parse_mode=ParseMode.HTML)
         return
 
-    api_key = context.user_data.get("api_key") or f"ADMIN_{ADMIN_USERNAME}"
+    api_key = context.user_data.get("api_key") or ADMIN_USERNAME
     result = api_request("/api/admin/pending", api_key=api_key)
     if not result or not result.get("success"):
         if query:
@@ -3016,29 +2833,16 @@ async def show_admin_notifications(update: Update, context: ContextTypes.DEFAULT
     if not requests_list:
         if query:
             await query.edit_message_text(
-                "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-                "<b>🔕 لا توجد طلبات حسابات معلقة</b>\n"
-                "<b>━━━━━━━━━━━━━━━━━━━━</b>",
+                "<b>🔕 لا توجد طلبات حسابات معلقة</b>",
                 parse_mode=ParseMode.HTML,
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="go_back")]]),
             )
         return
 
-    if query:
-        await query.edit_message_text(
-            f"<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-            f"<b>🔔 طلبات الحسابات الجديدة ({len(requests_list)})</b>\n"
-            f"<b>━━━━━━━━━━━━━━━━━━━━</b>",
-            parse_mode=ParseMode.HTML,
-        )
-
     for req in requests_list:
         req_user = req.get("username")
         req_date = str(req.get("created_at", ""))[:19]
-        text = (
-            f"<b>👤 اسم المستخدم:</b> <code>{req_user}</code>\n"
-            f"<b>📅 التاريخ:</b> <code>{req_date}</code>"
-        )
+        text = f"<b>👤 اسم المستخدم:</b> <code>{req_user}</code>\n<b>📅 التاريخ:</b> <code>{req_date}</code>"
         keyboard = [[
             InlineKeyboardButton("✅ قبول الحساب", callback_data=f"approve|{req_user}"),
             InlineKeyboardButton("❌ رفض الحساب", callback_data=f"reject|{req_user}"),
@@ -3046,16 +2850,16 @@ async def show_admin_notifications(update: Update, context: ContextTypes.DEFAULT
         if query and query.message:
             await query.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(keyboard))
 
-    if query and query.message:
-        await query.message.reply_text(
-            "<b>━━━━━━━━━━━━━━━━━━━━</b>",
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="go_back")]]),
-        )
-
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["nav_stack"] = ["main_menu"]
+    if is_admin_tg(update):
+        context.user_data.setdefault("api_key", ADMIN_USERNAME)
+        context.user_data.setdefault("username", ADMIN_USERNAME)
+        context.user_data["is_admin"] = True
+        await show_main_menu(update, context)
+        return ConversationHandler.END
+
     api_key = context.user_data.get("api_key")
     if api_key:
         result = api_request("/api/bot/verify", method="POST", data={"api_key": api_key})
@@ -3146,9 +2950,10 @@ async def receive_server_type(update: Update, context: ContextTypes.DEFAULT_TYPE
     }
     srv_type = type_mapping.get(query.data, "Python")
     name = context.user_data.get("pending_server_name", "Project")
+    eff_key = context.user_data.get("api_key") or (ADMIN_USERNAME if is_admin_tg(update) else None)
 
     result = api_request("/api/bot/create_server", method="POST", data={
-        "api_key": context.user_data.get("api_key"),
+        "api_key": eff_key,
         "name": name,
         "server_type": srv_type,
         "plan": "free",
@@ -3161,7 +2966,7 @@ async def receive_server_type(update: Update, context: ContextTypes.DEFAULT_TYPE
         gen_url = result.get("generated_url", "")
         link_txt = f"\n<b>🔗 الرابط المولّد:</b> <code>{gen_url}</code>" if gen_url else ""
         await query.edit_message_text(
-            f"<b>✅ تم تجهيز السيرفر والبيئة بنجاح!</b>\n\n"
+            f"<b>✅ تم تجهيز السيرفر والبيئة وتوليد الرابط بنجاح!</b>\n\n"
             f"<b>📛 الاسم:</b> <code>{name}</code>\n"
             f"<b>⚙️ النوع:</b> <code>{srv_type}</code>{link_txt}",
             parse_mode=ParseMode.HTML,
@@ -3178,25 +2983,26 @@ async def receive_server_type(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def receive_service_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    is_adm = is_admin_tg(update) and ADMIN_FREE_MODE
     uid = update.effective_user.id if update.effective_user else 0
     wkey = _wallet_owner_key(update, context)
-    active_wkey = wkey if get_balance(wkey) > 0 or get_balance(uid) == 0 else str(uid)
+    active_wkey = wkey if (is_adm or get_balance(wkey) > 0 or get_balance(uid) == 0) else str(uid)
     svc_id = context.user_data.get("pending_service_id", "")
     details = (update.message.text or "").strip()
 
-    res = execute_paid_service_order(active_wkey, svc_id, details)
+    res = execute_paid_service_order(active_wkey, svc_id, details, is_free_admin=is_adm)
     if res.get("success"):
+        bal_txt = "مجاني للأدمن (0.00 خصم)" if is_adm else f"{res.get('balance', 0.0):.2f} USD"
         await update.message.reply_text(
-            f"<b>✅ تم تأكيد الدفع وإتمام التسليم بنجاح!</b>\n"
+            f"<b>✅ تم تأكيد الطلب وإتمام التسليم بنجاح!</b>\n"
             f"<b>رقم الطلب:</b> <code>{res.get('order_id')}</code>\n"
-            f"<b>الرصيد المتبقي:</b> <code>{res.get('balance', 0.0):.2f} USD</code>\n"
+            f"<b>الرصيد / الحالة:</b> <code>{bal_txt}</code>\n"
             f"<b>التفاصيل:</b> <code>{res.get('message')}</code>",
             parse_mode=ParseMode.HTML,
         )
     else:
         await update.message.reply_text(
-            f"<b>⚠️ لم يكتمل الطلب:</b>\n<i>{res.get('message')}</i>\n"
-            f"<b>الرصيد الحالي:</b> <code>{res.get('balance', get_balance(active_wkey)):.2f} USD</code>",
+            f"<b>⚠️ لم يكتمل الطلب:</b>\n<i>{res.get('message')}</i>",
             parse_mode=ParseMode.HTML,
         )
     await show_main_menu(update, context)
@@ -3219,8 +3025,7 @@ async def receive_topup_info(update: Update, context: ContextTypes.DEFAULT_TYPE)
     _atomic_write_json(topup_file, db)
 
     await update.message.reply_text(
-        "<b>📩 تم تسجيل طلب شحن الرصيد بنجاح!</b>\n"
-        "<i>لن يتم خصم أو إضافة أي رصيد نهائي قبل التحقق وتأكيد الدفع من الإدارة.</i>",
+        "<b>📩 تم تسجيل طلب شحن الرصيد بنجاح!</b>",
         parse_mode=ParseMode.HTML,
     )
     await show_main_menu(update, context)
@@ -3230,7 +3035,8 @@ async def receive_topup_info(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def show_console(update: Update, context: ContextTypes.DEFAULT_TYPE, folder: str):
     push_nav_state(context, "my_servers")
     query = update.callback_query
-    result = api_request("/api/bot/console", params={"folder": folder}, api_key=context.user_data.get("api_key"))
+    eff_key = context.user_data.get("api_key") or (ADMIN_USERNAME if is_admin_tg(update) else None)
+    result = api_request("/api/bot/console", params={"folder": folder}, api_key=eff_key)
     if result and result.get("success"):
         logs = result.get("logs", "لا توجد سجلات تشغيل حالية")
         if len(logs) > 3500:
@@ -3251,7 +3057,8 @@ async def show_console(update: Update, context: ContextTypes.DEFAULT_TYPE, folde
 async def show_errors(update: Update, context: ContextTypes.DEFAULT_TYPE, folder: str):
     push_nav_state(context, "my_servers")
     query = update.callback_query
-    result = api_request("/api/bot/errors", params={"folder": folder}, api_key=context.user_data.get("api_key"))
+    eff_key = context.user_data.get("api_key") or (ADMIN_USERNAME if is_admin_tg(update) else None)
+    result = api_request("/api/bot/errors", params={"folder": folder}, api_key=eff_key)
     if result and result.get("success"):
         errors = result.get("errors", "✅ ممتاز: لا توجد أي أخطاء مسجلة")
         if len(errors) > 3500:
@@ -3283,7 +3090,7 @@ async def admin_delete_user_start(update: Update, context: ContextTypes.DEFAULT_
 
 async def admin_delete_user_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.message.text.strip()
-    api_key = context.user_data.get("api_key") or f"ADMIN_{ADMIN_USERNAME}"
+    api_key = context.user_data.get("api_key") or ADMIN_USERNAME
     result = api_request("/api/admin/delete-user", method="POST", data={
         "api_key": api_key,
         "username": username,
@@ -3363,7 +3170,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         push_nav_state(context, "wallet_menu")
         await query.edit_message_text(
             "<b>💳 طلب شحن رصيد</b>\n\n"
-            "<i>أرسل المبلغ المطلوب وتفاصيل الدفع (لن يُحتسب أو يُخصم أي رصيد إلا بعد التحقق والتأكيد):</i>",
+            "<i>أرسل المبلغ المطلوب وتفاصيل الدفع:</i>",
             parse_mode=ParseMode.HTML,
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="go_back")]]),
         )
@@ -3414,7 +3221,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if "|" in data:
         cmd, value = data.split("|", 1)
-        api_key = context.user_data.get("api_key") or f"ADMIN_{ADMIN_USERNAME}"
+        api_key = context.user_data.get("api_key") or (ADMIN_USERNAME if is_admin_tg(update) else None)
 
         if cmd == "buy_svc":
             svc = SERVICES_CATALOG.get(value)
@@ -3423,9 +3230,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return ConversationHandler.END
             push_nav_state(context, "services_menu")
             context.user_data["pending_service_id"] = value
+            price_str = "مجاني للأدمن" if (is_admin_tg(update) and ADMIN_FREE_MODE) else f"{svc['price']:.2f} {svc['currency']}"
             await query.edit_message_text(
                 f"<b>🛒 طلب خدمة: {svc['name']}</b>\n"
-                f"<b>💵 السعر:</b> <code>{svc['price']:.2f} {svc['currency']}</code>\n\n"
+                f"<b>💵 السعر:</b> <code>{price_str}</code>\n\n"
                 "<i>أرسل الآن تفاصيل الطلب أو رابط/اسم الموقع الإلكتروني المطلوب:</i>",
                 parse_mode=ParseMode.HTML,
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="go_back")]]),
@@ -3501,40 +3309,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def runner_start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         "<b>👋 مرحباً! أنا بوت يعمل على 𝗘𝗛𝗔𝗕</b>\n\n"
-        "<b>الأوامر المتاحة:</b>\n"
-        "• <code>/start</code> - عرض هذه الرسالة\n"
-        "• <code>/help</code> - الحصول على المساعدة\n"
-        "• <code>/info</code> - معلومات البوت\n\n"
         f"{DEVELOPER_INFO}",
-        parse_mode=ParseMode.HTML,
-    )
-
-
-async def runner_help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        "<b>📚 المساعدة:</b>\n\n"
-        "<i>هذا البوت يعمل بشكل مستمر على خادم 𝗘𝗛𝗔𝗕</i>\n"
-        "<b>للاشتراك أو الاستفسار:</b> <code>@Y_20_20</code>",
-        parse_mode=ParseMode.HTML,
-    )
-
-
-async def runner_info_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(
-        "<b>ℹ️ معلومات البوت:</b>\n\n"
-        "<b>🤖 الخدمة:</b> <code>𝗘𝗛𝗔𝗕</code>\n"
-        "<b>✅ الحالة:</b> <b>نشط ومستمر</b>\n"
-        "<b>🛠 المطور:</b> <code>@Y_20_20</code>",
-        parse_mode=ParseMode.HTML,
-    )
-
-
-async def runner_handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user_message = update.message.text or ""
-    await update.message.reply_text(
-        f"<b>📨 تم استقبال رسالتك:</b>\n\n<blockquote>{user_message}</blockquote>\n"
-        "<i>شكراً لاستخدامك 𝗘𝗛𝗔𝗕!</i>\n"
-        "<b>🛠</b> <code>@Y_20_20</code>",
         parse_mode=ParseMode.HTML,
     )
 
@@ -3550,9 +3325,6 @@ def run_runner_bot(token: str, bot_name: str) -> None:
         asyncio.set_event_loop(loop)
         application = Application.builder().token(token).build()
         application.add_handler(CommandHandler("start", runner_start_cmd))
-        application.add_handler(CommandHandler("help", runner_help_cmd))
-        application.add_handler(CommandHandler("info", runner_info_cmd))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, runner_handle_message))
         application.add_error_handler(runner_error_handler)
         application.run_polling(drop_pending_updates=True, stop_signals=None)
     except Exception as e:
@@ -3581,7 +3353,10 @@ def build_and_run_main_bot():
             conv = ConversationHandler(
                 entry_points=[
                     CommandHandler("start", start),
-                    CallbackQueryHandler(button_callback, pattern="^(topup_request|enter_api|change_api|create_server|admin_delete_user|buy_svc\\|.*)$"),
+                    CallbackQueryHandler(
+                        button_callback,
+                        pattern="^(topup_request|enter_api|change_api|create_server|admin_delete_user|buy_svc\\|.*)$",
+                    ),
                 ],
                 states={
                     WAITING_FOR_API_KEY: [
