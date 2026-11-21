@@ -181,11 +181,13 @@ def get_ip():
 
 
 def sanitize_folder_name(name: str) -> str:
-    name = (name or "").strip()
-    name = re.sub(r"\s+", "-", name)
-    name = re.sub(r"[^A-Za-z0-9\-_\.]", "", name)
-    name = name.strip(".")
-    return name[:200]
+    raw = (name or "").strip()
+    cleaned = re.sub(r"\s+", "-", raw)
+    cleaned = re.sub(r"[^A-Za-z0-9\-_\.]", "", cleaned)
+    cleaned = cleaned.strip(".")
+    if not cleaned and raw:
+        cleaned = f"srv-{uuid.uuid4().hex[:8]}"
+    return cleaned[:200]
 
 
 def safe_name(name: str) -> str:
@@ -332,13 +334,13 @@ def log_append(key: str, text: str):
 
 
 def get_site_base_url(req=None) -> str:
-    raw = (
+    env_url = (
         os.environ.get("RENDER_EXTERNAL_URL")
-        or PUBLIC_API_URL
+        or os.environ.get("PUBLIC_API_URL")
         or ""
     ).strip().rstrip("/")
-    if raw:
-        return raw if raw.startswith("http") else f"https://{raw}"
+    if env_url:
+        return env_url if env_url.startswith("http") else f"https://{env_url}"
     if req is not None:
         try:
             host_url = (req.host_url or "").strip().rstrip("/")
@@ -346,6 +348,9 @@ def get_site_base_url(req=None) -> str:
                 return host_url
         except Exception:
             pass
+    fallback = (PUBLIC_API_URL or "").strip().rstrip("/")
+    if fallback:
+        return fallback if fallback.startswith("http") else f"https://{fallback}"
     if API_BASE_URL and "127.0.0.1" not in API_BASE_URL and "localhost" not in API_BASE_URL:
         return API_BASE_URL
     return f"http://{get_ip()}:{PANEL_PORT_PRIMARY}"
@@ -415,6 +420,26 @@ def refresh_server_js_link(owner: str, folder: str, startup_file: str = "", subp
     meta["last_run_at"] = _utc_now_iso()
     write_meta(owner, folder, meta)
     return links
+
+
+def sync_active_server_for_owner(owner: str, folder: str, startup_file: str = "", req=None):
+    full_key = normalize_state_key(owner, folder)
+    links = refresh_server_js_link(owner, folder, startup_file=startup_file, req=req)
+    active_file = os.path.join(DATA_DIR, "active_servers.json")
+    db = _read_json(active_file, {"by_owner": {}, "last_selected": None})
+    entry = {
+        "key": full_key,
+        "owner": owner,
+        "folder": folder,
+        "startup_file": startup_file,
+        "generated_url": links["generated_url"],
+        "google_jump_url": links["google_jump_url"],
+        "updated_at": _utc_now_iso(),
+    }
+    db.setdefault("by_owner", {})[owner] = entry
+    db["last_selected"] = entry
+    _atomic_write_json(active_file, db)
+    return entry
 
 
 # ==============================================================================
@@ -1207,7 +1232,15 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
         const div = document.createElement("div");
         div.className = "card";
         const linkHtml = s.generated_url ? `<br/>🔗 الرابط المولّد: <a class="link-pill" href="${s.generated_url}" target="_blank">${s.generated_url}</a>` : "";
-        div.innerHTML = `<b>${s.title}</b> (${s.status}) - ${s.subtitle}${linkHtml}<br/><br/><button onclick='openServer(${JSON.stringify(s.key)}, ${JSON.stringify(s.startup_file || "")})'>⚙️ إدارة</button>`;
+        const btn = document.createElement("button");
+        btn.textContent = "⚙️ إدارة";
+        btn.setAttribute("data-key", s.key || "");
+        btn.setAttribute("data-startup", s.startup_file || "");
+        btn.onclick = function() {
+          openServer(this.getAttribute("data-key"), this.getAttribute("data-startup"));
+        };
+        div.innerHTML = `<b>${s.title}</b> (${s.status}) - ${s.subtitle}${linkHtml}<br/><br/>`;
+        div.appendChild(btn);
         box.appendChild(div);
       }
     }
@@ -1535,6 +1568,7 @@ def _render_js_runner_page(owner: str, folder: str, startup_file: str = "", subp
     bot_title = meta.get("display_name") or folder
     resolved_file = startup_file or resolve_startup_file(owner, folder, meta.get("startup_file") or "index.js")
     links = refresh_server_js_link(owner, folder, resolved_file, subpath=subpath, req=request)
+    sync_active_server_for_owner(owner, folder, startup_file=resolved_file, req=request)
     google_url = links["google_target"]
     gen_url = links["generated_url"]
 
@@ -1673,6 +1707,7 @@ def api_bot_js_link():
         return jsonify({"success": False, "message": "السيرفر غير موجود"}), 404
 
     links = refresh_server_js_link(owner, folder, startup_file=startup_file, subpath=subpath, req=request)
+    sync_active_server_for_owner(owner, folder, startup_file=startup_file, req=request)
     return jsonify({"success": True, **links})
 
 
@@ -1845,6 +1880,7 @@ def add_server():
     types_db.setdefault("types", {})[full_key] = srv_type
     _atomic_write_json(SERVER_TYPES_DB, types_db)
     set_state(full_key, "Offline")
+    sync_active_server_for_owner(owner, folder, startup_file=default_startup, req=request)
 
     if is_admin_session():
         return jsonify({"success": True, "servers": list_all_servers_for_admin()})
@@ -1982,6 +2018,7 @@ def server_action(key, act):
         return jsonify({"success": False, "message": "No main file set"}), 400
 
     links = refresh_server_js_link(owner, folder, startup_file=startup, subpath=subpath, req=request)
+    sync_active_server_for_owner(owner, folder, startup_file=startup, req=request)
     open(os.path.join(server_dir, "server.log"), "w", encoding="utf-8").close()
     t = threading.Thread(target=background_start, args=(state_key, owner, folder, startup, subpath), daemon=True)
     t.start()
@@ -2011,6 +2048,7 @@ def set_startup(key):
     meta["startup_file"] = f
     write_meta(owner, folder, meta)
     links = refresh_server_js_link(owner, folder, startup_file=f, req=request)
+    sync_active_server_for_owner(owner, folder, startup_file=f, req=request)
     return jsonify({
         "success": True,
         "generated_url": links["generated_url"],
@@ -2178,6 +2216,18 @@ def api_bot_create_server():
         "Python": "main.py",
     }.get(srv_type, "main.py")
 
+    sample_file = os.path.join(target, default_startup)
+    if not os.path.exists(sample_file):
+        with open(sample_file, "w", encoding="utf-8") as f:
+            if default_startup.endswith(".js"):
+                f.write('console.log("𝗘𝗛𝗔𝗕 Node/JS Server Running...");\nsetInterval(() => {}, 60000);\n')
+            elif default_startup.endswith(".html"):
+                f.write('<!DOCTYPE html><html lang="ar" dir="rtl"><body><h1>𝗘𝗛𝗔𝗕 Web Server</h1></body></html>\n')
+            elif default_startup.endswith(".php"):
+                f.write('<?php echo "𝗘𝗛𝗔𝗕 PHP Server Running...";\n')
+            else:
+                f.write('import time\nprint("𝗘𝗛𝗔𝗕 Python Server Running...")\ntime.sleep(2)\n')
+
     links = build_generated_server_url(owner, folder, default_startup, req=request)
     write_meta(owner, folder, {
         "display_name": name or folder,
@@ -2193,6 +2243,7 @@ def api_bot_create_server():
     types_db.setdefault("types", {})[full_key] = srv_type
     _atomic_write_json(SERVER_TYPES_DB, types_db)
     set_state(full_key, "Offline")
+    sync_active_server_for_owner(owner, folder, startup_file=default_startup, req=request)
 
     return jsonify({
         "success": True,
@@ -2265,6 +2316,7 @@ def api_bot_server_action():
                 f.write('import time\nprint("𝗘𝗛𝗔𝗕 Server Running...")\ntime.sleep(2)\n')
 
     links = refresh_server_js_link(owner, folder, startup_file=startup, subpath=subpath, req=request)
+    sync_active_server_for_owner(owner, folder, startup_file=startup, req=request)
     open(os.path.join(server_dir, "server.log"), "w", encoding="utf-8").close()
     t = threading.Thread(target=background_start, args=(state_key, owner, folder, startup, subpath), daemon=True)
     t.start()
@@ -2963,10 +3015,11 @@ async def receive_server_type(update: Update, context: ContextTypes.DEFAULT_TYPE
     })
 
     if result and result.get("success"):
+        context.user_data["selected_server"] = result.get("folder", name)
         gen_url = result.get("generated_url", "")
         link_txt = f"\n<b>🔗 الرابط المولّد:</b> <code>{gen_url}</code>" if gen_url else ""
         await query.edit_message_text(
-            f"<b>✅ تم تجهيز السيرفر والبيئة وتوليد الرابط بنجاح!</b>\n\n"
+            f"<b>✅ تم تجهيز السيرفر والبيئة وتوليد الرابط وربطه بالموقع تلقائياً!</b>\n\n"
             f"<b>📛 الاسم:</b> <code>{name}</code>\n"
             f"<b>⚙️ النوع:</b> <code>{srv_type}</code>{link_txt}",
             parse_mode=ParseMode.HTML,
@@ -3034,6 +3087,7 @@ async def receive_topup_info(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def show_console(update: Update, context: ContextTypes.DEFAULT_TYPE, folder: str):
     push_nav_state(context, "my_servers")
+    context.user_data["selected_server"] = folder
     query = update.callback_query
     eff_key = context.user_data.get("api_key") or (ADMIN_USERNAME if is_admin_tg(update) else None)
     result = api_request("/api/bot/console", params={"folder": folder}, api_key=eff_key)
@@ -3056,6 +3110,7 @@ async def show_console(update: Update, context: ContextTypes.DEFAULT_TYPE, folde
 
 async def show_errors(update: Update, context: ContextTypes.DEFAULT_TYPE, folder: str):
     push_nav_state(context, "my_servers")
+    context.user_data["selected_server"] = folder
     query = update.callback_query
     eff_key = context.user_data.get("api_key") or (ADMIN_USERNAME if is_admin_tg(update) else None)
     result = api_request("/api/bot/errors", params={"folder": folder}, api_key=eff_key)
@@ -3242,6 +3297,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if cmd in ("srv_start", "srv_stop", "srv_restart", "srv_delete"):
             action = cmd.replace("srv_", "")
+            context.user_data["selected_server"] = value
             result = api_request("/api/bot/server/action", method="POST", data={
                 "api_key": api_key,
                 "folder": value,
@@ -3264,6 +3320,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await show_errors(update, context, value)
 
         elif cmd == "install":
+            context.user_data["selected_server"] = value
             result = api_request("/api/bot/install", method="POST", data={
                 "api_key": api_key,
                 "folder": value,
