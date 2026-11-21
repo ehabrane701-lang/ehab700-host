@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title> — لوحة التحكم والاستضافة</title>
+  <title>EHAB — لوحة التحكم والاستضافة</title>
   <style>
     :root{
       --bg0:#f1f5fb;
@@ -369,7 +369,7 @@
     .guide-section h2{margin:0 0 12px 0;font-size:20px;font-weight:950;color:var(--burgundy)}
     .guide-section h3{margin:18px 0 8px 0;font-size:15px;font-weight:900;color:var(--royal-blue)}
     .guide-list{margin:8px 0 0 0;padding-right:20px;line-height:1.8;font-size:13px;color:var(--text)}
-    .guide-list li{margin-bottom:8px}
+    .guide-list li{margin-bottom:10px}
     .guide-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:12px}
     @media (max-width:760px){.guide-grid{grid-template-columns:1fr}}
     .guide-box{
@@ -377,6 +377,31 @@
       background:#f8fbff;
       border-radius:14px;
       padding:14px;
+    }
+
+    /* أزرار المميزات والبنود المرتبطة */
+    .feature-btn{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 11px;
+      margin-left:6px;
+      margin-bottom:4px;
+      border-radius:999px;
+      border:1px solid rgba(29,78,216,.26);
+      background:linear-gradient(135deg, #f8fbff, #eef4ff);
+      color:var(--royal-blue);
+      font-family:inherit;
+      font-size:12px;
+      font-weight:900;
+      cursor:pointer;
+      transition:transform .14s ease, background .14s ease, border-color .14s ease, color .14s ease;
+    }
+    .feature-btn:hover{
+      transform:translateY(-1px);
+      background:linear-gradient(135deg, var(--burgundy), var(--accent));
+      border-color:transparent;
+      color:#ffffff;
     }
   </style>
 </head>
@@ -535,36 +560,78 @@
       </div>
     </div>
 
-    <!-- دليل الاستضافة الشامل (أولاً • ثانياً • ثالثاً • رابعاً) -->
+    <!-- دليل الاستضافة الشامل (أولاً • ثانياً • ثالثاً • رابعاً) مع أزرار مرتبطة -->
     <div class="guide-section" id="hostingGuideSection">
       <h2>أولاً: أهم مميزات استضافة وتشغيل المشاريع على استضافه</h2>
       <ul class="guide-list">
-        <li><b>العمل الفوري من المتصفح (Zero Setup):</b> افتح مشروعك وابدأ البرمجة فوراً بأي لغة برمجة مدعومة، مع بيئة جاهزة ومضبوطة مسبقاً.</li>
-        <li><b>الاستضافة والنشر السريع (Hosting &amp; Deployments):</b> يمكنك تحويل مشروعك إلى موقع أو تطبيق حي برابط مباشر (ويمكن ربطه بدومين مخصص حسب الخطة)، مع إمكانية اختيار أنواع نشر تناسب طبيعة مشروعك (مثل المواقع الثابتة، أو الخوادم المستمرة، أو المهام المجدولة).</li>
-        <li><b>تعدد لغات البرمجة والأطر (Multi-Language Support):</b> تدعم عشرات اللغات والأطر الشهيرة مثل Python، Node.js، HTML/CSS/JS، C++، Java، Go، وغيرها، مع إمكانية دمج قواعد بيانات وأدوات مساعدة.</li>
-        <li><b>المساعد الذكي والبرمجة بالذكاء الاصطناعي:</b> توفر ميزات ذكاء اصطناعي تساعد في توليد الأكواد، شرح الأخطاء، تعديل الملفات، وبناء مشاريع كاملة انطلاقاً من وصف نصي.</li>
-        <li><b>التعاون الفوري (Real-time Collaboration):</b> يمكنك مشاركة مساحة العمل مع فريقك أو معلمك/زميلك لتعديل الكود ومشاهدة التغييرات والطرفية (Terminal) في الوقت الفعلي، أشبه بالعمل الجماعي على مستند مشترك.</li>
-        <li><b>إدارة الحزم والبيئة (Packages &amp; Secrets):</b> تثبيت المكتبات بسهولة، وتخزين المتغيرات الحساسة ومفاتيح API بأمان عبر Secrets بدلاً من كتابتها داخل الكود.</li>
-        <li><b>سجل التعديلات والنسخ الاحتياطي (History / Version Control):</b> تتبع التغييرات والعودة إلى نقاط سابقة، بالإضافة إلى التكامل مع Git / GitHub لاستيراد المشاريع أو رفعها.</li>
-        <li><b>تطبيقات الهواتف (Mobile App):</b> إمكانية متابعة الأكواد وتشغيلها وتعديلها البسيط من الهاتف أثناء التنقل.</li>
+        <li>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('zero_setup')">⚡ العمل الفوري من المتصفح (Zero Setup)</button>
+          افتح مشروعك وابدأ البرمجة فوراً بأي لغة برمجة مدعومة، مع بيئة جاهزة ومضبوطة مسبقاً.
+        </li>
+        <li>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('hosting_deploy')">🚀 الاستضافة والنشر السريع (Hosting &amp; Deployments)</button>
+          تحويل المشروع إلى موقع أو تطبيق حي برابط مباشر (ويمكن ربطه بدومين مخصص حسب الخطة)، مع إمكانية اختيار أنواع نشر تناسب طبيعة المشروع (المواقع الثابتة، الخوادم المستمرة، المهام المجدولة).
+        </li>
+        <li>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('multi_lang')">🧩 تعدد لغات البرمجة والأطر (Multi-Language Support)</button>
+          Python، Node.js، HTML/CSS/JS، C++، Java، Go، وغيرها، مع إمكانية دمج قواعد بيانات وأدوات مساعدة.
+        </li>
+        <li>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('ai_assistant')">🤖 المساعد الذكي والبرمجة بالذكاء الاصطناعي</button>
+          توليد الأكواد، شرح الأخطاء، تعديل الملفات، وبناء مشاريع كاملة انطلاقاً من وصف نصي.
+        </li>
+        <li>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('collaboration')">👥 التعاون الفوري (Real-time Collaboration)</button>
+          مشاركة مساحة العمل مع الفريق أو المعلم/الزميل لتعديل الكود ومشاهدة التغييرات والطرفية (Terminal) في الوقت الفعلي.
+        </li>
+        <li>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('packages_secrets')">🔐 إدارة الحزم والبيئة (Packages &amp; Secrets)</button>
+          تثبيت المكتبات بسهولة، وتخزين المتغيرات الحساسة ومفاتيح API بأمان عبر Secrets بدلاً من كتابتها داخل الكود.
+        </li>
+        <li>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('history_git')">🕒 سجل التعديلات والنسخ الاحتياطي (History / Version Control)</button>
+          تتبع التغييرات والعودة إلى نقاط سابقة، بالإضافة إلى التكامل مع Git / GitHub.
+        </li>
+        <li>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('mobile_app')">📱 تطبيقات الهواتف (Mobile App)</button>
+          متابعة الأكواد وتشغيلها وتعديلها البسيط من الهاتف أثناء التنقل.
+        </li>
       </ul>
 
       <h3>ثانياً: كيف تعمل المنصة؟ (نظرة شاملة)</h3>
       <div class="guide-grid">
         <div class="guide-box">
-          <b>مساحة العمل (Workspace):</b> تتكون عادةً من:
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('workspace')">🖥️ مساحة العمل (Workspace)</button>
           <ul class="guide-list">
-            <li><b>مستكشف الملفات (Files):</b> لإدارة ملفات ومجلدات المشروع.</li>
-            <li><b>محرر الأكواد (Editor):</b> لكتابة وتعديل الكود.</li>
-            <li><b>الطرفية (Shell / Console):</b> لتنفيذ الأوامر، تثبيت الحزم، ومراقبة السجلات (Logs).</li>
-            <li><b>المعاينة (Preview / Webview):</b> لعرض واجهة موقعك أو تطبيقك مباشرة أثناء التطوير.</li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('files_tab')">📂 مستكشف الملفات (Files)</button>
+              لإدارة ملفات ومجلدات المشروع.
+            </li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('editor_tab')">✏️ محرر الأكواد (Editor)</button>
+              لكتابة وتعديل الكود.
+            </li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('shell_tab')">📟 الطرفية (Shell / Console)</button>
+              لتنفيذ الأوامر، تثبيت الحزم، ومراقبة السجلات (Logs).
+            </li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('preview_tab')">🌐 المعاينة (Preview / Webview)</button>
+              لعرض واجهة موقعك أو تطبيقك مباشرة أثناء التطوير.
+            </li>
           </ul>
         </div>
         <div class="guide-box">
-          <b>التشغيل مقابل النشر (Run vs. Deploy):</b>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('run_vs_deploy')">▶️ التشغيل مقابل النشر (Run vs. Deploy)</button>
           <ul class="guide-list">
-            <li><b>زر Run</b> مخصص للتجربة والتطوير داخل بيئة العمل.</li>
-            <li><b>النشر (Deploy)</b> مخصص لإتاحة المشروع للزوار والمستخدمين بشكل مستقر ومستمر وفق خطة الاستضافة المختارة.</li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('run_btn')">▶ زر Run</button>
+              للتجربة والتطوير داخل بيئة العمل.
+            </li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('deploy_btn')">🌍 النشر (Deploy)</button>
+              لإتاحة المشروع للزوار والمستخدمين بشكل مستقر ومستمر وفق خطة الاستضافة المختارة.
+            </li>
           </ul>
         </div>
       </div>
@@ -572,29 +639,59 @@
       <h3>ثالثاً: لمن تناسب استضافه؟ ولمن قد لا تكون الخيار الأنسب؟</h3>
       <div class="guide-grid">
         <div class="guide-box">
-          <b>مناسبة جداً لـ:</b>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('suitable_for')">✅ مناسبة جداً لـ</button>
           <ul class="guide-list">
-            <li><b>المبتدئين والطلاب:</b> لأنها تزيل تعقيدات إعداد البيئة البرمجية وتسرّع التعلم والتجريب.</li>
-            <li><b>النماذج الأولية (MVPs) والهاكاثونات:</b> لبناء فكرة واختبارها ومشاركتها بسرعة كبيرة.</li>
-            <li><b>الفرق الصغيرة والمشاريع التعليمية:</b> بفضل التحرير التعاوني المباشر وسهولة مشاركة الرابط.</li>
-            <li><b>العمل من أكثر من جهاز:</b> لأن مشاريعك محفوظة في السحابة.</li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('beginners_students')">🎓 المبتدئين والطلاب</button>
+              لأنها تزيل تعقيدات إعداد البيئة البرمجية وتسرّع التعلم والتجريب.
+            </li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('mvp_hackathons')">💡 النماذج الأولية (MVPs) والهاكاثونات</button>
+              لبناء فكرة واختبارها ومشاركتها بسرعة كبيرة.
+            </li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('small_teams')">👨‍👩‍👧‍👦 الفرق الصغيرة والمشاريع التعليمية</button>
+              بفضل التحرير التعاوني المباشر وسهولة مشاركة الرابط.
+            </li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('multi_device')">🔁 العمل من أكثر من جهاز</button>
+              لأن مشاريعك محفوظة في السحابة.
+            </li>
           </ul>
         </div>
         <div class="guide-box">
-          <b>قد لا تكون الخيار الأنسب لـ:</b>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('not_ideal_for')">⚠️ قد لا تكون الخيار الأنسب لـ</button>
           <ul class="guide-list">
-            <li><b>المشاريع الضخمة ذات الأحمال العالية جداً أو المتطلبات المعقدة للبنية التحتية:</b> حيث تفضل الشركات الكبرى عادةً بنى سحابية مخصصة أو خوادم مستقلة تحكمها بالكامل.</li>
-            <li><b>التطبيقات التي تتطلب وصولاً منخفضاً جداً للعتاد أو بيئات مغلقة صارمة:</b> لأسباب أمنية أو تنظيمية أو تقنية.</li>
-            <li><b>المشاريع ذات الاستخدام المستمر والموارد العالية في الخطط المجانية:</b> إذ تخضع الخطط المجانية لحدود موارد وقواعد تشغيل مقارنة بالخطط المدفوعة.</li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('heavy_infra')">🏢 المشاريع الضخمة ذات الأحمال العالية جداً أو المتطلبات المعقدة للبنية التحتية</button>
+              حيث تفضل الشركات الكبرى عادةً بنى سحابية مخصصة أو خوادم مستقلة تحكمها بالكامل.
+            </li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('low_level_env')">🔒 التطبيقات التي تتطلب وصولاً منخفضاً جداً للعتاد أو بيئات مغلقة صارمة</button>
+              لأسباب أمنية أو تنظيمية أو تقنية.
+            </li>
+            <li>
+              <button type="button" class="feature-btn" onclick="handleFeatureAction('free_limits')">📉 المشاريع ذات الاستخدام المستمر والموارد العالية في الخطط المجانية</button>
+              إذ تخضع الخطط المجانية لحدود موارد وقواعد تشغيل مقارنة بالخطط المدفوعة.
+            </li>
           </ul>
         </div>
       </div>
 
       <h3>رابعاً: نصائح مهمة عند استخدامها</h3>
       <ul class="guide-list">
-        <li><b>لا تضع المفاتيح السرية في الكود:</b> استخدم Secrets دائماً لحماية كلمات المرور ومفاتيح الربط.</li>
-        <li><b>راقب السجلات (Logs) والموارد:</b> عند تشغيل بوتات أو خوادم، راقب استهلاك الموارد وسجلات الأخطاء لتفادي توقف الخدمة المفاجئ.</li>
-        <li><b>اربط بـ GitHub:</b> يُستحسن ربط مشاريعك المهمة بمستودع Git كنسخة احتياطية إضافية وإدارة احترافية للإصدارات.</li>
+        <li>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('secrets_tip')">🔑 لا تضع المفاتيح السرية في الكود</button>
+          استخدم Secrets دائماً لحماية كلمات المرور ومفاتيح الربط.
+        </li>
+        <li>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('logs_tip')">📊 راقب السجلات (Logs) والموارد</button>
+          عند تشغيل بوتات أو خوادم، راقب استهلاك الموارد وسجلات الأخطاء لتفادي توقف الخدمة المفاجئ.
+        </li>
+        <li>
+          <button type="button" class="feature-btn" onclick="handleFeatureAction('github_tip')">🐙 اربط بـ GitHub</button>
+          يُستحسن ربط مشاريعك المهمة بمستودع Git كنسخة احتياطية إضافية وإدارة احترافية للإصدارات.
+        </li>
       </ul>
     </div>
   </div>
@@ -609,6 +706,7 @@
       <div class="tabs">
         <button class="tab active" id="tabConsole" onclick="switchTab('console')">الكونسول</button>
         <button class="tab" id="tabFiles" onclick="switchTab('files')">مدير الملفات</button>
+        <button class="btn btn-danger btn-mini" id="btnDeleteServer" onclick="deleteCurrentServer()">🗑️ حذف السيرفر</button>
       </div>
     </div>
 
@@ -620,6 +718,7 @@
           <button id="btnStart" class="btn-block primary" onclick="srvAction('start')">تشغيل (START)</button>
           <button class="btn-block" onclick="srvAction('restart')">إعادة تشغيل (RESTART)</button>
           <button class="btn-block danger" onclick="srvAction('stop')">إيقاف (STOP)</button>
+          <button class="btn-block danger" onclick="deleteCurrentServer()">🗑️ حذف السيرفر نهائياً</button>
 
           <div class="stat"><div class="ico">⚡</div><div><small>الحالة</small><b id="statusTxt">Offline</b></div></div>
           <div class="stat"><div class="ico">🧠</div><div><small>الذاكرة RAM</small><b id="memTxt">0 MB</b></div></div>
@@ -678,7 +777,7 @@
     <h2>السيرفرات</h2>
     <div class="panel">
       <table class="table">
-        <thead><tr><th>المجلد</th><th>الاسم</th><th>المالك</th><th>الملف الرئيسي</th><th>الحالة</th><th>حظر</th></tr></thead>
+        <thead><tr><th>المجلد</th><th>الاسم</th><th>المالك</th><th>الملف الرئيسي</th><th>الحالة</th><th>إجراءات</th></tr></thead>
         <tbody id="serversT"></tbody>
       </table>
     </div>
@@ -692,7 +791,7 @@
       </table>
     </div>
 
-    <div class="msg">يمكن للأدمن حظر/فك حظر المستخدمين والسيرفرات وتفعيل الباقة المميزة · تواصل: <a href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@Y_20_20</a></div>
+    <div class="msg">يمكن للأدمن حظر/فك حظر المستخدمين والسيرفرات وحذف السيرفرات وتفعيل الباقة المميزة · تواصل: <a href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@Y_20_20</a></div>
   </div>
 
   <!-- نافذة محرر الملفات -->
@@ -931,6 +1030,20 @@ async function localFallbackFetch(input, init={}){
     });
     saveDb(db);
     return jsonRes({ success:true, key });
+  }
+
+  const mDeleteSrv = path.match(/^\/server\/delete\/(.+)$/);
+  if(mDeleteSrv && (method === 'POST' || method === 'DELETE')){
+    const key = decodeURIComponent(mDeleteSrv[1]);
+    const idx = db.servers.findIndex(s => s.key === key || s.folder === key);
+    if(idx === -1) return jsonRes({ success:false, message:'السيرفر غير موجود' }, 404);
+    const target = db.servers[idx];
+    if(!currentUser.is_admin && target.owner !== currentUser.username){
+      return jsonRes({ success:false, message:'غير مصرح بحذف هذا السيرفر' }, 403);
+    }
+    db.servers.splice(idx, 1);
+    saveDb(db);
+    return jsonRes({ success:true, message:'تم حذف السيرفر' });
   }
 
   const mStats = path.match(/^\/server\/stats\/(.+)$/);
@@ -1175,6 +1288,7 @@ window.fetch = async (input, init={}) => {
 let currentSrv = null, poll = null, currentFile = null, currentPath = '';
 let confirmResolver = null;
 let selectedServerKind = 'py';
+let serversCache = [];
 
 function stopPoll(){
   if(poll){ clearInterval(poll); poll = null; }
@@ -1311,7 +1425,7 @@ async function doLogout(){
 }
 
 /* =========================================================================
-   4. HOME & SERVER CONSOLE / FILE MANAGER + SERVICES
+   4. HOME & SERVER CONSOLE / FILE MANAGER / DELETE + SERVICES
    ========================================================================= */
 function statusClass(st){
   st = (st || '').toLowerCase();
@@ -1359,8 +1473,8 @@ async function orderFreeService(kind){
   }
   const srvKey = d.key || srvName;
   const sampleCode = isJs
-    ? `console.log("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 Free JS Service (${srvName}) Running!");\nsetInterval(() => {}, 60000);\n`
-    : `import time\nprint("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 Free PY Service (${srvName}) Running!")\ntime.sleep(2)\n`;
+    ? `console.log("𝗘𝗛𝗔𝗕 Free JS Service (${srvName}) Running!");\nsetInterval(() => {}, 60000);\n`
+    : `import time\nprint("𝗘𝗛𝗔𝗕 Free PY Service (${srvName}) Running!")\ntime.sleep(2)\n`;
 
   await fetch(`/files/save/${encodeURIComponent(srvKey)}`, {
     method: 'POST',
@@ -1417,6 +1531,134 @@ function openPaidServiceModal(svcId, svcName, priceLabel){
   });
 }
 
+async function deleteServerByKey(key, title){
+  const ok = await showConfirm(
+    'حذف سيرفر',
+    `هل أنت متأكد من حذف السيرفر "${title || key}" نهائياً مع جميع ملفاته وسجلاته؟`
+  );
+  if(!ok) return false;
+
+  let r = await fetch(`/server/delete/${encodeURIComponent(key)}`, { method: 'POST' });
+  if(r.status === 404 || r.status === 405){
+    r = await fetch(`/server/delete/${encodeURIComponent(key)}`, { method: 'DELETE' });
+  }
+  const d = await r.json().catch(() => ({}));
+  if(!r.ok || d.success === false){
+    toast(d.message || 'فشل حذف السيرفر', 'err');
+    return false;
+  }
+
+  toast(`تم حذف السيرفر "${title || key}" ✅`, 'ok');
+  if(currentSrv && (currentSrv.key === key || currentSrv.folder === key)){
+    stopPoll();
+    currentSrv = null;
+    goHome();
+  }else{
+    await loadServers();
+  }
+  await loadPythonHost();
+  return true;
+}
+
+async function deleteCurrentServer(){
+  if(!currentSrv) return;
+  await deleteServerByKey(currentSrv.key || currentSrv.folder, currentSrv.title || currentSrv.folder);
+}
+
+/* ربط أزرار المميزات والبنود بالوظائف والأقسام */
+function handleFeatureAction(actionKey){
+  const firstSrv = serversCache[0];
+  switch(actionKey){
+    case 'zero_setup':
+    case 'multi_lang':
+    case 'ai_assistant':
+    case 'beginners_students':
+    case 'mvp_hackathons':
+      document.getElementById('newBtn')?.click();
+      break;
+
+    case 'hosting_deploy':
+    case 'deploy_btn':
+    case 'free_limits':
+      document.getElementById('servicesSection')?.scrollIntoView({ behavior: 'smooth' });
+      toast('تم الانتقال إلى قسم الخدمات والنشر', 'info');
+      break;
+
+    case 'collaboration':
+    case 'small_teams':
+    case 'multi_device':
+    case 'mobile_app':
+      if(firstSrv){
+        openServer(firstSrv);
+        toast(`تم فتح مساحة العمل للسيرفر: ${firstSrv.title}`, 'ok');
+      }else{
+        document.getElementById('newBtn')?.click();
+      }
+      break;
+
+    case 'packages_secrets':
+    case 'history_git':
+    case 'files_tab':
+    case 'github_tip':
+    case 'secrets_tip':
+      if(firstSrv){
+        openServer(firstSrv);
+        switchTab('files');
+        toast('تم فتح مدير الملفات لإدارة الحزم والملفات', 'ok');
+      }else{
+        toast('أنشئ سيرفراً أولاً لفتح مدير الملفات', 'info');
+      }
+      break;
+
+    case 'editor_tab':
+      if(firstSrv){
+        openServer(firstSrv);
+        switchTab('files');
+        const targetFile = firstSrv.startup_file || 'main.py';
+        setTimeout(() => openEditor(targetFile), 180);
+      }else{
+        toast('أنشئ سيرفراً أولاً لفتح محرر الأكواد', 'info');
+      }
+      break;
+
+    case 'shell_tab':
+    case 'workspace':
+    case 'run_vs_deploy':
+    case 'run_btn':
+    case 'logs_tip':
+      if(firstSrv){
+        openServer(firstSrv);
+        switchTab('console');
+        toast('تم فتح الكونسول والسجلات', 'ok');
+      }else{
+        toast('أنشئ سيرفراً أولاً لفتح الكونسول', 'info');
+      }
+      break;
+
+    case 'preview_tab':
+      loadPythonHost();
+      toast('تم تحديث عنوان المعاينة والمنفذ', 'ok');
+      break;
+
+    case 'suitable_for':
+    case 'not_ideal_for':
+    case 'heavy_infra':
+    case 'low_level_env': {
+      const sess = getSession();
+      if(sess && sess.is_admin){
+        navigate('/admin');
+      }else{
+        document.getElementById('servicesSection')?.scrollIntoView({ behavior: 'smooth' });
+        toast('استعرض الخطط والخدمات المتاحة', 'info');
+      }
+      break;
+    }
+
+    default:
+      toast('تم تفعيل الإجراء', 'ok');
+  }
+}
+
 async function loadPythonHost(){
   const ipTxt = document.getElementById('pyHostTxt');
   const port = location.port || 5000;
@@ -1442,14 +1684,14 @@ async function loadServers(){
   const r = await fetch('/servers');
   if(!r.ok){ navigate('/login'); return; }
   const d = await r.json();
+  serversCache = (d.servers || []).map(s => ({ ...s, key: s.key || s.folder }));
   const cont = document.getElementById('cardsContainer');
   cont.innerHTML = '';
 
   const sess = getSession();
   if(sess && sess.is_admin) document.getElementById('adminBtn').style.display = 'inline-block';
 
-  (d.servers || []).forEach(s => {
-    s.key = s.key || s.folder;
+  serversCache.forEach(s => {
     const div = document.createElement('div');
     div.className = 'card';
     const cls = statusClass(s.status);
@@ -1738,8 +1980,8 @@ document.getElementById('newBtn').onclick = () => openM('اسم السيرفر �
   const serverType = isJs ? 'Node.js/JS' : 'Python';
   const startupFile = isJs ? 'index.js' : 'main.py';
   const starterCode = isJs
-    ? `console.log("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 JS Server (${cleanName}) Started!");\nsetInterval(() => {}, 60000);\n`
-    : `import time\nprint("𝙼𝙴𝚁𝙾 𝙷𝙾𝚂𝚃 PY Server (${cleanName}) Started!")\ntime.sleep(2)\n`;
+    ? `console.log("𝗘𝗛𝗔𝗕 JS Server (${cleanName}) Started!");\nsetInterval(() => {}, 60000);\n`
+    : `import time\nprint("𝗘𝗛𝗔𝗕 PY Server (${cleanName}) Started!")\ntime.sleep(2)\n`;
 
   const res = await fetch('/add', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1816,18 +2058,29 @@ async function refreshServers(){
       <td>${tagStatus(s.status)}</td>
       <td class="actions"></td>
     `;
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-mini';
+    const actTd = tr.querySelector('.actions');
+
+    const banBtn = document.createElement('button');
+    banBtn.className = 'btn btn-mini';
     if(s.banned){
-      btn.textContent = 'فك الحظر';
-      btn.onclick = () => banServer(s.key || s.folder, s.folder, false);
+      banBtn.textContent = 'فك الحظر';
+      banBtn.onclick = () => banServer(s.key || s.folder, s.folder, false);
     }else{
-      btn.textContent = 'حظر';
-      btn.style.borderColor = 'rgba(128,0,32,.4)';
-      btn.style.color = 'var(--burgundy)';
-      btn.onclick = () => banServer(s.key || s.folder, s.folder, true);
+      banBtn.textContent = 'حظر';
+      banBtn.style.borderColor = 'rgba(128,0,32,.4)';
+      banBtn.style.color = 'var(--burgundy)';
+      banBtn.onclick = () => banServer(s.key || s.folder, s.folder, true);
     }
-    tr.querySelector('.actions').appendChild(btn);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-mini btn-danger';
+    delBtn.textContent = 'حذف السيرفر';
+    delBtn.onclick = async () => {
+      const done = await deleteServerByKey(s.key || s.folder, s.display_name || s.folder);
+      if(done) refreshAll();
+    };
+
+    actTd.append(banBtn, delBtn);
     t.appendChild(tr);
   });
 }
