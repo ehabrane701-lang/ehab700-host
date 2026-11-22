@@ -68,11 +68,14 @@ PENDING_DB = os.path.join(DATA_DIR, "pending_requests.json")
 BALANCES_DB = os.path.join(DATA_DIR, "balances.json")
 ORDERS_DB = os.path.join(DATA_DIR, "orders.json")
 SERVER_TYPES_DB = os.path.join(DATA_DIR, "server_types.json")
+ACTIVE_SERVERS_DB = os.path.join(DATA_DIR, "active_servers.json")
+WEB_REQUESTS_DIR = os.path.join(DATA_DIR, "web_requests")
 INDEX_HTML_PATH = os.path.join(BASE_DIR, "index.html")
 
 os.makedirs(USERS_ROOT, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(SERVICES_STORAGE_DIR, exist_ok=True)
+os.makedirs(WEB_REQUESTS_DIR, exist_ok=True)
 
 # إعدادات لوحة الويب والأدمن
 PANEL_PORT_PRIMARY = int(os.environ.get("PORT", os.environ.get("SERVER_PORT", 8008)))
@@ -86,7 +89,10 @@ ADMIN_FREE_MODE = True  # الأدمن مجاني بالكامل بدون خصم
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8641088295:AAEPtjkMkn8kcGLpOgiud2SkHEc43XoLO9c").strip()
 API_BASE_URL = os.environ.get("API_BASE_URL", f"http://127.0.0.1:{PANEL_PORT_PRIMARY}").rstrip("/")
 PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "https://ehab700-host.onrender.com").strip()
-GOOGLE_REDIRECT_URL = os.environ.get("GOOGLE_REDIRECT_URL", "https://ehab700-host.onrender.com").strip() or "https://ehab700-host-3.onrender.com"
+GOOGLE_REDIRECT_URL = (
+    os.environ.get("GOOGLE_REDIRECT_URL", "https://ehab700-host.onrender.com").strip()
+    or "https://ehab700-host-3.onrender.com"
+)
 
 _admin_ids_raw = os.environ.get("ADMIN_TELEGRAM_IDS", "1002670694")
 ADMIN_TELEGRAM_IDS = [
@@ -154,6 +160,7 @@ server_states = {}   # key -> Offline/Installing/Starting/Running/Banned
 lock = threading.Lock()
 finance_lock = threading.Lock()
 db_lock = threading.Lock()
+file_io_lock = threading.Lock()
 
 
 # ==============================================================================
@@ -225,7 +232,10 @@ def get_server_dir(owner: str, folder: str) -> str:
 
 def ensure_user_dirs(username: str):
     try:
-        path = get_user_servers_root(username)
+        safe_u = re.sub(r"[^a-zA-Z0-9_.-]", "", username or "")
+        if not safe_u:
+            return
+        path = get_user_servers_root(safe_u)
         if is_path_safe(USERS_ROOT, path):
             os.makedirs(path, exist_ok=True)
     except Exception as e:
@@ -247,7 +257,13 @@ def resolve_user_for_api(api_key: str):
     if user_info:
         return user_info
     if is_admin_session():
-        return {"username": current_username() or ADMIN_USERNAME, "is_admin": True, "active": True, "premium": True}
+        return {
+            "username": current_username() or ADMIN_USERNAME,
+            "is_admin": True,
+            "active": True,
+            "premium": True,
+            "free_admin": True,
+        }
     if current_username():
         db = load_users()
         u = find_user(db, current_username())
@@ -325,10 +341,13 @@ def log_append(key: str, text: str):
         else:
             owner, folder = (current_username() or ADMIN_USERNAME), key
         server_dir = get_server_dir(owner, folder)
+        if not is_path_safe(USERS_ROOT, server_dir):
+            return
         os.makedirs(server_dir, exist_ok=True)
         log_path = os.path.join(server_dir, "server.log")
-        with open(log_path, "a", encoding="utf-8", errors="ignore") as f:
-            f.write(text)
+        with file_io_lock:
+            with open(log_path, "a", encoding="utf-8", errors="ignore") as f:
+                f.write(text)
     except Exception:
         pass
 
@@ -405,7 +424,7 @@ def build_generated_server_url(
 
 def refresh_server_js_link(owner: str, folder: str, startup_file: str = "", subpath: str = "", req=None) -> dict:
     meta = read_meta(owner, folder)
-    eff_file = (startup_file or meta.get("startup_file") or "").strip()
+    eff_file = (startup_file if startup_file is not None and startup_file != "" else meta.get("startup_file") or "").strip()
     links = build_generated_server_url(
         owner=owner,
         folder=folder,
@@ -417,6 +436,8 @@ def refresh_server_js_link(owner: str, folder: str, startup_file: str = "", subp
     meta["generated_url"] = links["generated_url"]
     meta["google_jump_url"] = links["google_jump_url"]
     meta["js_route"] = links["route_path"]
+    if eff_file:
+        meta["startup_file"] = eff_file
     meta["last_run_at"] = _utc_now_iso()
     write_meta(owner, folder, meta)
     return links
@@ -425,8 +446,7 @@ def refresh_server_js_link(owner: str, folder: str, startup_file: str = "", subp
 def sync_active_server_for_owner(owner: str, folder: str, startup_file: str = "", req=None):
     full_key = normalize_state_key(owner, folder)
     links = refresh_server_js_link(owner, folder, startup_file=startup_file, req=req)
-    active_file = os.path.join(DATA_DIR, "active_servers.json")
-    db = _read_json(active_file, {"by_owner": {}, "last_selected": None})
+    db = _read_json(ACTIVE_SERVERS_DB, {"by_owner": {}, "last_selected": None})
     entry = {
         "key": full_key,
         "owner": owner,
@@ -438,7 +458,7 @@ def sync_active_server_for_owner(owner: str, folder: str, startup_file: str = ""
     }
     db.setdefault("by_owner", {})[owner] = entry
     db["last_selected"] = entry
-    _atomic_write_json(active_file, db)
+    _atomic_write_json(ACTIVE_SERVERS_DB, db)
     return entry
 
 
@@ -492,7 +512,13 @@ def find_user_by_api_key(api_key: str):
     if not key:
         return None
     if key in (ADMIN_USERNAME, f"ADMIN_{ADMIN_USERNAME}", ADMIN_PASSWORD):
-        return {"username": ADMIN_USERNAME, "is_admin": True, "active": True, "premium": True, "free_admin": True}
+        return {
+            "username": ADMIN_USERNAME,
+            "is_admin": True,
+            "active": True,
+            "premium": True,
+            "free_admin": True,
+        }
     db = load_users()
     for u in db.get("users", []):
         if u.get("api_key") == key:
@@ -511,7 +537,10 @@ def get_user_limit(username: str) -> int:
 
 
 def get_balance(user_key: str) -> float:
-    if str(user_key).strip().lower() in (ADMIN_USERNAME.lower(), f"user:{ADMIN_USERNAME.lower()}") or str(user_key).strip() in [str(i) for i in ADMIN_TELEGRAM_IDS]:
+    if str(user_key).strip().lower() in (
+        ADMIN_USERNAME.lower(),
+        f"user:{ADMIN_USERNAME.lower()}",
+    ) or str(user_key).strip() in [str(i) for i in ADMIN_TELEGRAM_IDS]:
         return 999999.0
     with finance_lock:
         db = _read_json(BALANCES_DB, {"balances": {}})
@@ -537,7 +566,9 @@ def deduct_balance_safe(user_key: str, amount: float, is_free_admin: bool = Fals
     with finance_lock:
         amt = float(amount)
         if amt <= 0:
-            return False, float(_read_json(BALANCES_DB, {"balances": {}}).get("balances", {}).get(str(user_key), 0.0))
+            return False, float(
+                _read_json(BALANCES_DB, {"balances": {}}).get("balances", {}).get(str(user_key), 0.0)
+            )
         db = _read_json(BALANCES_DB, {"balances": {}})
         balances = db.setdefault("balances", {})
         cur = float(balances.get(str(user_key), 0.0))
@@ -601,13 +632,20 @@ def execute_paid_service_order(user_key: str, service_id: str, details: str, is_
             "message": f"رصيدك الحالي ({balance_after_deduct:.2f} {curr}) غير كافٍ لإتمام الدفع ({charged_price:.2f} {curr}).",
         }
 
-    order_id = record_order(user_key, service_id, charged_price, details, "paid_pending", "مجاني للأدمن" if charged_price == 0.0 else "تم حجز المبلغ وجاري التنفيذ")
+    order_id = record_order(
+        user_key,
+        service_id,
+        charged_price,
+        details,
+        "paid_pending",
+        "مجاني للأدمن" if charged_price == 0.0 else "تم حجز المبلغ وجاري التنفيذ",
+    )
 
     try:
         if not details or len(details.strip()) < 2:
             raise ValueError("البيانات المدخلة للطلب غير مكتملة")
 
-        web_dir = os.path.join(DATA_DIR, "web_requests", order_id)
+        web_dir = os.path.abspath(os.path.join(WEB_REQUESTS_DIR, order_id))
         if not is_path_safe(DATA_DIR, web_dir):
             raise ValueError("مسار الطلب غير آمن")
         os.makedirs(web_dir, exist_ok=True)
@@ -720,15 +758,16 @@ def read_installed(owner: str, folder: str):
     if not os.path.exists(p):
         return data
     try:
-        with open(p, "r", encoding="utf-8", errors="ignore") as f:
-            for line in f.read().splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                if line.startswith("REQ_SHA="):
-                    data["req_sha"] = line.split("=", 1)[1].strip()
-                else:
-                    data["pkgs"].add(line)
+        with file_io_lock:
+            with open(p, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f.read().splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if line.startswith("REQ_SHA="):
+                        data["req_sha"] = line.split("=", 1)[1].strip()
+                    else:
+                        data["pkgs"].add(line)
     except Exception:
         pass
     return data
@@ -736,17 +775,20 @@ def read_installed(owner: str, folder: str):
 
 def write_installed(owner: str, folder: str, req_sha=None, add_pkgs=None):
     p = installed_file_path(owner, folder)
-    cur = read_installed(owner, folder)
-    if req_sha is not None:
-        cur["req_sha"] = req_sha
-    if add_pkgs:
-        cur["pkgs"].update(add_pkgs)
-    lines = []
-    if cur["req_sha"]:
-        lines.append(f"REQ_SHA={cur['req_sha']}")
-    lines.extend(sorted(cur["pkgs"]))
-    with open(p, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + ("\n" if lines else ""))
+    if not is_path_safe(USERS_ROOT, p):
+        return
+    with file_io_lock:
+        cur = read_installed(owner, folder)
+        if req_sha is not None:
+            cur["req_sha"] = req_sha
+        if add_pkgs:
+            cur["pkgs"].update(add_pkgs)
+        lines = []
+        if cur["req_sha"]:
+            lines.append(f"REQ_SHA={cur['req_sha']}")
+        lines.extend(sorted(cur["pkgs"]))
+        with open(p, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines) + ("\n" if lines else ""))
 
 
 def detect_runtime_kind(owner: str, folder: str, startup_file: str) -> str:
@@ -765,7 +807,9 @@ def detect_runtime_kind(owner: str, folder: str, startup_file: str) -> str:
             return "py"
 
     server_dir = get_server_dir(owner, folder)
-    if os.path.exists(os.path.join(server_dir, "package.json")) and not os.path.exists(os.path.join(server_dir, "requirements.txt")):
+    if os.path.exists(os.path.join(server_dir, "package.json")) and not os.path.exists(
+        os.path.join(server_dir, "requirements.txt")
+    ):
         return "js"
     return "py"
 
@@ -803,7 +847,10 @@ def ensure_requirements_installed(owner: str, folder: str):
         if cur["req_sha"] != req_sha:
             log_append(state_key, "[SYSTEM] Installing requirements.txt...\n")
             try:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], cwd=server_dir)
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
+                    cwd=server_dir,
+                )
                 write_installed(owner, folder, req_sha=req_sha)
                 log_append(state_key, "[SYSTEM] requirements installed ✅\n")
                 installed_any = True
@@ -1371,8 +1418,10 @@ DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
 
 def ensure_index_html_exists():
     if not os.path.exists(INDEX_HTML_PATH):
-        with open(INDEX_HTML_PATH, "w", encoding="utf-8") as f:
-            f.write(DEFAULT_UNIFIED_INDEX_HTML)
+        with file_io_lock:
+            if not os.path.exists(INDEX_HTML_PATH):
+                with open(INDEX_HTML_PATH, "w", encoding="utf-8") as f:
+                    f.write(DEFAULT_UNIFIED_INDEX_HTML)
 
 
 def render_unified_index(tab_mode: str = "home"):
@@ -1574,7 +1623,7 @@ def _render_js_runner_page(owner: str, folder: str, startup_file: str = "", subp
 
     state_key = normalize_state_key(owner, folder)
     cur_state = _lookup_running_state([state_key, folder], bool(meta.get("banned", False)))
-    if not meta.get("banned", False) and cur_state != "Running":
+    if not meta.get("banned", False) and cur_state not in ("Running", "Installing", "Starting"):
         log_append(state_key, f"[JS-LINK] Auto-starting server for file: {resolved_file} | URL: {gen_url}\n")
         t = threading.Thread(target=background_start, args=(state_key, owner, folder, resolved_file, subpath), daemon=True)
         t.start()
@@ -1742,7 +1791,7 @@ def web_order_route(order_id):
     safe_oid = re.sub(r"[^A-Za-z0-9\-]", "", order_id or "")
     if not safe_oid:
         return jsonify({"success": False, "message": "Invalid order ID"}), 400
-    req_file = os.path.abspath(os.path.join(DATA_DIR, "web_requests", safe_oid, "request_info.json"))
+    req_file = os.path.abspath(os.path.join(WEB_REQUESTS_DIR, safe_oid, "request_info.json"))
     if not is_path_safe(DATA_DIR, req_file) or not os.path.exists(req_file):
         return jsonify({"success": False, "message": "Web route not found"}), 404
     return jsonify({"success": True, "data": _read_json(req_file, {})})
@@ -2122,8 +2171,9 @@ def file_save(key):
         return jsonify({"success": False, "message": "Invalid path"}), 400
     os.makedirs(os.path.dirname(full), exist_ok=True)
     try:
-        with open(full, "w", encoding="utf-8") as f:
-            f.write(content)
+        with file_io_lock:
+            with open(full, "w", encoding="utf-8") as f:
+                f.write(content)
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
@@ -2265,6 +2315,7 @@ def api_bot_server_action():
     folder_or_key = (data.get("folder") or "").strip()
     action = (data.get("action") or "").strip()
     subpath = (data.get("subpath") or "").strip()
+    custom_file = (data.get("file") or "").strip()
 
     try:
         owner, folder = parse_server_key(
@@ -2289,18 +2340,31 @@ def api_bot_server_action():
     meta = read_meta(owner, folder)
 
     if action == "delete":
-        stop_proc(folder_or_key, owner, folder)
+        stop_proc(state_key, owner, folder)
         with lock:
             for k in _candidate_keys(folder_or_key, owner, folder):
                 server_states.pop(k, None)
-        shutil.rmtree(server_dir, ignore_errors=True)
+        if is_path_safe(USERS_ROOT, server_dir) and server_dir != os.path.abspath(USERS_ROOT):
+            shutil.rmtree(server_dir, ignore_errors=True)
+        types_db = _read_json(SERVER_TYPES_DB, {"types": {}})
+        changed_types = False
+        for k in _candidate_keys(folder_or_key, owner, folder):
+            if k in types_db.get("types", {}):
+                types_db["types"].pop(k, None)
+                changed_types = True
+        if changed_types:
+            _atomic_write_json(SERVER_TYPES_DB, types_db)
         return jsonify({"success": True, "message": "تم حذف السيرفر بنجاح"})
 
     if meta.get("banned") and not user_info.get("is_admin"):
         return jsonify({"success": False, "message": "السيرفر محظور من الإدارة"}), 403
 
+    if custom_file and ".." not in custom_file.replace("\\", "/").split("/"):
+        meta["startup_file"] = custom_file.replace("\\", "/").lstrip("/")
+        write_meta(owner, folder, meta)
+
     if action in ("stop", "restart"):
-        stop_proc(folder_or_key, owner, folder)
+        stop_proc(state_key, owner, folder)
         set_state(state_key, "Offline")
         if action == "stop":
             return jsonify({"success": True, "message": "تم إيقاف السيرفر"})
@@ -2607,7 +2671,10 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, edi
         ])
         keyboard.append([
             InlineKeyboardButton("🛒 الخدمات وطلب موقع", callback_data="services_menu"),
-            InlineKeyboardButton("👑 أدمن مجاني (∞)" if (is_adm and ADMIN_FREE_MODE) else f"💰 رصيدي: {bal:.2f}$", callback_data="wallet_menu"),
+            InlineKeyboardButton(
+                "👑 أدمن مجاني (∞)" if (is_adm and ADMIN_FREE_MODE) else f"💰 رصيدي: {bal:.2f}$",
+                callback_data="wallet_menu",
+            ),
         ])
         keyboard.append([
             InlineKeyboardButton("🔑 تغيير API Key", callback_data="change_api"),
@@ -2644,7 +2711,11 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE, edi
         text += "<b>👑 صلاحية الأدمن:</b> <code>مجاني بالكامل (بدون رسوم)</code>\n"
     else:
         text += f"<b>💰 الرصيد الحالي:</b> <code>{bal:.2f} USD</code>\n"
-    text += ("<b>✅ متصل بسيرفر المنصة بنجاح</b>\n" if api_key else "<b>⚠️ ربط API Key اختياري أو للتحكم الكامل بالسيرفرات</b>\n")
+    text += (
+        "<b>✅ متصل بسيرفر المنصة بنجاح</b>\n"
+        if api_key
+        else "<b>⚠️ ربط API Key اختياري أو للتحكم الكامل بالسيرفرات</b>\n"
+    )
     text += f"\n{DEVELOPER_INFO}"
 
     markup = InlineKeyboardMarkup(keyboard)
@@ -2671,7 +2742,11 @@ async def show_services_menu(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "<b>━━━━━━━━━━━━━━━━━━━━</b>",
         "   <b>🛒 الخدمات وطلبات المواقع</b>",
         "<b>━━━━━━━━━━━━━━━━━━━━</b>",
-        "<b>👑 الأدمن:</b> <i>جميع الخدمات مجانية بالكامل (0.00 USD).</i>\n" if is_adm else "<i>يتم حجز المبلغ ولا يُثبّت التسليم إلا بعد اكتمال الطلب، وإلا يُعاد الرصيد تلقائياً.</i>\n",
+        (
+            "<b>👑 الأدمن:</b> <i>جميع الخدمات مجانية بالكامل (0.00 USD).</i>\n"
+            if is_adm
+            else "<i>يتم حجز المبلغ ولا يُثبّت التسليم إلا بعد اكتمال الطلب، وإلا يُعاد الرصيد تلقائياً.</i>\n"
+        ),
     ]
     for svc_id, svc in SERVICES_CATALOG.items():
         price_lbl = "مجاني (أدمن)" if is_adm else f"{svc['price']:.2f} {svc['currency']}"
@@ -2707,7 +2782,11 @@ async def show_wallet_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         "        <b>💰 المحفظة والرصيد</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-        + ("<b>الوضع الحالي:</b> <code>أدمن مجاني بالكامل (بدون خصم)</code>\n" if is_adm else f"<b>الرصيد المتاح:</b> <code>{bal:.2f} USD</code>\n")
+        + (
+            "<b>الوضع الحالي:</b> <code>أدمن مجاني بالكامل (بدون خصم)</code>\n"
+            if is_adm
+            else f"<b>الرصيد المتاح:</b> <code>{bal:.2f} USD</code>\n"
+        )
     )
     keyboard = [
         [InlineKeyboardButton("➕ طلب شحن رصيد", callback_data="topup_request")],
@@ -3151,7 +3230,10 @@ async def admin_delete_user_confirm(update: Update, context: ContextTypes.DEFAUL
         "username": username,
     })
     if result and result.get("success"):
-        await update.message.reply_text(f"<b>✅ تم حذف المستخدم</b> <code>{username}</code> <b>وجميع ملفاته بنجاح</b>", parse_mode=ParseMode.HTML)
+        await update.message.reply_text(
+            f"<b>✅ تم حذف المستخدم</b> <code>{username}</code> <b>وجميع ملفاته بنجاح</b>",
+            parse_mode=ParseMode.HTML,
+        )
     else:
         err_msg = result.get("message", "خطأ غير متوقع") if result else "خطأ"
         await update.message.reply_text(f"<b>❌ فشل الحذف:</b> <i>{err_msg}</i>", parse_mode=ParseMode.HTML)
