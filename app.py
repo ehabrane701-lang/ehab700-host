@@ -5969,5 +5969,5 @@ def bootstrap_system():
 bootstrap_system()
 
 if __name__ == "__main__":
-    logger.info("🚀 تشغيل خادم 𝗘𝗛𝗔𝗕 الموحد على المنفذ %s ...", PANEL_PORT_PRIMARY)
-    app.run(host="0.0.0.0", port=PANEL_PORT_PRIMARY, debug=False, use_reloader=False, threaded=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
