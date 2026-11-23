@@ -134,7 +134,7 @@ ADMIN_USERNAME = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASS", "1002670694")
 ADMIN_FREE_MODE = True
 
-TOKEN = os.environ.get("TELEBOT_TOKEN", os.environ.get("BOT_TOKEN", "8641088295:AAEPtjkMkn8kcGLpOgiud2SkHEc43XoLO9c")).strip()
+TOKEN = os.environ.get("TELEBOT_TOKEN", os.environ.get("BOT_TOKEN", "8641088295:AAGlgERmbLszyMQtxxzGXcfyurACiX5aMhg")).strip()
 BOT_TOKEN = os.environ.get("BOT_TOKEN", TOKEN).strip()
 
 _admin_ids_raw = os.environ.get("ADMIN_TELEGRAM_IDS", "1002670694")
@@ -5711,209 +5711,18 @@ def _tg_main_keyboard(user_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
-async def tg_start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    if not user:
+async def _ptb_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    err = context.error
+    if "Conflict" in str(err):
+        logger.warning("⚠️ تعارض getUpdates (Conflict): تأكد من عدم تشغيل نسخة أخرى بنفس التوكن.")
+        await asyncio.sleep(5)
         return
-    uid = user.id
-    role_badge = "👑 <b>أدمن مجاني بالكامل (بدون خصم)</b>" if _tg_is_free_admin(uid) else "👤 <b>مستخدم</b>"
-    text = (
-        f"✨ <b>أهلاً بك في نظام 𝗘𝗛𝗔𝗕 للاستضافة والخدمات</b>\n"
-        f"{role_badge}\n"
-        f"🆔 <code>{uid}</code>\n\n"
-        f"اختر من القائمة بالأسفل للبدء:\n"
-        f"{DEVELOPER_INFO}"
-    )
-    await update.message.reply_text(
-        text,
-        parse_mode=ParseMode.HTML,
-        reply_markup=_tg_main_keyboard(uid),
-    )
-
-
-async def tg_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    if not query or not query.from_user:
-        return
-    await query.answer()
-    uid = query.from_user.id
-    data = query.data or ""
-
-    if data == "tg_back_main":
-        await query.edit_message_text(
-            f"🏠 <b>القائمة الرئيسية — 𝗘𝗛𝗔𝗕</b>\n\n{DEVELOPER_INFO}",
-            parse_mode=ParseMode.HTML,
-            reply_markup=_tg_main_keyboard(uid),
-        )
-        return
-
-    if data == "tg_dev_info":
-        await query.edit_message_text(
-            f"👨‍💻 <b>معلومات المطور والنظام</b>\n\n{DEVELOPER_INFO}",
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="tg_back_main")]]),
-        )
-        return
-
-    if data == "tg_wallet":
-        ukey = _tg_user_key(uid)
-        bal = get_balance(ukey)
-        free_note = "\n🎁 <b>حسابك أدمن: جميع الخدمات مجانية 100% (0.00$)</b>" if _tg_is_free_admin(uid) else ""
-        text = (
-            f"💰 <b>المحفظة والرصيد</b>\n"
-            f"• الرصيد الحالي: <b>{bal:.2f} USD</b>{free_note}\n\n"
-            f"لشحن الرصيد اضغط على زر شحن رصيد بالأسفل."
-        )
-        kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("💳 طلب شحن رصيد", callback_data="tg_topup_start")],
-            [InlineKeyboardButton("🔙 رجوع", callback_data="tg_back_main")],
-        ])
-        await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
-        return
-
-    if data == "tg_services":
-        lines = ["🛒 <b>الخدمات المتاحة:</b>\n"]
-        kb_rows = []
-        for sid, svc in SERVICES_CATALOG.items():
-            price_label = "مجاني (أدمن)" if _tg_is_free_admin(uid) else f"{svc['price']:.2f} {svc['currency']}"
-            lines.append(f"• <b>{svc['name']}</b> — <code>{price_label}</code>\n  <i>{svc['desc']}</i>")
-            kb_rows.append([InlineKeyboardButton(f"{svc['name']} ({price_label})", callback_data=f"tg_buy_{sid}")])
-        kb_rows.append([InlineKeyboardButton("🔙 رجوع", callback_data="tg_back_main")])
-        await query.edit_message_text("\n".join(lines), parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(kb_rows))
-        return
-
-    if data.startswith("tg_buy_"):
-        sid = data[len("tg_buy_"):]
-        svc = SERVICES_CATALOG.get(sid)
-        if not svc:
-            await query.edit_message_text("❌ الخدمة غير موجودة.")
-            return
-        context.user_data["pending_service_id"] = sid
-        price_label = "0.00 USD (مجاني للأدمن)" if _tg_is_free_admin(uid) else f"{svc['price']:.2f} {svc['currency']}"
-        await query.edit_message_text(
-            f"📝 <b>طلب خدمة: {svc['name']}</b>\n"
-            f"💵 التكلفة: <b>{price_label}</b>\n\n"
-            f"أرسل الآن تفاصيل الطلب أو اسم المشروع/المسار المطلوب (أو /cancel للإلغاء):",
-            parse_mode=ParseMode.HTML,
-        )
-        return
-
-    if data == "tg_orders":
-        db = _read_json(ORDERS_DB, {"orders": []})
-        ukey = _tg_user_key(uid)
-        my_orders = [o for o in db.get("orders", []) if o.get("user_key") == ukey][-10:]
-        if not my_orders:
-            txt = "📦 <b>لا توجد طلبات مسجلة حتى الآن.</b>"
-        else:
-            parts = ["📦 <b>آخر طلباتك:</b>\n"]
-            for o in reversed(my_orders):
-                parts.append(
-                    f"• <code>{o.get('order_id')}</code> | {o.get('service_id')} | "
-                    f"<b>{o.get('status')}</b>\n  <i>{o.get('result', '')}</i>"
-                )
-            txt = "\n".join(parts)
-        await query.edit_message_text(
-            txt,
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="tg_back_main")]]),
-        )
-        return
-
-    if data == "tg_status":
-        cpu = psutil.cpu_percent(interval=0.2)
-        ram = psutil.virtual_memory().percent
-        txt = (
-            f"🖥 <b>حالة الخادم والنظام</b>\n"
-            f"• المعالج (CPU): <b>{cpu}%</b>\n"
-            f"• الذاكرة (RAM): <b>{ram}%</b>\n"
-            f"• المنفذ الأساسي: <code>{PANEL_PORT_PRIMARY}</code>\n"
-            f"• المنفذ الثانوي: <code>{PANEL_PORT_SECONDARY}</code>\n"
-            f"{DEVELOPER_INFO}"
-        )
-        await query.edit_message_text(
-            txt,
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="tg_back_main")]]),
-        )
-        return
-
-    if data == "tg_quick_host":
-        owner = ADMIN_USERNAME if _tg_is_free_admin(uid) else f"tg_{uid}"
-        folder = f"tg-bot-{uid}"
-        ensure_user_dirs(owner)
-        sdir = get_server_dir(owner, folder)
-        os.makedirs(sdir, exist_ok=True)
-        links = refresh_server_js_link(owner, folder, startup_file="main.py")
-        sync_active_server_for_owner(owner, folder, startup_file="main.py")
-        txt = (
-            f"🚀 <b>تم تجهيز مساحة الاستضافة السريعة</b>\n"
-            f"• المالك: <code>{owner}</code>\n"
-            f"• المجلد: <code>{folder}</code>\n"
-            f"• الرابط المولّد: {links['generated_url']}\n"
-            f"{DEVELOPER_INFO}"
-        )
-        await query.edit_message_text(
-            txt,
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="tg_back_main")]]),
-        )
-        return
-
-    if data == "tg_admin_panel" and _is_tg_admin(uid):
-        users_cnt = len(load_users().get("users", []))
-        orders_cnt = len(_read_json(ORDERS_DB, {"orders": []}).get("orders", []))
-        srvs_cnt = len(list_all_servers_for_admin())
-        txt = (
-            f"👑 <b>لوحة الأدمن المجانية (بدون خصم)</b>\n"
-            f"• عدد المستخدمين المسجلين: <b>{users_cnt}</b>\n"
-            f"• إجمالي السيرفرات: <b>{srvs_cnt}</b>\n"
-            f"• إجمالي الطلبات: <b>{orders_cnt}</b>\n"
-            f"• وضع الأدمن المجاني: <b>مفعل (100%)</b>\n"
-            f"{DEVELOPER_INFO}"
-        )
-        await query.edit_message_text(
-            txt,
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="tg_back_main")]]),
-        )
-        return
-
-
-async def tg_text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    msg = update.message
-    if not user or not msg or not msg.text:
-        return
-    uid = user.id
-    text_in = msg.text.strip()
-
-    pending_sid = context.user_data.pop("pending_service_id", None)
-    if pending_sid:
-        res = execute_paid_service_order(
-            user_key=_tg_user_key(uid),
-            service_id=pending_sid,
-            details=text_in,
-            is_free_admin=_tg_is_free_admin(uid),
-        )
-        if res.get("success"):
-            reply_txt = (
-                f"✅ <b>تم تنفيذ الطلب بنجاح</b>\n"
-                f"• رقم الطلب: <code>{res.get('order_id')}</code>\n"
-                f"• الرصيد الحالي: <b>{res.get('balance', 0.0):.2f} USD</b>\n"
-                f"• التفاصيل: {res.get('message')}"
-            )
-        else:
-            reply_txt = f"⚠️ <b>تنبيه بخصوص الطلب</b>\n{res.get('message')}"
-        await msg.reply_text(reply_txt, parse_mode=ParseMode.HTML, reply_markup=_tg_main_keyboard(uid))
-
-
-async def tg_cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.pop("pending_service_id", None)
-    await update.message.reply_text("✅ تم إلغاء العملية الحالية.", reply_markup=_tg_main_keyboard(update.effective_user.id))
+    logger.warning(f"⚠️ خطأ في python-telegram-bot: {err}")
 
 
 async def _run_ptb_async():
     application = Application.builder().token(BOT_TOKEN).build()
+    application.add_error_handler(_ptb_error_handler)
     application.add_handler(CommandHandler("start", tg_start_cmd))
     application.add_handler(CommandHandler("cancel", tg_cancel_cmd))
     application.add_handler(CallbackQueryHandler(tg_callback_handler))
