@@ -1,30 +1,14 @@
 services:
   - type: web
-    name: mero-host-unified
+    name: ehab700-host
     runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:${PORT:-10000} --workers 1 --threads 4 --timeout 120 app:app
     healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.9
-      - key: RUN_BOT_ON_RENDER
-        value: "1"
-      - key: START_BOT_THREAD
-        value: "1"
+        value: 3.12.7
       - key: ENABLE_KEEP_ALIVE
         value: "1"
-      - key: KEEP_ALIVE_INTERVAL
-        value: "300"
-      - key: PANEL_SECRET_KEY
-        generateValue: true
-      - key: ADMIN_USER
-        sync: false
-      - key: ADMIN_PASS
-        sync: false
-      - key: BOT_TOKEN
-        sync: false
-      - key: API_BASE_URL
-        sync: false
-      - key: PUBLIC_API_URL
-        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
