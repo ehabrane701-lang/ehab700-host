@@ -5912,22 +5912,62 @@ async def tg_cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ تم إلغاء العملية الحالية.", reply_markup=_tg_main_keyboard(update.effective_user.id))
 
 
+async def _run_ptb_async():
+    application = Application.builder().token(BOT_TOKEN).build()
+    application.add_handler(CommandHandler("start", tg_start_cmd))
+    application.add_handler(CommandHandler("cancel", tg_cancel_cmd))
+    application.add_handler(CallbackQueryHandler(tg_callback_handler))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, tg_text_message_handler))
+
+    await application.initialize()
+    await application.start()
+    if application.updater:
+        await application.updater.start_polling(drop_pending_updates=True)
+
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    finally:
+        if application.updater and application.updater.running:
+            await application.updater.stop()
+        if application.running:
+            await application.stop()
+        await application.shutdown()
+
+
 def _run_telegram_bot_thread():
     if not BOT_TOKEN or ":" not in BOT_TOKEN:
         logger.warning("⚠️ BOT_TOKEN غير مضبوط؛ تم تخطي تشغيل بوت python-telegram-bot")
         return
+
+    allow_dup = os.environ.get("ALLOW_DUPLICATE_BOT_TOKEN", "0").strip() in ("1", "true", "yes")
+    if TOKEN and BOT_TOKEN == TOKEN and not allow_dup:
+        logger.warning(
+            "⚠️ BOT_TOKEN مطابق لـ TOKEN المستخدم مع TeleBot؛ تم تخطي تشغيل python-telegram-bot لتجنب تعارض getUpdates."
+        )
+        return
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        application = Application.builder().token(BOT_TOKEN).build()
-        application.add_handler(CommandHandler("start", tg_start_cmd))
-        application.add_handler(CommandHandler("cancel", tg_cancel_cmd))
-        application.add_handler(CallbackQueryHandler(tg_callback_handler))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, tg_text_message_handler))
         logger.info("🤖 تشغيل بوت python-telegram-bot بنجاح...")
-        application.run_polling(drop_pending_updates=True)
+        loop.run_until_complete(_run_ptb_async())
     except Exception as e:
         logger.error(f"❌ خطأ في تشغيل بوت python-telegram-bot: {e}")
+    finally:
+        try:
+            pending = asyncio.all_tasks(loop=loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            loop.run_until_complete(loop.shutdown_asyncgens())
+        except Exception:
+            pass
+        try:
+            loop.close()
+        except Exception:
+            pass
 
 
 def _run_telebot_polling_thread():
@@ -5944,6 +5984,8 @@ def _run_telebot_polling_thread():
 
 
 def _run_secondary_flask_port():
+    if os.environ.get("RENDER") or os.environ.get("RENDER_EXTERNAL_URL"):
+        return
     if PANEL_PORT_SECONDARY and PANEL_PORT_SECONDARY != PANEL_PORT_PRIMARY:
         try:
             app.run(host="0.0.0.0", port=PANEL_PORT_SECONDARY, debug=False, use_reloader=False, threaded=True)
