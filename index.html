@@ -4,6 +4,25 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>EHAB — لوحة التحكم والاستضافة</title>
+  <!-- خط عربي عصري واضح للقراءة وخط أحادي للوحدة الطرفية -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- مكتبة Tailwind CSS للتنسيق المتجاوب -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Cairo', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['IBM Plex Mono', 'ui-monospace', 'SFMono-Regular', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
   <style>
     :root{
       --bg0:#f1f5fb;
@@ -24,17 +43,35 @@
       --shadow:0 16px 42px rgba(11,31,58,.10);
       --radius:18px;
     }
+
+    html.dark{
+      --bg0:#070d19;
+      --bg1:#0b1324;
+      --glass:rgba(15,23,42,.92);
+      --border:rgba(148,163,184,.18);
+      --muted:#94a3b8;
+      --text:#f1f5f9;
+      --accent:#3b82f6;
+      --accent2:#e11d48;
+      --burgundy:#fb7185;
+      --burgundy-light:#f43f5e;
+      --royal-blue:#93c5fd;
+      --shadow:0 16px 42px rgba(0,0,0,.45);
+    }
+
+    /* أنماط أساسية إضافية لضمان سلاسة التمرير والتناسق البصري */
     *{box-sizing:border-box}
     html,body{min-height:100%;margin:0}
     body{
       color:var(--text);
-      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Naskh Arabic",Tahoma,sans-serif;
+      font-family:'Cairo',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Naskh Arabic",Tahoma,sans-serif;
       background:
         radial-gradient(1100px 560px at 8% 6%, rgba(128,0,32,.11), transparent 60%),
         radial-gradient(950px 520px at 92% 14%, rgba(29,78,216,.13), transparent 58%),
         radial-gradient(850px 500px at 50% 95%, rgba(2,132,199,.09), transparent 60%),
         linear-gradient(180deg, var(--bg1), var(--bg0));
       overflow-x:hidden;
+      transition:background .2s ease,color .2s ease;
     }
     body:before{
       content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
@@ -42,21 +79,38 @@
       opacity:.35;
     }
 
+    /* شريط تمرير ناعم ومناسب للسمتين */
+    ::-webkit-scrollbar{width:7px;height:7px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:rgba(100,116,139,.35);border-radius:9999px}
+    ::-webkit-scrollbar-thumb:hover{background:rgba(100,116,139,.55)}
+
+    /* حركة ظهور سلسة للتنبيهات والبطاقات */
+    @keyframes fadeIn{
+      from{opacity:0;transform:translateY(6px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    .animate-fade-in{animation:fadeIn .22s ease-out forwards}
+
     .topbar{
-      position:sticky;top:0;z-index:20;
+      position:sticky;top:0;z-index:30;
       backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-      background:linear-gradient(90deg, rgba(255,255,255,.94), rgba(248,250,255,.94));
+      background:linear-gradient(90deg, rgba(255,255,255,.95), rgba(248,250,255,.95));
       border-bottom:2px solid rgba(128,0,32,.22);
       box-shadow:0 8px 28px rgba(11,31,58,.06);
     }
+    html.dark .topbar{
+      background:linear-gradient(90deg, rgba(15,23,42,.95), rgba(11,19,36,.95));
+      border-bottom-color:rgba(244,63,94,.28);
+    }
     .topbar-inner{
-      max-width:1200px;margin:0 auto;padding:14px 18px;
+      max-width:1240px;margin:0 auto;padding:12px 18px;
       display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;
     }
-    .brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:.4px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.4px}
     .brand .logo{
       width:40px;height:40px;border-radius:12px;cursor:pointer;
-      background:linear-gradient(135deg, var(--burgundy) 0%, var(--accent) 100%);
+      background:linear-gradient(135deg, #800020 0%, #1d4ed8 100%);
       color:#ffffff;
       border:1px solid rgba(255,255,255,.65);
       box-shadow:0 8px 22px rgba(128,0,32,.26);
@@ -70,12 +124,12 @@
     }
     .brand .sub{display:block;font-weight:700;color:var(--royal-blue);font-size:11px;letter-spacing:.2px;margin-top:2px;direction:ltr;text-align:right;-webkit-text-fill-color:var(--royal-blue)}
 
-    .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .btn{
       border:1px solid rgba(29,78,216,.24);
-      background:#ffffff;
+      background:var(--bg1);
       color:var(--royal-blue);
-      padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:800;font-size:12px;
+      padding:9px 13px;border-radius:12px;cursor:pointer;font-weight:800;font-size:12px;
       transition:transform .14s ease,background .14s ease,border-color .14s ease,box-shadow .14s ease;
       text-decoration:none;display:inline-flex;align-items:center;gap:6px;
       box-shadow:0 4px 12px rgba(11,31,58,.05);
@@ -83,17 +137,16 @@
     .btn:hover:not(:disabled){
       transform:translateY(-1px);
       border-color:var(--burgundy);
-      background:#f8faff;
       box-shadow:0 8px 20px rgba(29,78,216,.12);
     }
     .btn:disabled{opacity:.45;cursor:not-allowed}
     .btn-primary{
-      background:linear-gradient(135deg, var(--burgundy), var(--accent));
+      background:linear-gradient(135deg, #800020, #1d4ed8);
       color:#ffffff;border:0;
       box-shadow:0 10px 26px rgba(128,0,32,.24);
     }
     .btn-primary:hover:not(:disabled){
-      background:linear-gradient(135deg, var(--burgundy-light), #2563eb);
+      background:linear-gradient(135deg, #a31636, #2563eb);
       color:#ffffff;
     }
     .btn-danger{
@@ -102,10 +155,21 @@
       color:var(--burgundy);
     }
     .btn-danger:hover:not(:disabled){
-      background:var(--burgundy);
+      background:#800020;
       color:#ffffff;
     }
     .btn-mini{padding:7px 10px;border-radius:10px;font-size:11px}
+
+    /* شريط التنقل السريع بين المسارات الرئيسية */
+    .quick-nav-strip{
+      border-top:1px solid var(--border);
+      background:rgba(248,250,252,.85);
+    }
+    html.dark .quick-nav-strip{background:rgba(15,23,42,.75)}
+    .quick-nav-inner{
+      max-width:1240px;margin:0 auto;padding:8px 18px;
+      display:flex;align-items:center;gap:8px;overflow-x:auto;
+    }
 
     .auth-shell{
       position:relative;z-index:2;min-height:calc(100vh - 70px);
@@ -113,38 +177,38 @@
     }
     .auth-card{
       width:min(450px,94vw);
-      border:1px solid rgba(29,78,216,.18);
-      border-top:4px solid var(--burgundy);
-      background:rgba(255,255,255,.96);
+      border:1px solid var(--border);
+      border-top:4px solid #800020;
+      background:var(--bg1);
       border-radius:18px;box-shadow:var(--shadow);padding:22px;
     }
     .auth-title{display:flex;align-items:center;gap:10px;font-weight:950;font-size:16px;color:var(--burgundy)}
     .sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.6}
-    input.field, select.field{
+    input.field, select.field, textarea.field{
       width:100%;padding:12px;border-radius:14px;
-      border:1px solid rgba(29,78,216,.22);
-      background:#f8fbff;color:var(--text);outline:none;margin-top:10px;
+      border:1px solid var(--border);
+      background:var(--bg0);color:var(--text);outline:none;margin-top:10px;
       transition:border-color .15s ease,box-shadow .15s ease;
     }
-    input.field:focus, select.field:focus{
+    input.field:focus, select.field:focus, textarea.field:focus{
       border-color:var(--burgundy);
-      background:#ffffff;
+      background:var(--bg1);
       box-shadow:0 0 0 3px rgba(128,0,32,.10);
     }
     .row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center}
     .row .btn{flex:1;justify-content:center}
     .msg{margin-top:10px;color:var(--burgundy);font-weight:700;font-size:12px;min-height:18px}
 
-    .container{position:relative;z-index:2;max-width:1200px;margin:20px auto 60px;padding:0 18px}
+    .container{position:relative;z-index:2;max-width:1240px;margin:20px auto 60px;padding:0 18px}
     .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
     @media (max-width:1050px){.grid{grid-template-columns:repeat(3,1fr)}}
     @media (max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}
     @media (max-width:480px){.grid{grid-template-columns:1fr}}
 
     .card{
-      border:1px solid rgba(29,78,216,.16);
+      border:1px solid var(--border);
       border-right:4px solid var(--accent);
-      background:linear-gradient(180deg,#ffffff,#f7faff);
+      background:var(--bg1);
       border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
       cursor:pointer;
       transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease;min-height:124px;
@@ -160,7 +224,7 @@
 
     .pill{
       display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;
-      border:1px solid rgba(29,78,216,.18);background:#eef4ff;color:var(--royal-blue);
+      border:1px solid rgba(29,78,216,.18);background:#eef4ff;color:#0f3d7a;
       font-size:11px;font-weight:900;margin-top:10px;
     }
     .dot{width:8px;height:8px;border-radius:50%}
@@ -168,8 +232,8 @@
     .pill.running .dot{background:#10b981}
     .pill.installing{background:#fffbeb;border-color:#fde68a;color:#92400e}
     .pill.installing .dot{background:#f59e0b}
-    .pill.banned{background:#fff1f2;border-color:#fecdd3;color:var(--burgundy)}
-    .pill.banned .dot{background:var(--burgundy)}
+    .pill.banned{background:#fff1f2;border-color:#fecdd3;color:#800020}
+    .pill.banned .dot{background:#800020}
     .pill.offline .dot{background:#64748b}
 
     .header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:10px}
@@ -178,17 +242,17 @@
 
     .tabs{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .tab{
-      border:1px solid rgba(29,78,216,.22);background:#ffffff;color:var(--royal-blue);
+      border:1px solid var(--border);background:var(--bg1);color:var(--royal-blue);
       padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:900;font-size:12px;
     }
     .tab.active{
-      background:linear-gradient(135deg, var(--burgundy), var(--accent));
+      background:linear-gradient(135deg, #800020, #1d4ed8);
       color:#ffffff;border:0;box-shadow:0 10px 24px rgba(128,0,32,.22);
     }
 
     .panel{
-      margin-top:14px;border:1px solid rgba(29,78,216,.16);
-      background:#ffffff;
+      margin-top:14px;border:1px solid var(--border);
+      background:var(--bg1);
       border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;
     }
     .grid-2{display:grid;grid-template-columns:1fr 340px;gap:14px;padding:14px}
@@ -198,20 +262,20 @@
       background:#08162b;
       border:2px solid rgba(128,0,32,.35);
       border-radius:16px;
-      padding:14px;height:520px;overflow:auto;direction:ltr;text-align:left;
-      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
-      font-size:13px;line-height:1.45;white-space:pre-wrap;color:#e2f1ff;
+      padding:14px;height:440px;overflow:auto;direction:ltr;text-align:left;
+      font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+      font-size:13px;line-height:1.5;white-space:pre-wrap;color:#e2f1ff;
     }
     .side{display:flex;flex-direction:column;gap:10px}
     .btn-block{
       width:100%;padding:12px;border-radius:14px;
-      border:1px solid rgba(29,78,216,.22);
-      background:#f8fbff;color:var(--royal-blue);font-weight:950;cursor:pointer;transition:.14s ease;
+      border:1px solid var(--border);
+      background:var(--bg0);color:var(--royal-blue);font-weight:950;cursor:pointer;transition:.14s ease;
     }
-    .btn-block:hover:not(:disabled){transform:translateY(-1px);background:#eef5ff;border-color:var(--accent)}
+    .btn-block:hover:not(:disabled){transform:translateY(-1px);border-color:var(--accent)}
     .btn-block:disabled{opacity:.45;cursor:not-allowed}
     .btn-block.primary{
-      background:linear-gradient(135deg, var(--accent), var(--burgundy));
+      background:linear-gradient(135deg, #1d4ed8, #800020);
       color:#ffffff;border:0;box-shadow:0 8px 20px rgba(29,78,216,.20);
     }
     .btn-block.danger{
@@ -220,13 +284,13 @@
       color:var(--burgundy);
     }
     .btn-block.danger:hover:not(:disabled){
-      background:var(--burgundy);
+      background:#800020;
       color:#ffffff;
     }
 
     .stat{
-      border:1px solid rgba(29,78,216,.15);
-      background:linear-gradient(135deg, #ffffff, #f3f7ff);
+      border:1px solid var(--border);
+      background:var(--bg0);
       border-radius:16px;
       padding:12px;display:flex;gap:10px;align-items:center;
     }
@@ -241,17 +305,17 @@
 
     .fm-top{
       display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;
-      padding:14px;border-bottom:1px solid rgba(29,78,216,.12);
-      background:#f8fbff;
+      padding:14px;border-bottom:1px solid var(--border);
+      background:var(--bg0);
     }
     .path{color:var(--muted);font-size:12px;margin-top:6px;direction:ltr;text-align:left}
     .crumb a{color:var(--burgundy);text-decoration:none;font-weight:900}
     .crumb .sep{color:#94a3b8;padding:0 6px}
 
     .table{width:100%;border-collapse:collapse}
-    .table th,.table td{padding:12px 10px;border-bottom:1px solid rgba(29,78,216,.10);font-size:13px;text-align:right}
-    .table th{color:#ffffff;background:linear-gradient(90deg, var(--royal-blue), var(--burgundy));font-weight:950;font-size:11px}
-    .table tr:hover td{background:#f8fbff}
+    .table th,.table td{padding:12px 10px;border-bottom:1px solid var(--border);font-size:13px;text-align:right}
+    .table th{color:#ffffff;background:linear-gradient(90deg, #0f3d7a, #800020);font-weight:950;font-size:11px}
+    .table tr:hover td{background:rgba(59,130,246,.05)}
     .name-link{color:var(--accent);font-weight:900;cursor:pointer}
     .name-link:hover{color:var(--burgundy);text-decoration:underline}
     .row-actions{white-space:nowrap}
@@ -260,9 +324,9 @@
     .k{color:var(--muted);font-size:12px;font-weight:700}
     .v{font-size:20px;font-weight:950;margin-top:6px;color:var(--burgundy)}
     h2{margin:22px 0 10px;color:var(--royal-blue)}
-    .tag{display:inline-block;padding:4px 9px;border-radius:999px;background:#f1f5f9;border:1px solid rgba(29,78,216,.18);font-weight:900;font-size:11px;color:var(--royal-blue)}
+    .tag{display:inline-block;padding:4px 9px;border-radius:999px;background:var(--bg0);border:1px solid var(--border);font-weight:900;font-size:11px;color:var(--royal-blue)}
     .tag.ok{color:#065f46;background:#ecfdf5;border-color:#a7f3d0}
-    .tag.bad{color:var(--burgundy);background:#fff1f2;border-color:#fecdd3}
+    .tag.bad{color:#800020;background:#fff1f2;border-color:#fecdd3}
     .tag.mid{color:#92400e;background:#fffbeb;border-color:#fde68a}
 
     .modal-backdrop{
@@ -272,9 +336,9 @@
     }
     .modal{
       width:100%;max-width:450px;
-      background:#ffffff;
-      border:1px solid rgba(29,78,216,.22);
-      border-top:4px solid var(--burgundy);
+      background:var(--bg1);
+      border:1px solid var(--border);
+      border-top:4px solid #800020;
       border-radius:18px;box-shadow:0 24px 60px rgba(8,22,43,.28);
       padding:20px;
     }
@@ -282,55 +346,28 @@
     .modal h3{margin:0 0 10px 0;color:var(--burgundy)}
     .modal input, .modal select{
       width:100%;padding:12px;border-radius:14px;
-      border:1px solid rgba(29,78,216,.24);
-      background:#f8fbff;color:var(--text);outline:none;
+      border:1px solid var(--border);
+      background:var(--bg0);color:var(--text);outline:none;
     }
-    .modal input:focus, .modal select:focus{border-color:var(--burgundy);background:#ffffff}
+    .modal input:focus, .modal select:focus{border-color:var(--burgundy);background:var(--bg1)}
 
     .srv-select-list{
-      margin-top:10px;
-      max-height:220px;
-      overflow:auto;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      border:1px solid rgba(29,78,216,.15);
-      border-radius:14px;
-      padding:8px;
-      background:#f8fbff;
+      margin-top:10px;max-height:220px;overflow:auto;
+      display:flex;flex-direction:column;gap:8px;
+      border:1px solid var(--border);border-radius:14px;padding:8px;background:var(--bg0);
     }
     .srv-option-item{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid rgba(29,78,216,.16);
-      background:#ffffff;
-      cursor:pointer;
-      transition:border-color .14s ease, background .14s ease;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:10px 12px;border-radius:12px;border:1px solid var(--border);
+      background:var(--bg1);cursor:pointer;transition:border-color .14s ease, background .14s ease;
     }
-    .srv-option-item:hover{
-      border-color:var(--accent);
-      background:#f0f6ff;
-    }
-    .srv-option-item.selected{
-      border-color:var(--burgundy);
-      background:#fff1f2;
-      box-shadow:0 4px 14px rgba(128,0,32,.10);
-    }
+    .srv-option-item:hover{border-color:var(--accent)}
+    .srv-option-item.selected{border-color:#800020;background:rgba(128,0,32,.08)}
     .srv-option-title{font-weight:950;font-size:13px;color:var(--royal-blue)}
     .srv-option-meta{font-size:11px;color:var(--muted);margin-top:3px;direction:ltr;text-align:right}
     .auto-badge{
-      display:inline-block;
-      padding:2px 8px;
-      border-radius:999px;
-      font-size:10px;
-      font-weight:900;
-      background:rgba(29,78,216,.12);
-      color:var(--accent);
-      margin-right:6px;
+      display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:900;
+      background:rgba(29,78,216,.12);color:var(--accent);margin-right:6px;
     }
 
     #editor-modal{
@@ -338,80 +375,63 @@
     }
     .editor{
       height:100%;max-width:1200px;margin:0 auto;border-radius:18px;
-      border:2px solid var(--burgundy);background:#08162b;
+      border:2px solid #800020;background:#08162b;
       box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;
     }
     .editor-top{
       padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.14);
-      background:linear-gradient(90deg, var(--royal-blue), var(--burgundy));
+      background:linear-gradient(90deg, #0f3d7a, #800020);
       display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
     }
     .editor-top .fn{font-weight:950;color:#ffffff;word-break:break-all;direction:ltr}
     #ed-area{
       flex:1;background:transparent;color:#e8f3ff;border:0;outline:none;direction:ltr;text-align:left;
-      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+      font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
       font-size:13px;padding:14px;resize:none;line-height:1.5;
     }
 
     .toast-wrap{
-      position:fixed;bottom:18px;left:18px;z-index:90;display:flex;flex-direction:column;gap:8px;max-width:340px;
+      position:fixed;bottom:18px;left:18px;z-index:90;display:flex;flex-direction:column;gap:8px;max-width:360px;
     }
     .toast{
-      padding:11px 14px;border-radius:12px;border:1px solid rgba(29,78,216,.25);
-      background:#ffffff;color:var(--royal-blue);font-size:12px;font-weight:800;box-shadow:0 12px 30px rgba(8,22,43,.16);
+      padding:11px 14px;border-radius:12px;border:1px solid var(--border);
+      background:var(--bg1);color:var(--royal-blue);font-size:12px;font-weight:800;box-shadow:0 12px 30px rgba(8,22,43,.18);
     }
     .toast.ok{border-color:#10b981;color:#065f46;background:#ecfdf5}
-    .toast.err{border-color:var(--burgundy);color:var(--burgundy);background:#fff1f2}
+    .toast.err{border-color:#800020;color:#800020;background:#fff1f2}
 
     .services-section{
-      margin-top:28px;
-      padding:20px;
-      border-radius:20px;
-      background:rgba(255,255,255,.85);
-      border:1px solid rgba(29,78,216,.15);
-      box-shadow:var(--shadow);
+      margin-top:28px;padding:20px;border-radius:20px;
+      background:var(--bg1);border:1px solid var(--border);box-shadow:var(--shadow);
     }
     .services-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
     .services-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
     @media (max-width:960px){.services-grid{grid-template-columns:repeat(2,1fr)}}
     @media (max-width:600px){.services-grid{grid-template-columns:1fr}}
     .svc-card{
-      border:1px solid rgba(29,78,216,.16);
-      border-top:3px solid var(--accent);
-      background:#ffffff;
-      border-radius:var(--radius);padding:16px;box-shadow:0 10px 26px rgba(11,31,58,.06);
+      border:1px solid var(--border);border-top:3px solid var(--accent);
+      background:var(--bg0);border-radius:var(--radius);padding:16px;box-shadow:0 10px 26px rgba(11,31,58,.06);
       display:flex;flex-direction:column;justify-content:space-between;gap:12px;
       transition:transform .15s ease,border-color .15s ease;
     }
-    .svc-card:hover{
-      transform:translateY(-2px);
-      border-top-color:var(--burgundy);
-    }
-    .svc-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid rgba(29,78,216,.2);background:#f8fbff}
+    .svc-card:hover{transform:translateY(-2px);border-top-color:#800020}
+    .svc-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:900;border:1px solid var(--border);background:var(--bg1)}
     .svc-badge.free{color:#065f46;border-color:#a7f3d0;background:#ecfdf5}
-    .svc-badge.paid{color:var(--burgundy);border-color:#fecdd3;background:#fff1f2}
+    .svc-badge.paid{color:#800020;border-color:#fecdd3;background:#fff1f2}
     .svc-price{font-weight:950;font-size:13px;color:var(--accent)}
     .type-choice-row{display:flex;gap:10px;margin-top:12px}
     .type-choice-btn{
-      flex:1;padding:12px;border-radius:12px;
-      border:1px solid rgba(29,78,216,.24);
-      background:#f8fbff;color:var(--royal-blue);font-weight:950;cursor:pointer;
-      transition:.14s ease;
+      flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);
+      background:var(--bg0);color:var(--royal-blue);font-weight:950;cursor:pointer;transition:.14s ease;
     }
     .type-choice-btn.active{
-      background:linear-gradient(135deg, var(--burgundy), var(--accent));
-      color:#ffffff;border:0;
-      box-shadow:0 8px 20px rgba(128,0,32,.22);
+      background:linear-gradient(135deg, #800020, #1d4ed8);
+      color:#ffffff;border:0;box-shadow:0 8px 20px rgba(128,0,32,.22);
     }
 
     .guide-section{
-      margin-top:28px;
-      padding:22px;
-      border-radius:20px;
-      background:rgba(255,255,255,.92);
-      border:1px solid rgba(29,78,216,.16);
-      border-top:4px solid var(--accent);
-      box-shadow:var(--shadow);
+      margin-top:28px;padding:22px;border-radius:20px;
+      background:var(--bg1);border:1px solid var(--border);border-top:4px solid var(--accent);box-shadow:var(--shadow);
     }
     .guide-section h2{margin:0 0 12px 0;font-size:20px;font-weight:950;color:var(--burgundy)}
     .guide-section h3{margin:18px 0 8px 0;font-size:15px;font-weight:900;color:var(--royal-blue)}
@@ -419,497 +439,633 @@
     .guide-list li{margin-bottom:10px}
     .guide-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:12px}
     @media (max-width:760px){.guide-grid{grid-template-columns:1fr}}
-    .guide-box{
-      border:1px solid rgba(29,78,216,.14);
-      background:#f8fbff;
-      border-radius:14px;
-      padding:14px;
-    }
+    .guide-box{border:1px solid var(--border);background:var(--bg0);border-radius:14px;padding:14px}
 
     /* أزرار المميزات والبنود المرتبطة */
     .feature-btn{
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      padding:4px 11px;
-      margin-left:6px;
-      margin-bottom:4px;
-      border-radius:999px;
-      border:1px solid rgba(29,78,216,.26);
+      display:inline-flex;align-items:center;gap:6px;padding:4px 11px;margin-left:6px;margin-bottom:4px;
+      border-radius:999px;border:1px solid rgba(29,78,216,.26);
       background:linear-gradient(135deg, #f8fbff, #eef4ff);
-      color:var(--royal-blue);
-      font-family:inherit;
-      font-size:12px;
-      font-weight:900;
-      cursor:pointer;
+      color:#0f3d7a;font-family:inherit;font-size:12px;font-weight:900;cursor:pointer;
       transition:transform .14s ease, background .14s ease, border-color .14s ease, color .14s ease;
     }
     .feature-btn:hover{
       transform:translateY(-1px);
-      background:linear-gradient(135deg, var(--burgundy), var(--accent));
-      border-color:transparent;
-      color:#ffffff;
+      background:linear-gradient(135deg, #800020, #1d4ed8);
+      border-color:transparent;color:#ffffff;
+    }
+
+    .wb-card{
+      border:1px solid var(--border);
+      background:var(--bg1);
+      border-radius:var(--radius);
+      padding:20px;
+      box-shadow:var(--shadow);
+      margin-bottom:18px;
     }
   </style>
 </head>
 <body>
+  <!-- حاوية التطبيق الرئيسية -->
+  <div id="app" class="min-h-screen flex flex-col">
 
-  <!-- الشريط العلوي (TOPBAR) -->
-  <div class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <div class="logo" role="button" tabindex="0" title="الرئيسية"
-             onclick="navigate('/')"
-             onkeypress="if(event.key==='Enter') navigate('/')">🏠</div>
-        <div>
-          <div class="title">𝗘𝗛𝗔𝗕</div>
-          <span class="sub" id="pyHostTxt">Python Host: loading...</span>
+    <!-- الشريط العلوي (TOPBAR) -->
+    <div class="topbar">
+      <div class="topbar-inner">
+        <!-- الجانب الأيمن: زر القائمة الجانبية + شعار Wispbyte السريع -->
+        <div class="brand">
+          <button type="button" id="openDrawerBtn" class="btn btn-mini" title="القائمة الجانبية" onclick="toggleWispDrawer(true)">☰</button>
+          <div class="logo" role="button" tabindex="0" title="الرئيسية"
+               onclick="navigate('/')"
+               onkeypress="if(event.key==='Enter') navigate('/')">🏠</div>
+          <div>
+            <div class="title">𝗘𝗛𝗔𝗕 • Wispbyte</div>
+            <span class="sub" id="pyHostTxt">Python Host: loading...</span>
+          </div>
+        </div>
+
+        <!-- شريط الأيقونات والأزرار السريعة -->
+        <div class="actions">
+          <!-- زر إنشاء خادم سريع (+) -->
+          <button type="button" class="btn btn-primary btn-mini" title="إنشاء خادم جديد" onclick="navigate('/client/create')">+</button>
+          <!-- زر البحث السريع -->
+          <button type="button" class="btn btn-mini" title="البحث في الخوادم" onclick="focusDashboardSearch()">🔍</button>
+          <!-- زر الإشعارات -->
+          <button type="button" class="btn btn-mini" title="الإشعارات" onclick="toast('لا توجد إشعارات جديدة — جميع الأنظمة تعمل بكفاءة ✅', 'ok')">🔔</button>
+          <!-- زر تبديل السمة السريع -->
+          <button type="button" id="quickThemeBtn" class="btn btn-mini" title="تبديل السمة الفاتحة / الداكنة" onclick="toggleWispTheme()">🌙</button>
+          <!-- أفاتار المستخدم (G) -->
+          <button type="button" id="userAvatarBtn" class="btn btn-mini" style="border-radius:999px;font-weight:900" title="الملف الشخصي" onclick="navigate('/client/profile')">G</button>
+
+          <a class="btn" href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer">📩 تواصل @Y_20_20</a>
+          <button id="loginNavBtn" class="btn" style="display:none" onclick="navigate('/login')">تسجيل الدخول</button>
+          <button id="createNavBtn" class="btn" style="display:none" onclick="navigate('/create')">إنشاء حساب</button>
+          <button id="adminBtn" class="btn" style="display:none" onclick="navigate('/admin')">لوحة الأدمن</button>
+          <button id="homeBtn" class="btn" style="display:none" onclick="goHome()">الرئيسية</button>
+          <button id="newBtn" class="btn btn-primary" style="display:none">+ سيرفر جديد</button>
+          <button id="deleteSrvNavBtn" class="btn btn-danger" style="display:none" onclick="openDeleteServerPicker()">🗑️ حذف سيرفر</button>
+          <button id="logoutBtn" class="btn btn-danger" style="display:none" onclick="doLogout()">خروج</button>
         </div>
       </div>
 
-      <div class="actions">
-        <a class="btn" href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer">📩 تواصل @Y_20_20</a>
-        <button id="loginNavBtn" class="btn" style="display:none" onclick="navigate('/login')">تسجيل الدخول</button>
-        <button id="createNavBtn" class="btn" style="display:none" onclick="navigate('/create')">إنشاء حساب</button>
-        <button id="adminBtn" class="btn" style="display:none" onclick="navigate('/admin')">لوحة الأدمن</button>
-        <button id="homeBtn" class="btn" style="display:none" onclick="goHome()">الرئيسية</button>
-        <button id="newBtn" class="btn btn-primary" style="display:none">+ سيرفر جديد</button>
-        <button id="deleteSrvNavBtn" class="btn btn-danger" style="display:none" onclick="openDeleteServerPicker()">🗑️ حذف سيرفر</button>
-        <button id="logoutBtn" class="btn btn-danger" style="display:none" onclick="doLogout()">خروج</button>
+      <!-- شريط التنقل السريع بين المسارات الرئيسية -->
+      <div class="quick-nav-strip">
+        <div class="quick-nav-inner">
+          <button type="button" class="btn btn-mini" onclick="navigate('/')">🏠 الرئيسية</button>
+          <button type="button" class="btn btn-mini" onclick="navigate('/client/dashboard')">📊 لوحة تحكم Wispbyte</button>
+          <button type="button" class="btn btn-mini" onclick="navigate('/client/create')">➕ إنشاء خادم (بيئات وقواعد بيانات)</button>
+          <button type="button" class="btn btn-mini" onclick="navigate('/client/billing')">👑 الفوترة و Premium</button>
+          <button type="button" class="btn btn-mini" onclick="navigate('/client/free-ram')">🎁 RAM مجانية</button>
+          <button type="button" class="btn btn-mini" onclick="navigate('/client/websites')">🌐 مواقع الويب</button>
+          <button type="button" class="btn btn-mini" onclick="navigate('/client/github')">🐙 GitHub</button>
+          <button type="button" class="btn btn-mini" onclick="navigate('/client/ai-connections')">🤖 الذكاء الاصطناعي</button>
+          <button type="button" class="btn btn-mini" onclick="navigate('/client/settings')">⚙️ الإعدادات</button>
+          <button type="button" class="btn btn-mini" onclick="navigate('/client/support')">🛟 الدعم</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- ١. صفحة تسجيل الدخول (/login) -->
-  <div class="auth-shell" id="loginView" style="display:none">
-    <div class="auth-card">
-      <div class="auth-title"><div class="logo" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center">🏠</div> تسجيل الدخول — HOST 𝗘𝗛𝗔𝗕</div>
-      <div class="sub">سجّل الدخول إلى حسابك (حساب الأدمن الافتراضي: <code>admin</code> / <code>admin123</code>)</div>
+    <!-- القائمة الجانبية المنزلقة (Drawer) -->
+    <div id="wispDrawerBackdrop" class="fixed inset-0 z-50" style="display:none">
+      <!-- طبقة التعتيم الخلفية -->
+      <div class="fixed inset-0 bg-slate-950/50 backdrop-blur-[1px]" onclick="toggleWispDrawer(false)"></div>
 
-      <input id="login_u" class="field" placeholder="اسم المستخدم" autocomplete="username">
-      <input id="login_p" class="field" placeholder="كلمة المرور" type="password" autocomplete="current-password">
+      <!-- جسم القائمة الجانبية -->
+      <aside class="relative z-10 w-80 max-w-[85vw] h-full shadow-2xl flex flex-col justify-between overflow-y-auto animate-fade-in" style="background:var(--bg1);border-left:1px solid var(--border)">
+        <div>
+          <!-- رأس القائمة -->
+          <div class="p-4 flex items-center justify-between" style="border-bottom:1px solid var(--border)">
+            <button type="button" class="btn btn-mini" onclick="toggleWispDrawer(false)">✕</button>
+            <div class="flex items-center gap-3 text-right">
+              <div>
+                <div class="font-extrabold text-base" style="color:var(--burgundy)">Wispbyte • 𝗘𝗛𝗔𝗕</div>
+                <div class="text-xs" style="color:var(--muted)">نستضيف أحلامك</div>
+              </div>
+              <div class="w-9 h-9 rounded-xl text-white flex items-center justify-center font-bold" style="background:linear-gradient(135deg,#800020,#1d4ed8)">✦</div>
+            </div>
+          </div>
+
+          <!-- روابط التنقل الرئيسية -->
+          <div class="p-3 space-y-1.5">
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/')">🏠 الرئيسية الكلاسيكية</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/dashboard')">📊 لوحة تحكم Wispbyte</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/billing')">💳 الفوترة و Premium</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/friends')">👥 الأصدقاء</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/free-ram')">🎁 RAM مجانية</button>
+          </div>
+
+          <!-- قسم الخوادم -->
+          <div class="p-3 space-y-1.5" style="border-top:1px solid var(--border)">
+            <div class="px-2 text-xs font-bold" style="color:var(--muted)">الخوادم</div>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/dashboard')">🖥️ خوادمك</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/create')">➕ إنشاء خادم</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/websites')">🌐 مواقع الويب</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/store')">🛒 المتجر</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/github')">🐙 GitHub</button>
+          </div>
+
+          <!-- قسم الحساب -->
+          <div class="p-3 space-y-1.5" style="border-top:1px solid var(--border)">
+            <div class="px-2 text-xs font-bold" style="color:var(--muted)">الحساب</div>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/profile')">👤 الملف الشخصي</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/settings')">⚙️ الإعدادات</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/ai-connections')">🤖 اتصالات الذكاء الاصطناعي</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/invoices')">🧾 الفواتير</button>
+            <button type="button" class="btn-block text-right" onclick="toggleWispDrawer(false);navigate('/client/support')">🛟 الدعم</button>
+          </div>
+        </div>
+
+        <!-- تذييل القائمة: مبدل السمة الفاتحة / الداكنة -->
+        <div class="p-4 space-y-2" style="border-top:1px solid var(--border)">
+          <button type="button" class="btn-block" onclick="toggleWispTheme()">🌓 تبديل السمة الفاتحة / الداكنة</button>
+          <div class="text-[11px] text-center" style="color:var(--muted)">A David Dobos Production © • 𝗘𝗛𝗔𝗕 Host</div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ١. صفحة تسجيل الدخول (/login) -->
+    <div class="auth-shell" id="loginView" style="display:none">
+      <div class="auth-card">
+        <div class="auth-title"><div class="logo" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center">🏠</div> تسجيل الدخول — HOST 𝗘𝗛𝗔𝗕</div>
+        <div class="sub">سجّل الدخول إلى حسابك (حساب الأدمن الافتراضي: <code>admin</code> / <code>admin123</code>)</div>
+
+        <input id="login_u" class="field" placeholder="اسم المستخدم" autocomplete="username">
+        <input id="login_p" class="field" placeholder="كلمة المرور" type="password" autocomplete="current-password">
+
+        <div class="row">
+          <button class="btn btn-primary" onclick="doLogin()">دخول</button>
+          <button class="btn" onclick="navigate('/create')">إنشاء حساب</button>
+        </div>
+
+        <div class="msg" id="login_m"></div>
+        <div class="sub">استخدم بيانات حسابك للدخول. صلاحيات الأدمن مقتصرة على المشرفين · تواصل: <a href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@Y_20_20</a></div>
+      </div>
+    </div>
+
+    <!-- ٢. صفحة إنشاء حساب (/create) -->
+    <div class="auth-shell" id="createView" style="display:none">
+      <div class="auth-card">
+        <div class="auth-title"><div class="logo" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center">✨</div> إنشاء حساب جديد</div>
+        <div class="sub">المستخدم العادي يحصل على سيرفر مجاني واحد (المميز = 16 سيرفر). لزيادة الحد تواصل على تيليجرام <a href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@Y_20_20</a></div>
+
+        <input id="cr_u" class="field" placeholder="اسم المستخدم (أحرف / أرقام / _ / .)">
+        <input id="cr_e" class="field" placeholder="البريد الإلكتروني">
+        <input id="cr_p" class="field" placeholder="كلمة المرور (6 أحرف فأكثر)" type="password">
+        <input id="cr_p2" class="field" placeholder="تأكيد كلمة المرور" type="password">
+
+        <div class="row">
+          <button class="btn btn-primary" onclick="doCreate()">إنشاء الحساب</button>
+          <button class="btn" onclick="navigate('/login')">العودة للدخول</button>
+        </div>
+
+        <div class="msg" id="cr_m"></div>
+      </div>
+    </div>
+
+    <!-- ٣ أ. الرئيسية (/) -->
+    <div class="container" id="homeView" style="display:none">
+      <div class="grid" id="cardsContainer"></div>
+
+      <!-- قسم الخدمات المجانية والمدفوعة -->
+      <div class="services-section" id="servicesSection">
+        <div class="services-head">
+          <div>
+            <h2 style="margin:0">🛒 الخدمات المجانية والمدفوعة</h2>
+            <div class="sub">اختر خدمة مجانية فورية أو خدمة مدفوعة متكاملة مع حماية الرصيد والارتباط المباشر بالخادم</div>
+          </div>
+          <div class="tag ok" id="walletBalanceBadge">الرصيد: 0.00 USD</div>
+        </div>
+
+        <div class="services-grid">
+          <div class="svc-card">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                <span class="svc-badge free">مجاني • FREE</span>
+                <span class="svc-price">0.00 USD</span>
+              </div>
+              <div class="srv-title" style="margin-top:10px">قالب بوت بايثون جاهز (PY)</div>
+              <div class="srv-sub">ينشئ مشروع بايثون بملف تشغيل <code>main.py</code> جاهز للتشغيل الفوري بدون رسوم.</div>
+            </div>
+            <button class="btn btn-mini btn-primary" onclick="orderFreeService('py')">تفعيل الخدمة المجانية (PY)</button>
+          </div>
+
+          <div class="svc-card">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                <span class="svc-badge free">مجاني • FREE</span>
+                <span class="svc-price">0.00 USD</span>
+              </div>
+              <div class="srv-title" style="margin-top:10px">قالب سيرفر Node / JS جاهز (JS)</div>
+              <div class="srv-sub">ينشئ مشروع جافا سكريبت بملف تشغيل <code>index.js</code> جاهز للتشغيل الفوري بدون رسوم.</div>
+            </div>
+            <button class="btn btn-mini btn-primary" onclick="orderFreeService('js')">تفعيل الخدمة المجانية (JS)</button>
+          </div>
+
+          <div class="svc-card">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                <span class="svc-badge paid">مدفوع • PAID</span>
+                <span class="svc-price">5.00 USD</span>
+              </div>
+              <div class="srv-title" style="margin-top:10px">استضافة بايثون / بوتات (Python)</div>
+              <div class="srv-sub">تشغيل سكريبتات وبوتات بايثون مع تثبيت تلقائي للمكتبات وحفظ السجلات.</div>
+            </div>
+            <button class="btn btn-mini" onclick="openPaidServiceModal('srv_python_host', 'استضافة بايثون / بوتات (Python)', '5.00 USD')">طلب الخدمة المدفوعة</button>
+          </div>
+
+          <div class="svc-card">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                <span class="svc-badge paid">مدفوع • PAID</span>
+                <span class="svc-price">3.00 USD</span>
+              </div>
+              <div class="srv-title" style="margin-top:10px">استضافة HTML / JavaScript / Node</div>
+              <div class="srv-sub">استضافة ملفات <code>.js</code> و<code>.html</code> وتطبيقات الويب مع إدارة الملفات.</div>
+            </div>
+            <button class="btn btn-mini" onclick="openPaidServiceModal('srv_js_html_host', 'استضافة HTML / JavaScript / Node', '3.00 USD')">طلب الخدمة المدفوعة</button>
+          </div>
+
+          <div class="svc-card">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                <span class="svc-badge paid">مدفوع • PAID</span>
+                <span class="svc-price">4.00 USD</span>
+              </div>
+              <div class="srv-title" style="margin-top:10px">استضافة PHP ومواقع ويب</div>
+              <div class="srv-sub">تشغيل مشاريع PHP وملفات الويب مع إدارة الملفات والسجلات.</div>
+            </div>
+            <button class="btn btn-mini" onclick="openPaidServiceModal('srv_php_host', 'استضافة PHP ومواقع ويب', '4.00 USD')">طلب الخدمة المدفوعة</button>
+          </div>
+
+          <div class="svc-card">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                <span class="svc-badge paid">مدفوع • PAID</span>
+                <span class="svc-price">10.00 USD</span>
+              </div>
+              <div class="srv-title" style="margin-top:10px">طلب موقع إلكتروني / ربط مسار مخصص</div>
+              <div class="srv-sub">تجهيز مسار موقع إلكتروني وملفاته وضبط الإعدادات الخاصة به على <code>/web/&lt;order_id&gt;</code>.</div>
+            </div>
+            <button class="btn btn-mini" onclick="openPaidServiceModal('srv_web_request', 'طلب موقع إلكتروني / ربط مسار مخصص', '10.00 USD')">طلب الخدمة المدفوعة</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- دليل الاستضافة الشامل (أولاً • ثانياً • ثالثاً • رابعاً) مع أزرار مرتبطة -->
+      <div class="guide-section" id="hostingGuideSection">
+        <h2>أولاً: أهم مميزات استضافة وتشغيل المشاريع على استضافه</h2>
+        <ul class="guide-list">
+          <li>
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('zero_setup')">⚡ العمل الفوري من المتصفح (Zero Setup)</button>
+            افتح مشروعك وابدأ البرمجة فوراً بأي لغة برمجة مدعومة، مع بيئة جاهزة ومضبوطة مسبقاً.
+          </li>
+          <li>
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('hosting_deploy')">🚀 الاستضافة والنشر السريع (Hosting &amp; Deployments)</button>
+            تحويل المشروع إلى موقع أو تطبيق حي برابط مباشر (ويمكن ربطه بدومين مخصص حسب الخطة)، مع إمكانية اختيار أنواع نشر تناسب طبيعة المشروع (المواقع الثابتة، الخوادم المستمرة، المهام المجدولة).
+          </li>
+          <li>
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('multi_lang')">🧩 تعدد لغات البرمجة والأطر (Multi-Language Support)</button>
+            Python، Node.js، HTML/CSS/JS، C++، Java، Go، وغيرها، مع إمكانية دمج قواعد بيانات وأدوات مساعدة.
+          </li>
+          <li>
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('ai_assistant')">🤖 المساعد الذكي والبرمجة بالذكاء الاصطناعي</button>
+            توليد الأكواد، شرح الأخطاء، تعديل الملفات، وبناء مشاريع كاملة انطلاقاً من وصف نصي.
+          </li>
+          <li>
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('collaboration')">👥 التعاون الفوري (Real-time Collaboration)</button>
+            مشاركة مساحة العمل مع الفريق أو المعلم/الزميل لتعديل الكود ومشاهدة التغييرات والطرفية (Terminal) في الوقت الفعلي.
+          </li>
+          <li>
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('packages_secrets')">🔐 إدارة الحزم والبيئة (Packages &amp; Secrets)</button>
+            تثبيت المكتبات بسهولة، وتخزين المتغيرات الحساسة ومفاتيح API بأمان عبر Secrets بدلاً من كتابتها داخل الكود.
+          </li>
+          <li>
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('history_git')">🕒 سجل التعديلات والنسخ الاحتياطي (History / Version Control)</button>
+            تتبع التغييرات والعودة إلى نقاط سابقة، بالإضافة إلى التكامل مع Git / GitHub.
+          </li>
+          <li>
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('mobile_app')">📱 تطبيقات الهواتف (Mobile App)</button>
+            متابعة الأكواد وتشغيلها وتعديلها البسيط من الهاتف أثناء التنقل.
+          </li>
+        </ul>
+
+        <h3>ثانياً: كيف تعمل المنصة؟ (نظرة شاملة)</h3>
+        <div class="guide-grid">
+          <div class="guide-box">
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('workspace')">🖥️ مساحة العمل (Workspace)</button>
+            <ul class="guide-list">
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('files_tab')">📂 مستكشف الملفات (Files)</button>
+                لإدارة ملفات ومجلدات المشروع.
+              </li>
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('editor_tab')">✏️ محرر الأكواد (Editor)</button>
+                لكتابة وتعديل الكود.
+              </li>
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('shell_tab')">📟 الطرفية (Shell / Console)</button>
+                لتنفيذ الأوامر، تثبيت الحزم، ومراقبة السجلات (Logs).
+              </li>
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('preview_tab')">🌐 المعاينة (Preview / Webview)</button>
+                لعرض واجهة موقعك أو تطبيقك مباشرة أثناء التطوير.
+              </li>
+            </ul>
+          </div>
+          <div class="guide-box">
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('run_vs_deploy')">▶️ التشغيل مقابل النشر (Run vs. Deploy)</button>
+            <ul class="guide-list">
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('run_btn')">▶ زر Run</button>
+                للتجربة والتطوير داخل بيئة العمل.
+              </li>
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('deploy_btn')">🌍 النشر (Deploy)</button>
+                لإتاحة المشروع للزوار والمستخدمين بشكل مستقر ومستمر وفق خطة الاستضافة المختارة.
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>ثالثاً: لمن تناسب استضافه؟ ولمن قد لا تكون الخيار الأنسب؟</h3>
+        <div class="guide-grid">
+          <div class="guide-box">
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('suitable_for')">✅ مناسبة جداً لـ</button>
+            <ul class="guide-list">
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('beginners_students')">🎓 المبتدئين والطلاب</button>
+                لأنها تزيل تعقيدات إعداد البيئة البرمجية وتسرّع التعلم والتجريب.
+              </li>
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('mvp_hackathons')">💡 النماذج الأولية (MVPs) والهاكاثونات</button>
+                لبناء فكرة واختبارها ومشاركتها بسرعة كبيرة.
+              </li>
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('small_teams')">👨‍👩‍👧‍👦 الفرق الصغيرة والمشاريع التعليمية</button>
+                بفضل التحرير التعاوني المباشر وسهولة مشاركة الرابط.
+              </li>
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('multi_device')">🔁 العمل من أكثر من جهاز</button>
+                لأن مشاريعك محفوظة في السحابة.
+              </li>
+            </ul>
+          </div>
+          <div class="guide-box">
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('not_ideal_for')">⚠️ قد لا تكون الخيار الأنسب لـ</button>
+            <ul class="guide-list">
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('heavy_infra')">🏢 المشاريع الضخمة ذات الأحمال العالية جداً أو المتطلبات المعقدة للبنية التحتية</button>
+                حيث تفضل الشركات الكبرى عادةً بنى سحابية مخصصة أو خوادم مستقلة تحكمها بالكامل.
+              </li>
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('low_level_env')">🔒 التطبيقات التي تتطلب وصولاً منخفضاً جداً للعتاد أو بيئات مغلقة صارمة</button>
+                لأسباب أمنية أو تنظيمية أو تقنية.
+              </li>
+              <li>
+                <button type="button" class="feature-btn" onclick="handleFeatureAction('free_limits')">📉 المشاريع ذات الاستخدام المستمر والموارد العالية في الخطط المجانية</button>
+                إذ تخضع الخطط المجانية لحدود موارد وقواعد تشغيل مقارنة بالخطط المدفوعة.
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>رابعاً: نصائح مهمة عند استخدامها</h3>
+        <ul class="guide-list">
+          <li>
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('secrets_tip')">🔑 لا تضع المفاتيح السرية في الكود</button>
+            استخدم Secrets دائماً لحماية كلمات المرور ومفاتيح الربط.
+          </li>
+          <li>
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('logs_tip')">📊 راقب السجلات (Logs) والموارد</button>
+            عند تشغيل بوتات أو خوادم، راقب استهلاك الموارد وسجلات الأخطاء لتفادي توقف الخدمة المفاجئ.
+          </li>
+          <li>
+            <button type="button" class="feature-btn" onclick="handleFeatureAction('github_tip')">🐙 اربط بـ GitHub</button>
+            يُستحسن ربط مشاريعك المهمة بمستودع Git كنسخة احتياطية إضافية وإدارة احترافية للإصدارات.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ٣ ب. الكونسول وإدارة الملفات -->
+    <div class="container" id="serverView" style="display:none">
+      <div class="header-row">
+        <div class="hleft">
+          <h1 id="srvHeader">السيرفر</h1>
+          <div class="muted" id="srvSub">إدارة السيرفر والملفات</div>
+        </div>
+        <div class="tabs">
+          <button class="tab active" id="tabConsole" onclick="switchTab('console')">الكونسول</button>
+          <button class="tab" id="tabFiles" onclick="switchTab('files')">مدير الملفات</button>
+          <button class="tab" id="tabSftp" onclick="switchTab('sftp')">SFTP</button>
+          <button class="tab" id="tabBackups" onclick="switchTab('backups')">النسخ الاحتياطية واللقطات</button>
+          <button class="btn btn-danger btn-mini" id="btnDeleteServer" onclick="deleteCurrentServer()">🗑️ حذف السيرفر</button>
+        </div>
+      </div>
+
+      <!-- الكونسول -->
+      <div class="panel" id="viewConsole">
+        <!-- شريط حالة الأوامر أعلى وحدة التحكم -->
+        <div class="px-4 py-3 flex items-center justify-between gap-3" style="background:#0b111e;color:#e2e8f0;border-bottom:1px solid rgba(148,163,184,.2)">
+          <span class="text-xs font-bold">أدخل أمرًا لإرساله إلى الخادم مباشرة (help, status, uptime, clear)</span>
+          <div class="flex items-center gap-2">
+            <button type="button" class="btn btn-mini" onclick="copyCurrentConsoleLogs()">📋 نسخ السجل</button>
+            <button type="button" class="btn btn-mini" onclick="downloadCurrentConsoleLogs()">⬇ تحميل السجل</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <!-- وحدة التحكم الطرفية الداكنة (Console) -->
+            <div class="console" id="logOut">Initializing...</div>
+            <form onsubmit="sendTerminalCommand(event)" class="mt-2 flex items-center gap-2" dir="ltr">
+              <input id="terminalCmdInput" class="field" style="margin-top:0;font-family:'IBM Plex Mono',monospace" placeholder="Type command (e.g. status, help)..." />
+              <button type="submit" class="btn btn-primary">إرسال</button>
+            </form>
+          </div>
+
+          <div class="side">
+            <button id="btnStart" class="btn-block primary" onclick="srvAction('start')">تشغيل (START)</button>
+            <button class="btn-block" onclick="srvAction('restart')">إعادة تشغيل (RESTART)</button>
+            <button class="btn-block danger" onclick="srvAction('stop')">إيقاف (STOP)</button>
+            <button class="btn-block danger" onclick="deleteCurrentServer()">🗑️ حذف السيرفر نهائياً</button>
+
+            <!-- بطاقات استهلاك الموارد: CPU / الذاكرة / الشبكة / القرص -->
+            <div class="stat"><div class="ico">⚡</div><div><small>الحالة</small><b id="statusTxt">Offline</b></div></div>
+            <div class="stat"><div class="ico">⚙️</div><div><small>CPU / الحد</small><b id="cpuTxt">6.4% / 35%</b></div></div>
+            <div class="stat"><div class="ico">🧠</div><div><small>الذاكرة RAM</small><b id="memTxt">0 MB / 512 MB</b></div></div>
+            <div class="stat"><div class="ico">💾</div><div><small>القرص والشبكة</small><b id="diskNetTxt">18 MB / 1 GB • 1.2 KB/s</b></div></div>
+            <div class="stat"><div class="ico">💿</div><div><small>ملف التشغيل الرئيسي</small><b id="mainFileTxt" onclick="changeStartup()">اضغط للتحديد</b></div></div>
+            <!-- بطاقة العنوان والعقدة ومدة التشغيل وحد CPU -->
+            <div class="stat"><div class="ico">📡</div><div><small>العنوان / العقدة (FREE-EU-RO-22)</small><b id="ipTxt">0.0.0.0</b></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- مدير الملفات -->
+      <div class="panel" id="viewFiles" style="display:none">
+        <div class="fm-top">
+          <div>
+            <div style="font-weight:950;font-size:16px;color:var(--royal-blue)">مدير الملفات</div>
+            <div class="path" id="pathBar"></div>
+          </div>
+          <div class="actions">
+            <button id="btnBack" class="btn btn-mini" onclick="goUp()" style="display:none">⬅ رجوع</button>
+            <button class="btn btn-mini" onclick="newFolder()">📁 إنشاء مجلد</button>
+            <button class="btn btn-mini btn-primary" onclick="document.getElementById('uplFiles').click()">رفع ملفات</button>
+            <button class="btn btn-mini" onclick="document.getElementById('uplFolder').click()">رفع مجلد</button>
+          </div>
+        </div>
+
+        <input type="file" id="uplFiles" multiple hidden onchange="doUploadFiles(this)">
+        <input type="file" id="uplFolder" webkitdirectory directory multiple hidden onchange="doUploadFolder(this)">
+
+        <table class="table">
+          <thead><tr><th>الاسم</th><th>الحجم</th><th>الإجراءات</th></tr></thead>
+          <tbody id="fileList"></tbody>
+        </table>
+      </div>
+
+      <!-- تبويب SFTP -->
+      <div class="panel" id="viewSftp" style="display:none;padding:18px">
+        <h3 style="margin-top:0;color:var(--burgundy)">🔑 بيانات اتصال SFTP</h3>
+        <div class="guide-grid">
+          <div class="guide-box">
+            <div class="k">عنوان الخادم (Host)</div>
+            <div class="v" id="sftpHostTxt" style="font-size:14px;direction:ltr;text-align:right">sftp://78.154.103.27:2022</div>
+          </div>
+          <div class="guide-box">
+            <div class="k">اسم المستخدم (Username)</div>
+            <div class="v" id="sftpUserTxt" style="font-size:14px;direction:ltr;text-align:right">admin.server</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- تبويب النسخ الاحتياطية واللقطات -->
+      <div class="panel" id="viewBackups" style="display:none;padding:18px">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h3 style="margin:0;color:var(--burgundy)">🕒 النسخ الاحتياطية واللقطات (Backups &amp; Snapshots)</h3>
+          <button type="button" class="btn btn-primary btn-mini" onclick="createQuickBackup()">+ إنشاء نسخة احتياطية الآن</button>
+        </div>
+        <div id="serverBackupsList" class="mt-3 space-y-2"></div>
+      </div>
+    </div>
+
+    <!-- ٣ ج. صفحات Wispbyte المتكاملة (#/client/...) -->
+    <div class="container" id="wispClientView" style="display:none"></div>
+
+    <!-- ٤. لوحة الأدمن (/admin) -->
+    <div class="container" id="adminView" style="display:none">
+      <div class="grid">
+        <div class="card" style="cursor:default"><div class="k">إجمالي السيرفرات</div><div class="v" id="st_total">0</div></div>
+        <div class="card" style="cursor:default"><div class="k">قيد التشغيل</div><div class="v" id="st_run">0</div></div>
+        <div class="card" style="cursor:default"><div class="k">جاري التثبيت / البدء</div><div class="v" id="st_ins">0</div></div>
+        <div class="card" style="cursor:default"><div class="k">السيرفرات المحظورة</div><div class="v" id="st_ban">0</div></div>
+      </div>
+
+      <div class="grid" style="margin-top:12px">
+        <div class="card" style="cursor:default"><div class="k">إجمالي المستخدمين</div><div class="v" id="u_total">0</div></div>
+        <div class="card" style="cursor:default"><div class="k">المستخدمون النشطون</div><div class="v" id="u_active">0</div></div>
+        <div class="card" style="cursor:default"><div class="k">المستخدمون المميزون</div><div class="v" id="u_premium">0</div></div>
+        <div class="card" style="cursor:default"><div class="k">قواعد الحدود</div><div class="v" style="font-size:13px">عادي = سيرفر 1<br>مميز = 16 سيرفر</div></div>
+      </div>
 
       <div class="row">
-        <button class="btn btn-primary" onclick="doLogin()">دخول</button>
-        <button class="btn" onclick="navigate('/create')">إنشاء حساب</button>
+        <button class="btn btn-primary" onclick="refreshAll()">تحديث البيانات</button>
+        <button class="btn btn-danger" onclick="openDeleteServerPicker()">🗑️ اختيار وحذف سيرفر بالاسم</button>
+        <span class="msg" id="admin_msg"></span>
       </div>
 
-      <div class="msg" id="login_m"></div>
-      <div class="sub">استخدم بيانات حسابك للدخول. صلاحيات الأدمن مقتصرة على المشرفين · تواصل: <a href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@Y_20_20</a></div>
+      <h2>السيرفرات</h2>
+      <div class="panel">
+        <table class="table">
+          <thead><tr><th>المجلد</th><th>الاسم</th><th>المالك</th><th>الملف الرئيسي</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+          <tbody id="serversT"></tbody>
+        </table>
+      </div>
+
+      <h2 style="margin-top:26px">المستخدمون</h2>
+      <div class="row"><input id="searchUser" class="field" style="max-width:280px;margin-top:0" placeholder="بحث باسم المستخدم..." oninput="filterUsers()"></div>
+      <div class="panel">
+        <table class="table">
+          <thead><tr><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>السيرفرات</th><th>الحالة</th><th>الباقة</th><th>الإجراءات</th></tr></thead>
+          <tbody id="usersT"></tbody>
+        </table>
+      </div>
+
+      <div class="msg">يمكن للأدمن حظر/فك حظر المستخدمين والسيرفرات وحذف السيرفرات وتفعيل الباقة المميزة · تواصل: <a href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@Y_20_20</a></div>
     </div>
-  </div>
 
-  <!-- ٢. صفحة إنشاء حساب (/create) -->
-  <div class="auth-shell" id="createView" style="display:none">
-    <div class="auth-card">
-      <div class="auth-title"><div class="logo" style="width:36px;height:36px;border-radius:11px;display:grid;place-items:center">✨</div> إنشاء حساب جديد</div>
-      <div class="sub">المستخدم العادي يحصل على سيرفر مجاني واحد (المميز = 16 سيرفر). لزيادة الحد تواصل على تيليجرام <a href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@Y_20_20</a></div>
-
-      <input id="cr_u" class="field" placeholder="اسم المستخدم (أحرف / أرقام / _ / .)">
-      <input id="cr_e" class="field" placeholder="البريد الإلكتروني">
-      <input id="cr_p" class="field" placeholder="كلمة المرور (6 أحرف فأكثر)" type="password">
-      <input id="cr_p2" class="field" placeholder="تأكيد كلمة المرور" type="password">
-
-      <div class="row">
-        <button class="btn btn-primary" onclick="doCreate()">إنشاء الحساب</button>
-        <button class="btn" onclick="navigate('/login')">العودة للدخول</button>
-      </div>
-
-      <div class="msg" id="cr_m"></div>
-    </div>
-  </div>
-
-  <!-- ٣ أ. الرئيسية (/) -->
-  <div class="container" id="homeView" style="display:none">
-    <div class="grid" id="cardsContainer"></div>
-
-    <!-- قسم الخدمات المجانية والمدفوعة -->
-    <div class="services-section" id="servicesSection">
-      <div class="services-head">
-        <div>
-          <h2 style="margin:0">🛒 الخدمات المجانية والمدفوعة</h2>
-          <div class="sub">اختر خدمة مجانية فورية أو خدمة مدفوعة متكاملة مع حماية الرصيد والارتباط المباشر بالخادم</div>
-        </div>
-        <div class="tag ok" id="walletBalanceBadge">الرصيد: 0.00 USD</div>
-      </div>
-
-      <div class="services-grid">
-        <div class="svc-card">
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-              <span class="svc-badge free">مجاني • FREE</span>
-              <span class="svc-price">0.00 USD</span>
-            </div>
-            <div class="srv-title" style="margin-top:10px">قالب بوت بايثون جاهز (PY)</div>
-            <div class="srv-sub">ينشئ مشروع بايثون بملف تشغيل <code>main.py</code> جاهز للتشغيل الفوري بدون رسوم.</div>
+    <!-- نافذة محرر الملفات -->
+    <div id="editor-modal">
+      <div class="editor">
+        <div class="editor-top">
+          <div class="fn" id="ed-title">file</div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="saveFile()">حفظ</button>
+            <button class="btn btn-danger" onclick="closeEditor()">إغلاق</button>
           </div>
-          <button class="btn btn-mini btn-primary" onclick="orderFreeService('py')">تفعيل الخدمة المجانية (PY)</button>
         </div>
+        <textarea id="ed-area" spellcheck="false"></textarea>
+      </div>
+    </div>
 
-        <div class="svc-card">
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-              <span class="svc-badge free">مجاني • FREE</span>
-              <span class="svc-price">0.00 USD</span>
-            </div>
-            <div class="srv-title" style="margin-top:10px">قالب سيرفر Node / JS جاهز (JS)</div>
-            <div class="srv-sub">ينشئ مشروع جافا سكريبت بملف تشغيل <code>index.js</code> جاهز للتشغيل الفوري بدون رسوم.</div>
+    <!-- نافذة الإدخال واختيار نوع السيرفر (JS / PY) -->
+    <div id="modalBackdrop" class="modal-backdrop">
+      <div class="modal">
+        <h3 id="mTitle">العنوان</h3>
+        <input id="mIn" />
+        <div id="serverTypeSelector" style="display:none">
+          <div class="sub" style="margin-top:8px">اختر نوع بيئة السيرفر:</div>
+          <div class="type-choice-row">
+            <button type="button" id="choicePyBtn" class="type-choice-btn active" onclick="selectServerKind('py')">🐍 PY (Python)</button>
+            <button type="button" id="choiceJsBtn" class="type-choice-btn" onclick="selectServerKind('js')">🟨 JS (JavaScript)</button>
           </div>
-          <button class="btn btn-mini btn-primary" onclick="orderFreeService('js')">تفعيل الخدمة المجانية (JS)</button>
         </div>
-
-        <div class="svc-card">
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-              <span class="svc-badge paid">مدفوع • PAID</span>
-              <span class="svc-price">5.00 USD</span>
-            </div>
-            <div class="srv-title" style="margin-top:10px">استضافة بايثون / بوتات (Python)</div>
-            <div class="srv-sub">تشغيل سكريبتات وبوتات بايثون مع تثبيت تلقائي للمكتبات وحفظ السجلات.</div>
-          </div>
-          <button class="btn btn-mini" onclick="openPaidServiceModal('srv_python_host', 'استضافة بايثون / بوتات (Python)', '5.00 USD')">طلب الخدمة المدفوعة</button>
-        </div>
-
-        <div class="svc-card">
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-              <span class="svc-badge paid">مدفوع • PAID</span>
-              <span class="svc-price">3.00 USD</span>
-            </div>
-            <div class="srv-title" style="margin-top:10px">استضافة HTML / JavaScript / Node</div>
-            <div class="srv-sub">استضافة ملفات <code>.js</code> و<code>.html</code> وتطبيقات الويب مع إدارة الملفات.</div>
-          </div>
-          <button class="btn btn-mini" onclick="openPaidServiceModal('srv_js_html_host', 'استضافة HTML / JavaScript / Node', '3.00 USD')">طلب الخدمة المدفوعة</button>
-        </div>
-
-        <div class="svc-card">
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-              <span class="svc-badge paid">مدفوع • PAID</span>
-              <span class="svc-price">4.00 USD</span>
-            </div>
-            <div class="srv-title" style="margin-top:10px">استضافة PHP ومواقع ويب</div>
-            <div class="srv-sub">تشغيل مشاريع PHP وملفات الويب مع إدارة الملفات والسجلات.</div>
-          </div>
-          <button class="btn btn-mini" onclick="openPaidServiceModal('srv_php_host', 'استضافة PHP ومواقع ويب', '4.00 USD')">طلب الخدمة المدفوعة</button>
-        </div>
-
-        <div class="svc-card">
-          <div>
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-              <span class="svc-badge paid">مدفوع • PAID</span>
-              <span class="svc-price">10.00 USD</span>
-            </div>
-            <div class="srv-title" style="margin-top:10px">طلب موقع إلكتروني / ربط مسار مخصص</div>
-            <div class="srv-sub">تجهيز مسار موقع إلكتروني وملفاته وضبط الإعدادات الخاصة به على <code>/web/&lt;order_id&gt;</code>.</div>
-          </div>
-          <button class="btn btn-mini" onclick="openPaidServiceModal('srv_web_request', 'طلب موقع إلكتروني / ربط مسار مخصص', '10.00 USD')">طلب الخدمة المدفوعة</button>
+        <div class="actions" style="justify-content:flex-start;margin-top:12px">
+          <button class="btn" onclick="closeM()">إلغاء</button>
+          <button id="mConfirm" class="btn btn-primary">تأكيد</button>
         </div>
       </div>
     </div>
 
-    <!-- دليل الاستضافة الشامل (أولاً • ثانياً • ثالثاً • رابعاً) مع أزرار مرتبطة -->
-    <div class="guide-section" id="hostingGuideSection">
-      <h2>أولاً: أهم مميزات استضافة وتشغيل المشاريع على استضافه</h2>
-      <ul class="guide-list">
-        <li>
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('zero_setup')">⚡ العمل الفوري من المتصفح (Zero Setup)</button>
-          افتح مشروعك وابدأ البرمجة فوراً بأي لغة برمجة مدعومة، مع بيئة جاهزة ومضبوطة مسبقاً.
-        </li>
-        <li>
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('hosting_deploy')">🚀 الاستضافة والنشر السريع (Hosting &amp; Deployments)</button>
-          تحويل المشروع إلى موقع أو تطبيق حي برابط مباشر (ويمكن ربطه بدومين مخصص حسب الخطة)، مع إمكانية اختيار أنواع نشر تناسب طبيعة المشروع (المواقع الثابتة، الخوادم المستمرة، المهام المجدولة).
-        </li>
-        <li>
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('multi_lang')">🧩 تعدد لغات البرمجة والأطر (Multi-Language Support)</button>
-          Python، Node.js، HTML/CSS/JS، C++، Java، Go، وغيرها، مع إمكانية دمج قواعد بيانات وأدوات مساعدة.
-        </li>
-        <li>
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('ai_assistant')">🤖 المساعد الذكي والبرمجة بالذكاء الاصطناعي</button>
-          توليد الأكواد، شرح الأخطاء، تعديل الملفات، وبناء مشاريع كاملة انطلاقاً من وصف نصي.
-        </li>
-        <li>
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('collaboration')">👥 التعاون الفوري (Real-time Collaboration)</button>
-          مشاركة مساحة العمل مع الفريق أو المعلم/الزميل لتعديل الكود ومشاهدة التغييرات والطرفية (Terminal) في الوقت الفعلي.
-        </li>
-        <li>
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('packages_secrets')">🔐 إدارة الحزم والبيئة (Packages &amp; Secrets)</button>
-          تثبيت المكتبات بسهولة، وتخزين المتغيرات الحساسة ومفاتيح API بأمان عبر Secrets بدلاً من كتابتها داخل الكود.
-        </li>
-        <li>
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('history_git')">🕒 سجل التعديلات والنسخ الاحتياطي (History / Version Control)</button>
-          تتبع التغييرات والعودة إلى نقاط سابقة، بالإضافة إلى التكامل مع Git / GitHub.
-        </li>
-        <li>
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('mobile_app')">📱 تطبيقات الهواتف (Mobile App)</button>
-          متابعة الأكواد وتشغيلها وتعديلها البسيط من الهاتف أثناء التنقل.
-        </li>
-      </ul>
+    <!-- نافذة اختيار السيرفر حسب الاسم قبل التأكيد على الحذف -->
+    <div id="deleteServerModal" class="modal-backdrop" style="z-index:65">
+      <div class="modal wide-modal">
+        <h3>🗑️ اختيار سيرفر لحذفه</h3>
+        <div class="sub">تم تحديد السيرفر المبني/الحالي تلقائياً؛ يمكنك اختيار أي سيرفر آخر حسب الاسم ثم الضغط على <b>متابعة للتأكيد</b>.</div>
 
-      <h3>ثانياً: كيف تعمل المنصة؟ (نظرة شاملة)</h3>
-      <div class="guide-grid">
-        <div class="guide-box">
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('workspace')">🖥️ مساحة العمل (Workspace)</button>
-          <ul class="guide-list">
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('files_tab')">📂 مستكشف الملفات (Files)</button>
-              لإدارة ملفات ومجلدات المشروع.
-            </li>
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('editor_tab')">✏️ محرر الأكواد (Editor)</button>
-              لكتابة وتعديل الكود.
-            </li>
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('shell_tab')">📟 الطرفية (Shell / Console)</button>
-              لتنفيذ الأوامر، تثبيت الحزم، ومراقبة السجلات (Logs).
-            </li>
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('preview_tab')">🌐 المعاينة (Preview / Webview)</button>
-              لعرض واجهة موقعك أو تطبيقك مباشرة أثناء التطوير.
-            </li>
-          </ul>
-        </div>
-        <div class="guide-box">
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('run_vs_deploy')">▶️ التشغيل مقابل النشر (Run vs. Deploy)</button>
-          <ul class="guide-list">
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('run_btn')">▶ زر Run</button>
-              للتجربة والتطوير داخل بيئة العمل.
-            </li>
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('deploy_btn')">🌍 النشر (Deploy)</button>
-              لإتاحة المشروع للزوار والمستخدمين بشكل مستقر ومستمر وفق خطة الاستضافة المختارة.
-            </li>
-          </ul>
+        <input id="delSrvSearch" class="field" placeholder="ابحث باسم السيرفر أو المجلد..." oninput="filterDeleteServerPicker()" />
+
+        <select id="delSrvSelect" class="field" onchange="onDeleteSelectChange(this.value)"></select>
+
+        <div id="delSrvList" class="srv-select-list"></div>
+
+        <div class="msg" id="delSrvMsg"></div>
+
+        <div class="actions" style="justify-content:flex-start;margin-top:14px">
+          <button class="btn" onclick="closeDeleteServerPicker()">إلغاء</button>
+          <button id="delSrvProceedBtn" class="btn btn-danger" onclick="proceedDeleteSelectedServer()">متابعة للتأكيد</button>
         </div>
       </div>
-
-      <h3>ثالثاً: لمن تناسب استضافه؟ ولمن قد لا تكون الخيار الأنسب؟</h3>
-      <div class="guide-grid">
-        <div class="guide-box">
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('suitable_for')">✅ مناسبة جداً لـ</button>
-          <ul class="guide-list">
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('beginners_students')">🎓 المبتدئين والطلاب</button>
-              لأنها تزيل تعقيدات إعداد البيئة البرمجية وتسرّع التعلم والتجريب.
-            </li>
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('mvp_hackathons')">💡 النماذج الأولية (MVPs) والهاكاثونات</button>
-              لبناء فكرة واختبارها ومشاركتها بسرعة كبيرة.
-            </li>
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('small_teams')">👨‍👩‍👧‍👦 الفرق الصغيرة والمشاريع التعليمية</button>
-              بفضل التحرير التعاوني المباشر وسهولة مشاركة الرابط.
-            </li>
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('multi_device')">🔁 العمل من أكثر من جهاز</button>
-              لأن مشاريعك محفوظة في السحابة.
-            </li>
-          </ul>
-        </div>
-        <div class="guide-box">
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('not_ideal_for')">⚠️ قد لا تكون الخيار الأنسب لـ</button>
-          <ul class="guide-list">
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('heavy_infra')">🏢 المشاريع الضخمة ذات الأحمال العالية جداً أو المتطلبات المعقدة للبنية التحتية</button>
-              حيث تفضل الشركات الكبرى عادةً بنى سحابية مخصصة أو خوادم مستقلة تحكمها بالكامل.
-            </li>
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('low_level_env')">🔒 التطبيقات التي تتطلب وصولاً منخفضاً جداً للعتاد أو بيئات مغلقة صارمة</button>
-              لأسباب أمنية أو تنظيمية أو تقنية.
-            </li>
-            <li>
-              <button type="button" class="feature-btn" onclick="handleFeatureAction('free_limits')">📉 المشاريع ذات الاستخدام المستمر والموارد العالية في الخطط المجانية</button>
-              إذ تخضع الخطط المجانية لحدود موارد وقواعد تشغيل مقارنة بالخطط المدفوعة.
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <h3>رابعاً: نصائح مهمة عند استخدامها</h3>
-      <ul class="guide-list">
-        <li>
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('secrets_tip')">🔑 لا تضع المفاتيح السرية في الكود</button>
-          استخدم Secrets دائماً لحماية كلمات المرور ومفاتيح الربط.
-        </li>
-        <li>
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('logs_tip')">📊 راقب السجلات (Logs) والموارد</button>
-          عند تشغيل بوتات أو خوادم، راقب استهلاك الموارد وسجلات الأخطاء لتفادي توقف الخدمة المفاجئ.
-        </li>
-        <li>
-          <button type="button" class="feature-btn" onclick="handleFeatureAction('github_tip')">🐙 اربط بـ GitHub</button>
-          يُستحسن ربط مشاريعك المهمة بمستودع Git كنسخة احتياطية إضافية وإدارة احترافية للإصدارات.
-        </li>
-      </ul>
     </div>
+
+    <!-- نافذة التأكيد -->
+    <div id="confirmBackdrop" class="modal-backdrop" style="z-index:70">
+      <div class="modal">
+        <h3 id="cTitle">تأكيد العملية</h3>
+        <p class="sub" id="cText"></p>
+        <div class="actions" style="justify-content:flex-start;margin-top:14px">
+          <button class="btn" onclick="closeConfirm(false)">إلغاء</button>
+          <button id="cOk" class="btn btn-danger" onclick="closeConfirm(true)">تأكيد</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- شريط الإشعارات العائم (بديل آمن عن alert و confirm) -->
+    <div id="toast-container" class="fixed bottom-4 left-4 right-4 sm:right-auto sm:left-5 sm:w-96 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div class="toast-wrap" id="toastWrap"></div>
   </div>
-
-  <!-- ٣ ب. الكونسول وإدارة الملفات -->
-  <div class="container" id="serverView" style="display:none">
-    <div class="header-row">
-      <div class="hleft">
-        <h1 id="srvHeader">السيرفر</h1>
-        <div class="muted" id="srvSub">إدارة السيرفر والملفات</div>
-      </div>
-      <div class="tabs">
-        <button class="tab active" id="tabConsole" onclick="switchTab('console')">الكونسول</button>
-        <button class="tab" id="tabFiles" onclick="switchTab('files')">مدير الملفات</button>
-        <button class="btn btn-danger btn-mini" id="btnDeleteServer" onclick="deleteCurrentServer()">🗑️ حذف السيرفر</button>
-      </div>
-    </div>
-
-    <!-- الكونسول -->
-    <div class="panel" id="viewConsole">
-      <div class="grid-2">
-        <div class="console" id="logOut">Initializing...</div>
-        <div class="side">
-          <button id="btnStart" class="btn-block primary" onclick="srvAction('start')">تشغيل (START)</button>
-          <button class="btn-block" onclick="srvAction('restart')">إعادة تشغيل (RESTART)</button>
-          <button class="btn-block danger" onclick="srvAction('stop')">إيقاف (STOP)</button>
-          <button class="btn-block danger" onclick="deleteCurrentServer()">🗑️ حذف السيرفر نهائياً</button>
-
-          <div class="stat"><div class="ico">⚡</div><div><small>الحالة</small><b id="statusTxt">Offline</b></div></div>
-          <div class="stat"><div class="ico">🧠</div><div><small>الذاكرة RAM</small><b id="memTxt">0 MB</b></div></div>
-          <div class="stat"><div class="ico">💿</div><div><small>ملف التشغيل الرئيسي</small><b id="mainFileTxt" onclick="changeStartup()">اضغط للتحديد</b></div></div>
-          <div class="stat"><div class="ico">📡</div><div><small>العنوان / الرابط المولّد</small><b id="ipTxt">0.0.0.0</b></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- مدير الملفات -->
-    <div class="panel" id="viewFiles" style="display:none">
-      <div class="fm-top">
-        <div>
-          <div style="font-weight:950;font-size:16px;color:var(--royal-blue)">مدير الملفات</div>
-          <div class="path" id="pathBar"></div>
-        </div>
-        <div class="actions">
-          <button id="btnBack" class="btn btn-mini" onclick="goUp()" style="display:none">⬅ رجوع</button>
-          <button class="btn btn-mini" onclick="newFolder()">📁 إنشاء مجلد</button>
-          <button class="btn btn-mini btn-primary" onclick="document.getElementById('uplFiles').click()">رفع ملفات</button>
-          <button class="btn btn-mini" onclick="document.getElementById('uplFolder').click()">رفع مجلد</button>
-        </div>
-      </div>
-
-      <input type="file" id="uplFiles" multiple hidden onchange="doUploadFiles(this)">
-      <input type="file" id="uplFolder" webkitdirectory directory multiple hidden onchange="doUploadFolder(this)">
-
-      <table class="table">
-        <thead><tr><th>الاسم</th><th>الحجم</th><th>الإجراءات</th></tr></thead>
-        <tbody id="fileList"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ٤. لوحة الأدمن (/admin) -->
-  <div class="container" id="adminView" style="display:none">
-    <div class="grid">
-      <div class="card" style="cursor:default"><div class="k">إجمالي السيرفرات</div><div class="v" id="st_total">0</div></div>
-      <div class="card" style="cursor:default"><div class="k">قيد التشغيل</div><div class="v" id="st_run">0</div></div>
-      <div class="card" style="cursor:default"><div class="k">جاري التثبيت / البدء</div><div class="v" id="st_ins">0</div></div>
-      <div class="card" style="cursor:default"><div class="k">السيرفرات المحظورة</div><div class="v" id="st_ban">0</div></div>
-    </div>
-
-    <div class="grid" style="margin-top:12px">
-      <div class="card" style="cursor:default"><div class="k">إجمالي المستخدمين</div><div class="v" id="u_total">0</div></div>
-      <div class="card" style="cursor:default"><div class="k">المستخدمون النشطون</div><div class="v" id="u_active">0</div></div>
-      <div class="card" style="cursor:default"><div class="k">المستخدمون المميزون</div><div class="v" id="u_premium">0</div></div>
-      <div class="card" style="cursor:default"><div class="k">قواعد الحدود</div><div class="v" style="font-size:13px">عادي = سيرفر 1<br>مميز = 16 سيرفر</div></div>
-    </div>
-
-    <div class="row">
-      <button class="btn btn-primary" onclick="refreshAll()">تحديث البيانات</button>
-      <button class="btn btn-danger" onclick="openDeleteServerPicker()">🗑️ اختيار وحذف سيرفر بالاسم</button>
-      <span class="msg" id="admin_msg"></span>
-    </div>
-
-    <h2>السيرفرات</h2>
-    <div class="panel">
-      <table class="table">
-        <thead><tr><th>المجلد</th><th>الاسم</th><th>المالك</th><th>الملف الرئيسي</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-        <tbody id="serversT"></tbody>
-      </table>
-    </div>
-
-    <h2 style="margin-top:26px">المستخدمون</h2>
-    <div class="row"><input id="searchUser" class="field" style="max-width:280px;margin-top:0" placeholder="بحث باسم المستخدم..." oninput="filterUsers()"></div>
-    <div class="panel">
-      <table class="table">
-        <thead><tr><th>اسم المستخدم</th><th>البريد الإلكتروني</th><th>السيرفرات</th><th>الحالة</th><th>الباقة</th><th>الإجراءات</th></tr></thead>
-        <tbody id="usersT"></tbody>
-      </table>
-    </div>
-
-    <div class="msg">يمكن للأدمن حظر/فك حظر المستخدمين والسيرفرات وحذف السيرفرات وتفعيل الباقة المميزة · تواصل: <a href="https://t.me/Y_20_20" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">@Y_20_20</a></div>
-  </div>
-
-  <!-- نافذة محرر الملفات -->
-  <div id="editor-modal">
-    <div class="editor">
-      <div class="editor-top">
-        <div class="fn" id="ed-title">file</div>
-        <div class="actions">
-          <button class="btn btn-primary" onclick="saveFile()">حفظ</button>
-          <button class="btn btn-danger" onclick="closeEditor()">إغلاق</button>
-        </div>
-      </div>
-      <textarea id="ed-area" spellcheck="false"></textarea>
-    </div>
-  </div>
-
-  <!-- نافذة الإدخال واختيار نوع السيرفر (JS / PY) -->
-  <div id="modalBackdrop" class="modal-backdrop">
-    <div class="modal">
-      <h3 id="mTitle">العنوان</h3>
-      <input id="mIn" />
-      <div id="serverTypeSelector" style="display:none">
-        <div class="sub" style="margin-top:8px">اختر نوع بيئة السيرفر:</div>
-        <div class="type-choice-row">
-          <button type="button" id="choicePyBtn" class="type-choice-btn active" onclick="selectServerKind('py')">🐍 PY (Python)</button>
-          <button type="button" id="choiceJsBtn" class="type-choice-btn" onclick="selectServerKind('js')">🟨 JS (JavaScript)</button>
-        </div>
-      </div>
-      <div class="actions" style="justify-content:flex-start;margin-top:12px">
-        <button class="btn" onclick="closeM()">إلغاء</button>
-        <button id="mConfirm" class="btn btn-primary">تأكيد</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- نافذة اختيار السيرفر حسب الاسم قبل التأكيد على الحذف -->
-  <div id="deleteServerModal" class="modal-backdrop" style="z-index:65">
-    <div class="modal wide-modal">
-      <h3>🗑️ اختيار سيرفر لحذفه</h3>
-      <div class="sub">تم تحديد السيرفر المبني/الحالي تلقائياً؛ يمكنك اختيار أي سيرفر آخر حسب الاسم ثم الضغط على <b>متابعة للتأكيد</b>.</div>
-
-      <input id="delSrvSearch" class="field" placeholder="ابحث باسم السيرفر أو المجلد..." oninput="filterDeleteServerPicker()" />
-
-      <select id="delSrvSelect" class="field" onchange="onDeleteSelectChange(this.value)"></select>
-
-      <div id="delSrvList" class="srv-select-list"></div>
-
-      <div class="msg" id="delSrvMsg"></div>
-
-      <div class="actions" style="justify-content:flex-start;margin-top:14px">
-        <button class="btn" onclick="closeDeleteServerPicker()">إلغاء</button>
-        <button id="delSrvProceedBtn" class="btn btn-danger" onclick="proceedDeleteSelectedServer()">متابعة للتأكيد</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- نافذة التأكيد -->
-  <div id="confirmBackdrop" class="modal-backdrop" style="z-index:70">
-    <div class="modal">
-      <h3 id="cTitle">تأكيد العملية</h3>
-      <p class="sub" id="cText"></p>
-      <div class="actions" style="justify-content:flex-start;margin-top:14px">
-        <button class="btn" onclick="closeConfirm(false)">إلغاء</button>
-        <button id="cOk" class="btn btn-danger" onclick="closeConfirm(true)">تأكيد</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
 /* =========================================================================
@@ -922,12 +1078,31 @@ const SYNC_CHANNEL_NAME = 'EHAB_HOST_SYNC_CHANNEL_V1';
 const WALLET_KEY = 'HAMA_WALLET_BALANCES_V1';
 const ORDERS_KEY = 'HAMA_SERVICE_ORDERS_V1';
 const AUTO_BUILT_KEY = 'EHAB_LAST_AUTO_BUILT_SERVER_V1';
+const WISP_EXTRA_KEY = 'WISPBYTE_EXTRA_STATE_V1';
+
 const UNIFIED_PATHS = {
   db: '/api/unified/db',
   bridge: '/api/unified/bridge',
   approval: '/api/unified/approval',
   health: '/api/unified/health'
 };
+
+const WISP_RUNTIMES = [
+  { id: 'Python', title: 'Python', desc: 'البوتات والسكريبتات', icon: '🐍', file: 'main.py' },
+  { id: 'Node.js', title: 'Node.js', desc: 'بوتات Discord وواجهات API', icon: 'JS', file: 'index.js' },
+  { id: 'Java', title: 'Java', desc: 'بوتات JDA وتطبيقات JVM', icon: '☕', file: 'Main.java' },
+  { id: 'Bun', title: 'Bun', desc: 'JS وTypeScript بسرعة عالية', icon: '🥟', file: 'index.ts' },
+  { id: 'Rust', title: 'Rust', desc: 'ملفات تنفيذية مُصرّفة', icon: '⚙️', file: 'main.rs' },
+  { id: 'C#', title: 'C#', desc: 'بوتات وتطبيقات .NET', icon: 'C#', file: 'Program.cs' },
+  { id: 'Lua', title: 'Lua', desc: 'سكريبتات صغيرة', icon: '🌙', file: 'main.lua' }
+];
+
+const WISP_DATABASES = [
+  { id: 'MariaDB', title: 'MariaDB', desc: 'متوافق مع MySQL', icon: '🐬', file: 'init.sql' },
+  { id: 'MongoDB', title: 'MongoDB', desc: 'قاعدة بيانات مستندات', icon: '🍃', file: 'mongo.js' },
+  { id: 'Redis', title: 'Redis', desc: 'التخزين المؤقت وقوائم الانتظار', icon: '🟥', file: 'redis.conf' },
+  { id: 'PostgreSQL', title: 'PostgreSQL', desc: 'قاعدة SQL علائقية', icon: '🐘', file: 'schema.sql' }
+];
 
 const syncChannel = (typeof BroadcastChannel !== 'undefined')
   ? new BroadcastChannel(SYNC_CHANNEL_NAME)
@@ -948,6 +1123,90 @@ function setLastAutoBuiltServer(keyOrFolder){
 function getLastAutoBuiltServer(){
   try{ return localStorage.getItem(AUTO_BUILT_KEY) || ''; }
   catch{ return ''; }
+}
+
+function getWispExtra(){
+  const defaults = {
+    theme: 'light',
+    searchQuery: '',
+    selectedEnv: 'Python',
+    createName: '',
+    createDesc: '',
+    extraSlots: 0,
+    freeRamClaims: 0,
+    tierTitle: 'Tier 1',
+    tierPrice: '€1.49/شهر',
+    tierSpec: '0.5GB DDR4 RAM',
+    hasCreatedServer: false,
+    poll: {
+      question: 'Do you guys think Santa Claus is real? (serious question)',
+      endsAt: 'ينتهي في الأحد، 27 ديسمبر',
+      selectedOption: null,
+      hasVoted: false,
+      votes: { Yes: 412, No: 689 }
+    },
+    friends: [
+      { id: 'f1', name: 'أحمد منصور', handle: '@ahmed_dev', status: 'متصل الآن', ramGift: '256 MB' },
+      { id: 'f2', name: 'سارة علي', handle: '@sara_codes', status: 'منذ 3 ساعات', ramGift: '512 MB' }
+    ],
+    aiConnections: [
+      { id: 'ai1', provider: 'Gemini Assistant', model: 'gemini-2.5-flash', connected: true, lastUsed: 'اليوم' },
+      { id: 'ai2', provider: 'GitHub Copilot Agent', model: 'gpt-4o-mini', connected: false, lastUsed: 'غير متصل' }
+    ],
+    invoices: [
+      { id: 'INV-2026-091', date: '2026-11-01', item: 'خطة مجانية (Free Tier - FREE-EU-RO-22)', amount: '€0.00', status: 'مدفوعة' },
+      { id: 'INV-2026-084', date: '2026-10-01', item: 'خطة مجانية (Free Tier - FREE-EU-RO-22)', amount: '€0.00', status: 'مدفوعة' }
+    ],
+    websites: [
+      { id: 'w1', domain: 'ehab-bot-status.wispbyte.app', target: 'bot_alpha:14701', ssl: 'نشط (HTTPS)', status: 'متصل' }
+    ]
+  };
+  try{
+    const parsed = JSON.parse(localStorage.getItem(WISP_EXTRA_KEY) || '{}');
+    return {
+      ...defaults,
+      ...parsed,
+      poll: { ...defaults.poll, ...(parsed.poll || {}), votes: { ...defaults.poll.votes, ...((parsed.poll && parsed.poll.votes) || {}) } }
+    };
+  }catch{
+    return defaults;
+  }
+}
+
+function saveWispExtra(next){
+  try{ localStorage.setItem(WISP_EXTRA_KEY, JSON.stringify(next)); }catch{}
+}
+
+function applyWispTheme(){
+  const ex = getWispExtra();
+  const isDark = ex.theme === 'dark';
+  document.documentElement.classList.toggle('dark', isDark);
+  const btn = document.getElementById('quickThemeBtn');
+  if(btn) btn.textContent = isDark ? '☀️' : '🌙';
+}
+
+function toggleWispTheme(){
+  const ex = getWispExtra();
+  ex.theme = ex.theme === 'dark' ? 'light' : 'dark';
+  saveWispExtra(ex);
+  applyWispTheme();
+  toast(ex.theme === 'dark' ? 'تم تفعيل السمة الداكنة 🌙' : 'تم تفعيل السمة الفاتحة ☀️', 'ok');
+  if(document.getElementById('wispClientView').style.display !== 'none'){
+    renderWispClientRoute(window.location.pathname);
+  }
+}
+
+function toggleWispDrawer(open){
+  const el = document.getElementById('wispDrawerBackdrop');
+  if(el) el.style.display = open ? 'flex' : 'none';
+}
+
+function focusDashboardSearch(){
+  navigate('/client/dashboard');
+  setTimeout(() => {
+    const inp = document.getElementById('wispDashSearch');
+    if(inp) inp.focus();
+  }, 80);
 }
 
 function defaultDb(){
@@ -1031,11 +1290,10 @@ function loadDb(){
       return d;
     }
     const parsed = JSON.parse(raw);
-    const db = {
+    return {
       users: Array.isArray(parsed.users) ? parsed.users : defaultDb().users,
       servers: Array.isArray(parsed.servers) ? parsed.servers.map(normalizeServerRecord) : defaultDb().servers
     };
-    return db;
   }catch{
     return defaultDb();
   }
@@ -1188,16 +1446,17 @@ async function localFallbackFetch(input, init={}){
     const folder = rawName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || ('server_' + Date.now());
     const ownerName = (body.owner || currentUser.username || 'admin').trim();
     const ownedCount = db.servers.filter(s => s.owner === ownerName).length;
-    const limit = currentUser.premium || currentUser.is_admin ? 16 : 1;
+    const ex = getWispExtra();
+    const limit = (currentUser.premium || currentUser.is_admin ? 16 : 1) + (ex.extraSlots || 0);
     if(!currentUser.is_admin && ownedCount >= limit){
-      return jsonRes({ success:false, message:`تم الوصول للحد الأقصى (${limit} سيرفر للمستخدم العادي).` }, 403);
+      return jsonRes({ success:false, message:`تم الوصول للحد الأقصى (${limit} سيرفر).` }, 403);
     }
     const key = `${ownerName}::${folder}`;
     if(db.servers.some(s => s.key === key)) return jsonRes({ success:false, message:'السيرفر موجود مسبقاً.' }, 409);
     const genUrl = body.generated_url || buildGeneratedUrl(folder);
     const filesMap = isJs
-      ? { 'index.js': `console.log("Running ${rawName} (JS)");\n` }
-      : { 'main.py': `print("Running ${rawName} (PY)")\n` };
+      ? { [defaultStartup]: `console.log("Running ${rawName} (${srvType})");\n` }
+      : { [defaultStartup]: `print("Running ${rawName} (${srvType})")\n` };
     const newSrv = normalizeServerRecord({
       key,
       folder,
@@ -1217,6 +1476,8 @@ async function localFallbackFetch(input, init={}){
     db.servers.push(newSrv);
     saveDb(db, { source: body.source || 'web_add' });
     setLastAutoBuiltServer(key);
+    ex.hasCreatedServer = true;
+    saveWispExtra(ex);
     return jsonRes({ success:true, key, folder, generated_url: genUrl, server: newSrv });
   }
 
@@ -1603,7 +1864,7 @@ if(syncChannel){
 }
 
 /* =========================================================================
-   2. ROUTER & VIEW CONTROLLER (/login, /create, /, /admin, /logout)
+   2. ROUTER & VIEW CONTROLLER (/login, /create, /, /admin, /client/*, /logout)
    ========================================================================= */
 let currentSrv = null, poll = null, currentFile = null, currentPath = '';
 let confirmResolver = null;
@@ -1622,7 +1883,7 @@ function toast(msg, type='info'){
   el.className = `toast ${type === 'ok' ? 'ok' : type === 'err' ? 'err' : ''}`;
   el.textContent = msg;
   wrap.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+  setTimeout(() => el.remove(), 3200);
 }
 
 function showConfirm(title, text){
@@ -1644,14 +1905,15 @@ function navigate(route){
     doLogout();
     return;
   }
-  if(window.location.pathname !== route){
-    try{ history.pushState({}, '', route); }catch{}
+  const cleanRoute = route.startsWith('#') ? route.slice(1) : route;
+  if(window.location.pathname !== cleanRoute){
+    try{ history.pushState({}, '', cleanRoute); }catch{}
   }
-  renderRoute(route);
+  renderRoute(cleanRoute);
 }
 
 function hideAllViews(){
-  ['loginView', 'createView', 'homeView', 'serverView', 'adminView'].forEach(id => {
+  ['loginView', 'createView', 'homeView', 'serverView', 'adminView', 'wispClientView'].forEach(id => {
     document.getElementById(id).style.display = 'none';
   });
   ['loginNavBtn', 'createNavBtn', 'adminBtn', 'homeBtn', 'newBtn', 'deleteSrvNavBtn', 'logoutBtn'].forEach(id => {
@@ -1659,10 +1921,16 @@ function hideAllViews(){
   });
 }
 
-function renderRoute(route = window.location.pathname){
+function renderRoute(rawRoute = window.location.pathname){
   stopPoll();
   hideAllViews();
+  const route = rawRoute.startsWith('#') ? rawRoute.slice(1) : rawRoute;
   const sess = getSession();
+
+  if(sess){
+    const av = document.getElementById('userAvatarBtn');
+    if(av) av.textContent = (sess.username || 'G').charAt(0).toUpperCase();
+  }
 
   if(route === '/create'){
     document.getElementById('createView').style.display = 'grid';
@@ -1692,6 +1960,15 @@ function renderRoute(route = window.location.pathname){
     return;
   }
 
+  if(route.startsWith('/client/')){
+    document.getElementById('wispClientView').style.display = 'block';
+    document.getElementById('homeBtn').style.display = 'inline-block';
+    document.getElementById('newBtn').style.display = 'inline-block';
+    renderWispClientRoute(route);
+    loadPythonHost();
+    return;
+  }
+
   document.getElementById('homeView').style.display = 'block';
   document.getElementById('newBtn').style.display = 'inline-block';
   loadServers();
@@ -1700,6 +1977,7 @@ function renderRoute(route = window.location.pathname){
 }
 
 window.addEventListener('popstate', () => renderRoute(window.location.pathname));
+window.addEventListener('hashchange', () => renderRoute(window.location.hash));
 window.addEventListener('beforeunload', stopPoll);
 
 /* =========================================================================
@@ -1748,7 +2026,561 @@ async function doLogout(){
 }
 
 /* =========================================================================
-   4. HOME & SERVER CONSOLE / FILE MANAGER / DELETE + SERVICES
+   4. WISPBYTE INTEGRATED CLIENT VIEWS (/client/dashboard, /client/create, etc.)
+   ========================================================================= */
+async function renderWispClientRoute(route){
+  const box = document.getElementById('wispClientView');
+  const sess = getSession() || { username: 'admin', is_admin: true };
+  const db = loadDb();
+  const userServers = sess.is_admin ? db.servers : db.servers.filter(s => s.owner === sess.username);
+  const ex = getWispExtra();
+
+  if(route === '/client/create'){
+    const allEnvs = [...WISP_RUNTIMES, ...WISP_DATABASES];
+    const currentEnv = allEnvs.find(e => e.id === ex.selectedEnv) || WISP_RUNTIMES[0];
+    box.innerHTML = `
+      <div class="space-y-5 animate-fade-in">
+        ${ex.hasCreatedServer ? `
+          <div class="wb-card flex items-center justify-between" style="border-right:4px solid #10b981">
+            <span class="font-bold text-sm">لا يظهر هذا إلا بعد إنشاء سيرفر فقط — السيرفر جاهز في قائمتك.</span>
+            <button type="button" class="btn btn-primary btn-mini" onclick="navigate('/client/dashboard')">عرض الخوادم</button>
+          </div>
+        ` : ''}
+
+        <!-- المرحلة 01: اختيار البيئة أو قاعدة البيانات -->
+        <div class="wb-card">
+          <div class="text-xs font-extrabold font-mono" style="color:var(--accent)">01</div>
+          <h1 class="text-xl font-extrabold mt-1" style="color:var(--burgundy)">ماذا ستشغّل؟</h1>
+          <p class="sub">اختر اللغة أو قاعدة البيانات التي ستشغّل بها مشروعك. يمكنك تغييرها لاحقاً من إعدادات الخادم.</p>
+
+          <!-- بيئات التشغيل -->
+          <h3 class="mt-4 mb-2 font-extrabold text-sm" style="color:var(--royal-blue)">بيئات التشغيل</h3>
+          <div class="grid">
+            ${WISP_RUNTIMES.map(rt => `
+              <div class="card ${ex.selectedEnv === rt.id ? 'selected' : ''}" style="min-height:auto;${ex.selectedEnv === rt.id ? 'border-color:#800020;border-width:2px' : ''}" onclick="selectWispEnv('${rt.id}')">
+                <div class="flex items-center justify-between">
+                  <div class="srv-title">${escapeHtml(rt.title)}</div>
+                  <span class="text-lg font-extrabold">${rt.icon}</span>
+                </div>
+                <div class="srv-sub">${escapeHtml(rt.desc)}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- قواعد البيانات -->
+          <h3 class="mt-5 mb-2 font-extrabold text-sm" style="color:var(--royal-blue)">قواعد البيانات</h3>
+          <div class="grid">
+            ${WISP_DATABASES.map(dbItem => `
+              <div class="card" style="min-height:auto;${ex.selectedEnv === dbItem.id ? 'border-color:#800020;border-width:2px' : ''}" onclick="selectWispEnv('${dbItem.id}')">
+                <div class="flex items-center justify-between">
+                  <div class="srv-title">${escapeHtml(dbItem.title)}</div>
+                  <span class="text-lg font-extrabold">${dbItem.icon}</span>
+                </div>
+                <div class="srv-sub">${escapeHtml(dbItem.desc)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- المرحلة 02: تسمية الخادم والوصف -->
+        <div class="wb-card">
+          <div class="text-xs font-extrabold font-mono" style="color:var(--accent)">02</div>
+          <h2 style="margin-top:4px">سمّه</h2>
+          <div class="row">
+            <button type="button" class="btn" style="flex:0 0 auto" onclick="generateRandomWispName()">🔀 توليد اسم عشوائي</button>
+            <input id="wispCreateNameInput" class="field" style="margin-top:0;flex:1" value="${escapeHtml(ex.createName)}" placeholder="بوتي الرائع (مثال: alpha-bot-101)" oninput="updateWispCreateDraft()" />
+          </div>
+          <textarea id="wispCreateDescInput" class="field" rows="2" placeholder="الوصف (اختياري) — ما الغرض من هذا الخادم؟" oninput="updateWispCreateDraft()">${escapeHtml(ex.createDesc)}</textarea>
+        </div>
+
+        <!-- بطاقة الملخص وزر الإنشاء والقواعد -->
+        <div class="wb-card">
+          <div class="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div class="srv-title" style="font-size:16px">${escapeHtml(ex.createName || 'خادم جديد')} (${escapeHtml(currentEnv.title)})</div>
+              <div class="srv-sub">الذاكرة: 512 MB • القرص: 1 GB • CPU: 35% • السعر: مجاني</div>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="submitWispCreateServer()">🚀 إنشاء وتشغيل الخادم</button>
+          </div>
+
+          <!-- ملاحظات وسياسات الاستضافة المجانية -->
+          <div class="mt-4 pt-3 space-y-2 text-xs" style="border-top:1px solid var(--border);color:var(--muted)">
+            <div>🕒 سجّل الدخول مرة كل أسبوعين على الأقل ليبقى يعمل. بعد ذلك يتم إيقافه، وبعد 30 يوماً يُنقل إلى التخزين دون حذف.</div>
+            <div>📢 الخوادم المجانية تُمَوّل من الإعلانات، لذا أبقِ مانع الإعلانات معطلاً على اللوحة.</div>
+            <div>🛡️ يُمنع استخدام البوتات الذاتية (selfbots) وبوتات التخريب (nukebots) وأدوات السبام.</div>
+          </div>
+        </div>
+
+        <!-- دعوة للترقية إلى Premium -->
+        <div class="wb-card flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <div class="srv-title">👑 تحتاج إلى قوة أكبر؟</div>
+            <div class="srv-sub">خوادم Premium تحصل على RAM أكثر وبلا إعلانات، ولا تتوقف أثناء غيابك.</div>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="navigate('/client/billing')">عرض خطط Premium</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(route === '/client/billing'){
+    box.innerHTML = `
+      <div class="wb-card animate-fade-in">
+        <h1 class="text-xl font-extrabold" style="color:var(--burgundy)">👑 الفوترة وخطط Premium</h1>
+        <p class="sub">إدارة باقتك الحالية والترقية إلى موارد أعلى بدون إعلانات أو إيقاف تلقائي.</p>
+        <div class="guide-grid mt-4">
+          <div class="guide-box">
+            <div class="srv-title">الباقة المجانية (Free Tier)</div>
+            <div class="v">€0.00 <span class="text-xs font-normal">/ شهر</span></div>
+            <div class="srv-sub mt-2">• 512 MB RAM • 1 GB Disk • 35% CPU<br>• تجديد الدخول كل أسبوعين</div>
+          </div>
+          <div class="guide-box" style="border-color:#800020;border-width:2px">
+            <div class="srv-title">Tier 1 — Premium (${escapeHtml(ex.tierTitle)})</div>
+            <div class="v">${escapeHtml(ex.tierPrice)}</div>
+            <div class="srv-sub mt-2">• ${escapeHtml(ex.tierSpec)} مضمونة وبلا إعلانات<br>• عمل مستمر 24/7 دون توقف أثناء الغياب</div>
+            <button type="button" class="btn btn-primary mt-3" onclick="activateWispPremium()">تفعيل Tier 1 الآن</button>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(route === '/client/friends'){
+    box.innerHTML = `
+      <div class="wb-card animate-fade-in">
+        <div class="flex items-center justify-between">
+          <h1 class="text-xl font-extrabold" style="color:var(--burgundy)">👥 الأصدقاء والدعوات</h1>
+          <button type="button" class="btn btn-primary btn-mini" onclick="toast('تم نسخ رابط الدعوة إلى الحافظة ✅', 'ok')">+ دعوة صديق</button>
+        </div>
+        <div class="mt-4 space-y-2">
+          ${ex.friends.map(f => `
+            <div class="guide-box flex items-center justify-between">
+              <div>
+                <div class="srv-title">${escapeHtml(f.name)} <span class="font-mono text-xs">${escapeHtml(f.handle)}</span></div>
+                <div class="srv-sub">${escapeHtml(f.status)}</div>
+              </div>
+              <span class="tag ok">هدية: ${escapeHtml(f.ramGift)}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(route === '/client/free-ram'){
+    box.innerHTML = `
+      <div class="wb-card animate-fade-in">
+        <h1 class="text-xl font-extrabold" style="color:var(--burgundy)">🎁 المطالبة بـ RAM وخانات مجانية</h1>
+        <p class="sub">احصل على دفعات RAM وخانات خوادم إضافية مجانية لدعم مشاريعك.</p>
+        <div class="guide-box mt-3 flex items-center justify-between">
+          <div>
+            <div class="srv-title">المطالبات المستلمة: ${ex.freeRamClaims}</div>
+            <div class="srv-sub">الخانات الإضافية الحالية: +${ex.extraSlots}</div>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="claimWispFreeRam()">المطالبة الآن (+1 خانة)</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(route === '/client/websites'){
+    box.innerHTML = `
+      <div class="wb-card animate-fade-in">
+        <h1 class="text-xl font-extrabold" style="color:var(--burgundy)">🌐 مواقع الويب والنطاقات الفرعية</h1>
+        <div class="mt-3 space-y-2">
+          ${ex.websites.map(w => `
+            <div class="guide-box flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <div class="srv-title" style="direction:ltr;text-align:right">${escapeHtml(w.domain)}</div>
+                <div class="srv-sub">الوجهة: ${escapeHtml(w.target)} • ${escapeHtml(w.ssl)}</div>
+              </div>
+              <span class="tag ok">${escapeHtml(w.status)}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(route === '/client/store'){
+    box.innerHTML = `
+      <div class="wb-card animate-fade-in">
+        <h1 class="text-xl font-extrabold" style="color:var(--burgundy)">🛒 متجر الترقيات والموارد</h1>
+        <div class="guide-grid mt-3">
+          <div class="guide-box">
+            <div class="srv-title">خانة خادم إضافية (+1 Server Slot)</div>
+            <div class="srv-sub">أضف خادماً إضافياً إلى حسابك فوراً.</div>
+            <button type="button" class="btn btn-primary btn-mini mt-3" onclick="claimWispFreeRam()">إضافة خانة مجانية</button>
+          </div>
+          <div class="guide-box">
+            <div class="srv-title">نسخ احتياطية إضافية</div>
+            <div class="srv-sub">زيادة سعة النسخ الاحتياطية واللقطات.</div>
+            <button type="button" class="btn btn-mini mt-3" onclick="toast('تمت ترقية حد النسخ الاحتياطية بنجاح ✅', 'ok')">تفعيل</button>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(route === '/client/github'){
+    box.innerHTML = `
+      <div class="wb-card animate-fade-in">
+        <h1 class="text-xl font-extrabold" style="color:var(--burgundy)">🐙 ربط ومزامنة GitHub</h1>
+        <p class="sub">اسحب الشيفرة البرمجية مباشرة من مستودعات GitHub إلى خادمك بنقرة واحدة.</p>
+        <button type="button" class="btn btn-primary mt-3" onclick="toast('تمت مزامنة مستودعات GitHub بنجاح ✅', 'ok')">مزامنة المستودعات الآن</button>
+      </div>
+    `;
+    return;
+  }
+
+  if(route === '/client/profile'){
+    box.innerHTML = `
+      <div class="wb-card animate-fade-in">
+        <h1 class="text-xl font-extrabold" style="color:var(--burgundy)">👤 الملف الشخصي</h1>
+        <div class="guide-grid mt-3">
+          <div class="guide-box"><div class="k">اسم المستخدم</div><div class="v">${escapeHtml(sess.username)}</div></div>
+          <div class="guide-box"><div class="k">الصلاحيات والباقة</div><div class="v">${sess.is_admin ? 'مشرف عام (Admin)' : escapeHtml(ex.tierTitle)}</div></div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(route === '/client/settings'){
+    box.innerHTML = `
+      <div class="wb-card animate-fade-in">
+        <h1 class="text-xl font-extrabold" style="color:var(--burgundy)">⚙️ إعدادات الحساب والواجهة</h1>
+        <div class="row mt-3">
+          <button type="button" class="btn" onclick="toggleWispTheme()">🌓 تبديل السمة الفاتحة / الداكنة</button>
+          <button type="button" class="btn btn-danger" onclick="resetWispExtraState()">إعادة ضبط تفضيلات الواجهة</button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(route === '/client/ai-connections'){
+    box.innerHTML = `
+      <div class="wb-card animate-fade-in">
+        <h1 class="text-xl font-extrabold" style="color:var(--burgundy)">🤖 اتصالات الذكاء الاصطناعي</h1>
+        <div class="mt-3 space-y-2">
+          ${ex.aiConnections.map((ai, idx) => `
+            <div class="guide-box flex items-center justify-between">
+              <div>
+                <div class="srv-title">${escapeHtml(ai.provider)}</div>
+                <div class="srv-sub">${escapeHtml(ai.model)} • ${escapeHtml(ai.lastUsed)}</div>
+              </div>
+              <button type="button" class="btn btn-mini ${ai.connected ? 'btn-primary' : ''}" onclick="toggleWispAi(${idx})">${ai.connected ? 'متصل ✓' : 'اتصال'}</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(route === '/client/invoices'){
+    box.innerHTML = `
+      <div class="wb-card animate-fade-in">
+        <h1 class="text-xl font-extrabold" style="color:var(--burgundy)">🧾 الفواتير والسجل المالي</h1>
+        <div class="mt-3 space-y-2">
+          ${ex.invoices.map(inv => `
+            <div class="guide-box flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <div class="srv-title">${escapeHtml(inv.id)} — ${escapeHtml(inv.item)}</div>
+                <div class="srv-sub">${escapeHtml(inv.date)}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold">${escapeHtml(inv.amount)}</span>
+                <span class="tag ok">${escapeHtml(inv.status)}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  if(route === '/client/support'){
+    box.innerHTML = `
+      <div class="wb-card animate-fade-in">
+        <h1 class="text-xl font-extrabold" style="color:var(--burgundy)">🛟 الدعم الفني ومركز المساعدة</h1>
+        <form onsubmit="submitWispTicket(event)" class="mt-3 space-y-2">
+          <input id="wispTicketSubj" class="field" required placeholder="موضوع التذكرة (مثال: استفسار عن تشغيل بوت بايثون)" />
+          <textarea id="wispTicketBody" class="field" rows="3" required placeholder="اشرح المشكلة أو الاستفسار..."></textarea>
+          <button type="submit" class="btn btn-primary">إرسال تذكرة الدعم</button>
+        </form>
+      </div>
+    `;
+    return;
+  }
+
+  // الافتراضي: لوحة تحكم Wispbyte الشاملة (/client/dashboard)
+  const q = (ex.searchQuery || '').toLowerCase().trim();
+  const filtered = userServers.filter(s =>
+    (s.title || '').toLowerCase().includes(q) ||
+    (s.folder || '').toLowerCase().includes(q) ||
+    (s.startup_file || '').toLowerCase().includes(q)
+  );
+  const totalVotes = (ex.poll.votes.Yes || 0) + (ex.poll.votes.No || 0);
+  const yesPct = totalVotes > 0 ? Math.round((ex.poll.votes.Yes / totalVotes) * 100) : 50;
+  const noPct = 100 - yesPct;
+  const maxSlots = (sess.is_admin ? 16 : 1) + (ex.extraSlots || 0);
+
+  box.innerHTML = `
+    <div class="space-y-5 animate-fade-in">
+      <!-- بطاقة الترحيب الرئيسية -->
+      <div class="wb-card">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 class="text-2xl font-extrabold" style="color:var(--burgundy)">مرحبًا بعودتك، ${escapeHtml(sess.username)}</h1>
+            <p class="sub">استضافة مجانية بلا تجديدات. سجّل الدخول مرة كل أسبوعين على الأقل وستبقى خوادمك تعمل.</p>
+            <div class="row mt-3">
+              <button type="button" class="btn btn-primary" onclick="navigate('/client/billing')">👑 الترقية إلى Premium</button>
+              <button type="button" class="btn" onclick="navigate('/client/create')">➕ إنشاء خادم جديد</button>
+              <button type="button" class="btn" onclick="navigate('/')">🏠 العودة للواجهة الرئيسية</button>
+            </div>
+          </div>
+          <div class="text-3xl">🚪</div>
+        </div>
+      </div>
+
+      <!-- الاستطلاع الأسبوعي -->
+      <div class="wb-card">
+        <div class="flex items-center justify-between text-xs" style="color:var(--muted)">
+          <span>${escapeHtml(ex.poll.endsAt)}</span>
+          <span class="font-bold">📊 الاستطلاع الأسبوعي</span>
+        </div>
+        <h3 class="mt-2 font-bold" dir="ltr">${escapeHtml(ex.poll.question)}</h3>
+        <div class="mt-3 space-y-2" dir="ltr">
+          ${['Yes', 'No'].map(opt => {
+            const pct = opt === 'Yes' ? yesPct : noPct;
+            return `
+              <label class="guide-box flex items-center justify-between cursor-pointer">
+                <span class="font-bold">${opt}</span>
+                <div class="flex items-center gap-3">
+                  ${ex.poll.hasVoted ? `<span class="text-xs font-mono">${pct}% (${ex.poll.votes[opt]})</span>` : ''}
+                  <input type="radio" name="wispWeeklyPoll" ${ex.poll.selectedOption === opt ? 'checked' : ''} onchange="voteWispPoll('${opt}')" />
+                </div>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- عدادات الملخص وخطة Tier 1 -->
+      <div class="grid">
+        <div class="card" style="cursor:default;min-height:auto"><div class="k">خوادمك</div><div class="v">${userServers.length} / ${maxSlots}</div></div>
+        <div class="card" style="cursor:default;min-height:auto"><div class="k">خانات إضافية</div><div class="v">${ex.extraSlots || 0}</div></div>
+        <div class="card" style="cursor:default;min-height:auto"><div class="k">الخطة الحالية</div><div class="v">${escapeHtml(ex.tierTitle)}</div></div>
+        <div class="card" style="cursor:default;min-height:auto"><div class="k">المواصفات</div><div class="v" style="font-size:14px">${escapeHtml(ex.tierSpec)}</div></div>
+      </div>
+
+      <!-- قسم خوادمك والبحث والإجراءات -->
+      <div class="wb-card">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
+          <h2 style="margin:0">خوادمك</h2>
+          <input id="wispDashSearch" class="field" style="margin-top:0;max-width:280px" value="${escapeHtml(ex.searchQuery || '')}" placeholder="البحث في الخوادم..." oninput="updateWispSearch(this.value)" />
+        </div>
+
+        <!-- قائمة الخوادم -->
+        <div class="space-y-2.5">
+          ${filtered.length === 0 ? `<div class="sub">لا توجد خوادم مطابقة لبحثك.</div>` : filtered.map(srv => `
+            <div class="guide-box flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <div class="srv-title">${escapeHtml(srv.title)} <span class="tag ${statusClass(srv.status) === 'running' ? 'ok' : ''}">${escapeHtml(srv.status)}</span></div>
+                <div class="srv-sub">${escapeHtml(srv.folder)} • ${escapeHtml(srv.startup_file)} • ${escapeHtml(srv.generated_url || '')}</div>
+              </div>
+              <div class="actions">
+                <button type="button" class="btn btn-mini" onclick="quickToggleServerFromDash('${escapeAttr(srv.key)}', '${srv.status === 'Running' ? 'stop' : 'start'}')">${srv.status === 'Running' ? '⏹ إيقاف' : '▶ تشغيل'}</button>
+                <button type="button" class="btn btn-primary btn-mini" onclick="openServerByKey('${escapeAttr(srv.key)}')">إدارة ←</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- صف إنشاء خادم جديد + تقييم Trustpilot -->
+        <div class="guide-grid mt-4">
+          <div class="guide-box flex items-center justify-between cursor-pointer" onclick="navigate('/client/create')">
+            <div>
+              <div class="srv-title">إنشاء خادم جديد</div>
+              <div class="srv-sub">أضف مشروعاً مجانياً آخر ببضع نقرات</div>
+            </div>
+            <span class="text-xl font-bold">+</span>
+          </div>
+          <div class="guide-box flex items-center justify-between cursor-pointer" onclick="toast('شكراً لدعمك! تم فتح صفحة تقييم Trustpilot للمجتمع ⭐', 'ok')">
+            <div>
+              <div class="srv-title">قيمنا على Trustpilot</div>
+              <div class="srv-sub">ساعد الآخرين على اكتشاف المنصة — دعم المجتمع</div>
+            </div>
+            <span class="text-xl font-bold text-emerald-600">★</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- بنر إعلاني نظيف منسق -->
+      <div class="wb-card flex items-center justify-between flex-wrap gap-3" style="background:linear-gradient(90deg,#0f172a,#1e293b);color:#ffffff">
+        <div>
+          <div class="font-extrabold text-sm">🛡️ WORLD OF TANKS — شريك الاستضافة المجانية</div>
+          <div class="text-xs text-slate-300">يساعد دعم الشركاء في إبقاء الخوادم المجانية متاحة للجميع</div>
+        </div>
+        <button type="button" class="btn btn-primary btn-mini" onclick="toast('تم فتح عرض الشريك الترويجي بنجاح', 'ok')">PLAY NOW FOR FREE</button>
+      </div>
+
+      <!-- قسم البدء السريع -->
+      <div class="wb-card">
+        <h3 style="margin-top:0;color:var(--burgundy)">📖 البدء السريع</h3>
+        <p class="sub">توجه إلى <b>إنشاء خادم</b>، واختر بيئة التشغيل أو قاعدة البيانات المناسبة لمشروعك، وانشر خلال ثوانٍ.</p>
+      </div>
+    </div>
+  `;
+}
+
+function selectWispEnv(envId){
+  const ex = getWispExtra();
+  ex.selectedEnv = envId;
+  saveWispExtra(ex);
+  renderWispClientRoute('/client/create');
+}
+
+function updateWispCreateDraft(){
+  const ex = getWispExtra();
+  const n = document.getElementById('wispCreateNameInput');
+  const d = document.getElementById('wispCreateDescInput');
+  if(n) ex.createName = n.value;
+  if(d) ex.createDesc = d.value;
+  saveWispExtra(ex);
+}
+
+function generateRandomWispName(){
+  const prefixes = ['alpha', 'nova', 'cyber', 'swift', 'nexus', 'cloud', 'bot'];
+  const suffixes = ['worker', 'core', 'hub', 'runner', 'node', 'py'];
+  const name = `${prefixes[Math.floor(Math.random()*prefixes.length)]}-${suffixes[Math.floor(Math.random()*suffixes.length)]}-${Math.floor(100+Math.random()*899)}`;
+  const ex = getWispExtra();
+  ex.createName = name;
+  saveWispExtra(ex);
+  renderWispClientRoute('/client/create');
+}
+
+async function submitWispCreateServer(){
+  const ex = getWispExtra();
+  const allEnvs = [...WISP_RUNTIMES, ...WISP_DATABASES];
+  const envObj = allEnvs.find(e => e.id === ex.selectedEnv) || WISP_RUNTIMES[0];
+  const cleanName = (ex.createName || '').trim() || `srv-${Date.now().toString().slice(-4)}`;
+  const res = await fetch('/add', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: cleanName,
+      server_type: envObj.id,
+      startup_file: envObj.file
+    })
+  });
+  const d = await res.json().catch(() => ({ success:false, message:'خطأ' }));
+  if(!res.ok || !d.success){
+    toast(d.message || 'تعذر إنشاء الخادم', 'err');
+    return;
+  }
+  ex.createName = '';
+  ex.createDesc = '';
+  ex.hasCreatedServer = true;
+  saveWispExtra(ex);
+  await fetch(`/server/action/${encodeURIComponent(d.key)}/start`, { method: 'POST' });
+  toast(`تم إنشاء وتشغيل خادم ${envObj.id} بنجاح ✅`, 'ok');
+  await loadServers();
+  openServerByKey(d.key);
+}
+
+function voteWispPoll(opt){
+  const ex = getWispExtra();
+  if(!ex.poll.hasVoted){
+    ex.poll.votes[opt] = (ex.poll.votes[opt] || 0) + 1;
+    ex.poll.hasVoted = true;
+  }else if(ex.poll.selectedOption !== opt){
+    const prev = ex.poll.selectedOption;
+    if(prev && ex.poll.votes[prev] > 0) ex.poll.votes[prev] -= 1;
+    ex.poll.votes[opt] = (ex.poll.votes[opt] || 0) + 1;
+  }
+  ex.poll.selectedOption = opt;
+  saveWispExtra(ex);
+  toast('تم تسجيل صوتك في الاستطلاع الأسبوعي ✅', 'ok');
+  renderWispClientRoute('/client/dashboard');
+}
+
+function updateWispSearch(val){
+  const ex = getWispExtra();
+  ex.searchQuery = val;
+  saveWispExtra(ex);
+  renderWispClientRoute('/client/dashboard');
+  const inp = document.getElementById('wispDashSearch');
+  if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+}
+
+async function quickToggleServerFromDash(key, act){
+  await fetch(`/server/action/${encodeURIComponent(key)}/${act}`, { method: 'POST' });
+  toast(act === 'start' ? 'تم تشغيل الخادم ▶' : 'تم إيقاف الخادم ⏹', 'ok');
+  renderWispClientRoute('/client/dashboard');
+}
+
+function openServerByKey(key){
+  const db = loadDb();
+  const srv = findServerRecord(db, key);
+  if(!srv) return;
+  document.getElementById('wispClientView').style.display = 'none';
+  openServer(srv);
+}
+
+function activateWispPremium(){
+  const ex = getWispExtra();
+  ex.tierTitle = 'Tier 1 (نشط)';
+  saveWispExtra(ex);
+  toast('تم تفعيل خطة Tier 1 (€1.49/شهر) بنجاح ✅', 'ok');
+  navigate('/client/dashboard');
+}
+
+function claimWispFreeRam(){
+  const ex = getWispExtra();
+  ex.freeRamClaims = (ex.freeRamClaims || 0) + 1;
+  ex.extraSlots = (ex.extraSlots || 0) + 1;
+  saveWispExtra(ex);
+  toast('تمت إضافة +1 خانة خادم مجانية إلى حسابك 🎁', 'ok');
+  renderWispClientRoute(window.location.pathname);
+}
+
+function toggleWispAi(idx){
+  const ex = getWispExtra();
+  if(ex.aiConnections[idx]){
+    ex.aiConnections[idx].connected = !ex.aiConnections[idx].connected;
+    ex.aiConnections[idx].lastUsed = ex.aiConnections[idx].connected ? 'الآن' : 'غير متصل';
+    saveWispExtra(ex);
+    toast('تم تحديث حالة اتصال الذكاء الاصطناعي ✅', 'ok');
+    renderWispClientRoute('/client/ai-connections');
+  }
+}
+
+function submitWispTicket(e){
+  e.preventDefault();
+  document.getElementById('wispTicketSubj').value = '';
+  document.getElementById('wispTicketBody').value = '';
+  toast('تم إرسال تذكرة الدعم بنجاح وسيتم الرد عليك قريباً ✅', 'ok');
+}
+
+function resetWispExtraState(){
+  try{ localStorage.removeItem(WISP_EXTRA_KEY); }catch{}
+  applyWispTheme();
+  toast('تمت إعادة ضبط تفضيلات الواجهة ✅', 'ok');
+  renderWispClientRoute('/client/settings');
+}
+
+/* =========================================================================
+   5. HOME & SERVER CONSOLE / FILE MANAGER / DELETE + SERVICES
    ========================================================================= */
 function statusClass(st){
   st = (st || '').toLowerCase();
@@ -2066,10 +2898,13 @@ function handleFeatureAction(actionKey){
   switch(actionKey){
     case 'zero_setup':
     case 'multi_lang':
-    case 'ai_assistant':
     case 'beginners_students':
     case 'mvp_hackathons':
-      document.getElementById('newBtn')?.click();
+      navigate('/client/create');
+      break;
+
+    case 'ai_assistant':
+      navigate('/client/ai-connections');
       break;
 
     case 'hosting_deploy':
@@ -2087,14 +2922,12 @@ function handleFeatureAction(actionKey){
         openServer(firstSrv);
         toast(`تم فتح مساحة العمل للسيرفر: ${firstSrv.title}`, 'ok');
       }else{
-        document.getElementById('newBtn')?.click();
+        navigate('/client/create');
       }
       break;
 
     case 'packages_secrets':
-    case 'history_git':
     case 'files_tab':
-    case 'github_tip':
     case 'secrets_tip':
       if(firstSrv){
         openServer(firstSrv);
@@ -2103,6 +2936,11 @@ function handleFeatureAction(actionKey){
       }else{
         toast('أنشئ سيرفراً أولاً لفتح مدير الملفات', 'info');
       }
+      break;
+
+    case 'history_git':
+    case 'github_tip':
+      navigate('/client/github');
       break;
 
     case 'editor_tab':
@@ -2143,8 +2981,7 @@ function handleFeatureAction(actionKey){
       if(sess && sess.is_admin){
         navigate('/admin');
       }else{
-        document.getElementById('servicesSection')?.scrollIntoView({ behavior: 'smooth' });
-        toast('استعرض الخطط والخدمات المتاحة', 'info');
+        navigate('/client/billing');
       }
       break;
     }
@@ -2226,6 +3063,7 @@ function openServer(s){
   };
   currentPath = '';
   document.getElementById('homeView').style.display = 'none';
+  document.getElementById('wispClientView').style.display = 'none';
   document.getElementById('serverView').style.display = 'block';
   document.getElementById('homeBtn').style.display = 'inline-block';
   document.getElementById('newBtn').style.display = 'none';
@@ -2233,6 +3071,8 @@ function openServer(s){
   document.getElementById('srvHeader').textContent = currentSrv.title;
   document.getElementById('srvSub').textContent = `${currentSrv.subtitle || ''} · ${currentSrv.generated_url}`;
   document.getElementById('mainFileTxt').textContent = currentSrv.startup_file || 'اضغط للتحديد';
+  document.getElementById('sftpHostTxt').textContent = `sftp://${currentSrv.ip || '78.154.103.27'}:2022`;
+  document.getElementById('sftpUserTxt').textContent = `${(getSession() || {}).username || 'admin'}.${currentSrv.folder}`;
   loadPythonHost();
 
   switchTab('console');
@@ -2243,8 +3083,10 @@ function goHome(){
   currentSrv = null;
   document.getElementById('homeView').style.display = 'block';
   document.getElementById('serverView').style.display = 'none';
+  document.getElementById('wispClientView').style.display = 'none';
   document.getElementById('homeBtn').style.display = 'none';
   document.getElementById('newBtn').style.display = 'inline-block';
+  try{ history.pushState({}, '', '/'); }catch{}
   loadServers();
   loadPythonHost();
   refreshWalletBadge();
@@ -2252,12 +3094,98 @@ function goHome(){
 
 function switchTab(t){
   stopPoll();
-  document.getElementById('tabConsole').classList.toggle('active', t === 'console');
-  document.getElementById('tabFiles').classList.toggle('active', t === 'files');
-  document.getElementById('viewConsole').style.display = t === 'console' ? 'block' : 'none';
-  document.getElementById('viewFiles').style.display = t === 'files' ? 'block' : 'none';
-  if(t === 'console') startPolling();
-  else loadFiles();
+  ['tabConsole', 'tabFiles', 'tabSftp', 'tabBackups'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('active');
+  });
+  ['viewConsole', 'viewFiles', 'viewSftp', 'viewBackups'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
+
+  if(t === 'files'){
+    document.getElementById('tabFiles').classList.add('active');
+    document.getElementById('viewFiles').style.display = 'block';
+    loadFiles();
+  }else if(t === 'sftp'){
+    document.getElementById('tabSftp').classList.add('active');
+    document.getElementById('viewSftp').style.display = 'block';
+  }else if(t === 'backups'){
+    document.getElementById('tabBackups').classList.add('active');
+    document.getElementById('viewBackups').style.display = 'block';
+    renderServerBackups();
+  }else{
+    document.getElementById('tabConsole').classList.add('active');
+    document.getElementById('viewConsole').style.display = 'block';
+    startPolling();
+  }
+}
+
+function renderServerBackups(){
+  const box = document.getElementById('serverBackupsList');
+  if(!box || !currentSrv) return;
+  box.innerHTML = `
+    <div class="guide-box flex items-center justify-between">
+      <div>
+        <div class="srv-title">لقطة تلقائية (${escapeHtml(currentSrv.folder)})</div>
+        <div class="srv-sub">الحجم: 18.4 MB • الحالة: جاهزة للاستعادة</div>
+      </div>
+      <button type="button" class="btn btn-mini" onclick="toast('تمت استعادة اللقطة بنجاح ✅', 'ok')">استعادة</button>
+    </div>
+  `;
+}
+
+function createQuickBackup(){
+  const box = document.getElementById('serverBackupsList');
+  if(!box) return;
+  const div = document.createElement('div');
+  div.className = 'guide-box flex items-center justify-between';
+  div.innerHTML = `
+    <div>
+      <div class="srv-title">نسخة احتياطية يدوية (${new Date().toLocaleTimeString()})</div>
+      <div class="srv-sub">الحجم: 2.3 MB • الحالة: مكتملة</div>
+    </div>
+    <span class="tag ok">جاهزة</span>
+  `;
+  box.prepend(div);
+  toast('تم إنشاء نسخة احتياطية جديدة بنجاح ✅', 'ok');
+}
+
+function sendTerminalCommand(e){
+  e.preventDefault();
+  const inp = document.getElementById('terminalCmdInput');
+  if(!inp || !currentSrv) return;
+  const cmd = inp.value.trim();
+  if(!cmd) return;
+  const db = loadDb();
+  const srv = findServerRecord(db, currentSrv.key);
+  if(srv){
+    const ts = new Date().toLocaleTimeString();
+    srv.logs += `[${ts}] $ ${cmd}\n`;
+    if(cmd === 'help') srv.logs += `[${ts}] Available commands: help, status, uptime, clear\n`;
+    else if(cmd === 'status') srv.logs += `[${ts}] Server "${srv.title}" is ${srv.status} (${srv.generated_url})\n`;
+    else if(cmd === 'uptime') srv.logs += `[${ts}] Uptime: Active session\n`;
+    else if(cmd === 'clear') srv.logs = `[${ts}] Console cleared\n`;
+    else srv.logs += `[${ts}] Executed: ${cmd}\n`;
+    saveDb(db, { silent: true });
+    document.getElementById('logOut').textContent = srv.logs;
+  }
+  inp.value = '';
+}
+
+function copyCurrentConsoleLogs(){
+  const txt = document.getElementById('logOut')?.textContent || '';
+  navigator.clipboard?.writeText(txt).then(() => toast('تم نسخ سجل وحدة التحكم ✅', 'ok'));
+}
+
+function downloadCurrentConsoleLogs(){
+  const txt = document.getElementById('logOut')?.textContent || '';
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${(currentSrv && currentSrv.folder) || 'server'}-console.log`;
+  a.click();
+  toast('تم تنزيل ملف السجل ✅', 'ok');
 }
 
 async function startPolling(){
@@ -2271,7 +3199,10 @@ async function startPolling(){
       const d = await r.json();
       document.getElementById('logOut').textContent = d.logs || 'No logs';
       document.getElementById('statusTxt').textContent = d.status || 'Offline';
-      document.getElementById('memTxt').textContent = d.mem || '0 MB';
+      document.getElementById('memTxt').textContent = `${d.mem || '0 MB'} / 512 MB`;
+      const isRun = d.status === 'Running';
+      document.getElementById('cpuTxt').textContent = isRun ? '6.4% / 35%' : '0% / 35%';
+      document.getElementById('diskNetTxt').textContent = isRun ? '18 MB / 1 GB • 1.2 KB/s' : '18 MB / 1 GB • 0 KB/s';
       const genUrl = d.generated_url || currentSrv.generated_url || buildGeneratedUrl(currentSrv.folder);
       currentSrv.generated_url = genUrl;
       if(d.startup_file){
@@ -2604,7 +3535,7 @@ document.getElementById('newBtn').onclick = () => openM('اسم السيرفر �
 }, true);
 
 /* =========================================================================
-   5. ADMIN PANEL (/admin) — XSS-Safe, Data-Attr Safe & Checked Responses
+   6. ADMIN PANEL (/admin) — XSS-Safe, Data-Attr Safe & Checked Responses
    ========================================================================= */
 let usersCache = [];
 
@@ -2783,10 +3714,11 @@ function escapeHtml(s){
 function escapeAttr(s){ return escapeHtml(s).replaceAll('\\', '\\\\'); }
 
 document.addEventListener('DOMContentLoaded', () => {
+  applyWispTheme();
   const tabMap = { login: '/login', create: '/create', admin: '/admin', home: '/' };
   const initialRoute = window.__INITIAL_TAB__ && tabMap[window.__INITIAL_TAB__]
     ? tabMap[window.__INITIAL_TAB__]
-    : (['/login', '/create', '/admin', '/'].includes(window.location.pathname)
+    : (['/login', '/create', '/admin', '/'].includes(window.location.pathname) || window.location.pathname.startsWith('/client/')
       ? window.location.pathname
       : (getSession() ? '/' : '/login'));
   renderRoute(initialRoute);
@@ -2794,3 +3726,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
