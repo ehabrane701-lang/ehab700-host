@@ -120,13 +120,13 @@
     }
     .auth-title{display:flex;align-items:center;gap:10px;font-weight:950;font-size:16px;color:var(--burgundy)}
     .sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.6}
-    input.field{
+    input.field, select.field{
       width:100%;padding:12px;border-radius:14px;
       border:1px solid rgba(29,78,216,.22);
       background:#f8fbff;color:var(--text);outline:none;margin-top:10px;
       transition:border-color .15s ease,box-shadow .15s ease;
     }
-    input.field:focus{
+    input.field:focus, select.field:focus{
       border-color:var(--burgundy);
       background:#ffffff;
       box-shadow:0 0 0 3px rgba(128,0,32,.10);
@@ -278,13 +278,60 @@
       border-radius:18px;box-shadow:0 24px 60px rgba(8,22,43,.28);
       padding:20px;
     }
+    .modal.wide-modal{max-width:540px}
     .modal h3{margin:0 0 10px 0;color:var(--burgundy)}
-    .modal input{
+    .modal input, .modal select{
       width:100%;padding:12px;border-radius:14px;
       border:1px solid rgba(29,78,216,.24);
       background:#f8fbff;color:var(--text);outline:none;
     }
-    .modal input:focus{border-color:var(--burgundy);background:#ffffff}
+    .modal input:focus, .modal select:focus{border-color:var(--burgundy);background:#ffffff}
+
+    .srv-select-list{
+      margin-top:10px;
+      max-height:220px;
+      overflow:auto;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      border:1px solid rgba(29,78,216,.15);
+      border-radius:14px;
+      padding:8px;
+      background:#f8fbff;
+    }
+    .srv-option-item{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(29,78,216,.16);
+      background:#ffffff;
+      cursor:pointer;
+      transition:border-color .14s ease, background .14s ease;
+    }
+    .srv-option-item:hover{
+      border-color:var(--accent);
+      background:#f0f6ff;
+    }
+    .srv-option-item.selected{
+      border-color:var(--burgundy);
+      background:#fff1f2;
+      box-shadow:0 4px 14px rgba(128,0,32,.10);
+    }
+    .srv-option-title{font-weight:950;font-size:13px;color:var(--royal-blue)}
+    .srv-option-meta{font-size:11px;color:var(--muted);margin-top:3px;direction:ltr;text-align:right}
+    .auto-badge{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:10px;
+      font-weight:900;
+      background:rgba(29,78,216,.12);
+      color:var(--accent);
+      margin-right:6px;
+    }
 
     #editor-modal{
       display:none;position:fixed;inset:0;background:rgba(8,22,43,.76);z-index:60;padding:18px;
@@ -427,6 +474,7 @@
         <button id="adminBtn" class="btn" style="display:none" onclick="navigate('/admin')">لوحة الأدمن</button>
         <button id="homeBtn" class="btn" style="display:none" onclick="goHome()">الرئيسية</button>
         <button id="newBtn" class="btn btn-primary" style="display:none">+ سيرفر جديد</button>
+        <button id="deleteSrvNavBtn" class="btn btn-danger" style="display:none" onclick="openDeleteServerPicker()">🗑️ حذف سيرفر</button>
         <button id="logoutBtn" class="btn btn-danger" style="display:none" onclick="doLogout()">خروج</button>
       </div>
     </div>
@@ -771,6 +819,7 @@
 
     <div class="row">
       <button class="btn btn-primary" onclick="refreshAll()">تحديث البيانات</button>
+      <button class="btn btn-danger" onclick="openDeleteServerPicker()">🗑️ اختيار وحذف سيرفر بالاسم</button>
       <span class="msg" id="admin_msg"></span>
     </div>
 
@@ -827,6 +876,27 @@
     </div>
   </div>
 
+  <!-- نافذة اختيار السيرفر حسب الاسم قبل التأكيد على الحذف -->
+  <div id="deleteServerModal" class="modal-backdrop" style="z-index:65">
+    <div class="modal wide-modal">
+      <h3>🗑️ اختيار سيرفر لحذفه</h3>
+      <div class="sub">تم تحديد السيرفر المبني/الحالي تلقائياً؛ يمكنك اختيار أي سيرفر آخر حسب الاسم ثم الضغط على <b>متابعة للتأكيد</b>.</div>
+
+      <input id="delSrvSearch" class="field" placeholder="ابحث باسم السيرفر أو المجلد..." oninput="filterDeleteServerPicker()" />
+
+      <select id="delSrvSelect" class="field" onchange="onDeleteSelectChange(this.value)"></select>
+
+      <div id="delSrvList" class="srv-select-list"></div>
+
+      <div class="msg" id="delSrvMsg"></div>
+
+      <div class="actions" style="justify-content:flex-start;margin-top:14px">
+        <button class="btn" onclick="closeDeleteServerPicker()">إلغاء</button>
+        <button id="delSrvProceedBtn" class="btn btn-danger" onclick="proceedDeleteSelectedServer()">متابعة للتأكيد</button>
+      </div>
+    </div>
+  </div>
+
   <!-- نافذة التأكيد -->
   <div id="confirmBackdrop" class="modal-backdrop" style="z-index:70">
     <div class="modal">
@@ -849,6 +919,15 @@ const DB_KEY = 'HAMA_PANEL_DB_V1';
 const SESSION_KEY = 'HAMA_PANEL_SESSION_V1';
 const BOT_BRIDGE_KEY = 'HAMA_BOT_SYNC_EVENT_V1';
 const SYNC_CHANNEL_NAME = 'EHAB_HOST_SYNC_CHANNEL_V1';
+const WALLET_KEY = 'HAMA_WALLET_BALANCES_V1';
+const ORDERS_KEY = 'HAMA_SERVICE_ORDERS_V1';
+const AUTO_BUILT_KEY = 'EHAB_LAST_AUTO_BUILT_SERVER_V1';
+const UNIFIED_PATHS = {
+  db: '/api/unified/db',
+  bridge: '/api/unified/bridge',
+  approval: '/api/unified/approval',
+  health: '/api/unified/health'
+};
 
 const syncChannel = (typeof BroadcastChannel !== 'undefined')
   ? new BroadcastChannel(SYNC_CHANNEL_NAME)
@@ -858,6 +937,17 @@ function buildGeneratedUrl(folder){
   const safeFolder = String(folder || 'server').replace(/[^a-zA-Z0-9_-]/g, '_');
   const origin = (location.origin && location.origin !== 'null') ? location.origin : `http://127.0.0.1:${location.port || 5000}`;
   return `${origin}/srv/${encodeURIComponent(safeFolder)}`;
+}
+
+function setLastAutoBuiltServer(keyOrFolder){
+  try{
+    if(keyOrFolder) localStorage.setItem(AUTO_BUILT_KEY, String(keyOrFolder));
+  }catch{}
+}
+
+function getLastAutoBuiltServer(){
+  try{ return localStorage.getItem(AUTO_BUILT_KEY) || ''; }
+  catch{ return ''; }
 }
 
 function defaultDb(){
@@ -969,6 +1059,13 @@ function notifyExternalSync(payload){
   try{
     if(syncChannel) syncChannel.postMessage(payload);
   }catch{}
+  try{
+    nativeFetch(UNIFIED_PATHS.bridge, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  }catch{}
 }
 
 function getSession(){
@@ -988,7 +1085,7 @@ function jsonRes(obj, status=200){
 }
 
 function splitFileMap(filesObj, dirPath){
-  const prefix = dirPath ? dirPath.replace(/^\/+|\/+$/g,'') + '/' : '';
+  const prefix = dirPath ? dirPath.replace(/^\/+|\/+$/g, '') + '/' : '';
   const dirsMap = new Map();
   const files = [];
   for(const [fullPath, content] of Object.entries(filesObj || {})){
@@ -1013,7 +1110,9 @@ function findServerRecord(db, keyOrFolder){
     s.key === target ||
     s.folder === target ||
     s.key.endsWith('::' + target) ||
-    s.folder.toLowerCase() === target.toLowerCase()
+    s.folder.toLowerCase() === target.toLowerCase() ||
+    (s.title && s.title.toLowerCase() === target.toLowerCase()) ||
+    (s.display_name && s.display_name.toLowerCase() === target.toLowerCase())
   );
 }
 
@@ -1086,7 +1185,7 @@ async function localFallbackFetch(input, init={}){
     const isJs = srvType.toLowerCase().includes('js') || srvType.toLowerCase().includes('node');
     const defaultStartup = (body.startup_file || '').trim() || (isJs ? 'index.js' : 'main.py');
     if(!rawName) return jsonRes({ success:false, message:'اسم السيرفر مطلوب.' }, 400);
-    const folder = rawName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || 'server_' + Date.now();
+    const folder = rawName.toLowerCase().replace(/[^a-z0-9_-]+/g, '_') || ('server_' + Date.now());
     const ownerName = (body.owner || currentUser.username || 'admin').trim();
     const ownedCount = db.servers.filter(s => s.owner === ownerName).length;
     const limit = currentUser.premium || currentUser.is_admin ? 16 : 1;
@@ -1117,6 +1216,7 @@ async function localFallbackFetch(input, init={}){
     });
     db.servers.push(newSrv);
     saveDb(db, { source: body.source || 'web_add' });
+    setLastAutoBuiltServer(key);
     return jsonRes({ success:true, key, folder, generated_url: genUrl, server: newSrv });
   }
 
@@ -1439,6 +1539,7 @@ window.EHAB_BOT_BRIDGE = {
     }
 
     saveDb(db, { source: 'bot_bridge' });
+    setLastAutoBuiltServer(srv.key);
     await loadServers();
     if(currentSrv && (currentSrv.key === srv.key || currentSrv.folder === srv.folder)){
       currentSrv = { ...currentSrv, ...srv };
@@ -1459,6 +1560,9 @@ function handleExternalSyncEvent(evData){
   if(!evData || evData.source === 'web_self') return;
   const sess = getSession();
   if(!sess) return;
+  if(evData.type === 'approval_decision' && evData.message){
+    toast(evData.message, evData.approved ? 'ok' : 'err');
+  }
   if(document.getElementById('homeView').style.display !== 'none'){
     loadServers();
     loadPythonHost();
@@ -1484,7 +1588,7 @@ function handleExternalSyncEvent(evData){
 }
 
 window.addEventListener('storage', (e) => {
-  if(e.key === DB_KEY || e.key === BOT_BRIDGE_KEY){
+  if(e.key === DB_KEY || e.key === BOT_BRIDGE_KEY || e.key === AUTO_BUILT_KEY){
     try{
       const parsed = e.key === BOT_BRIDGE_KEY && e.newValue ? JSON.parse(e.newValue) : { type: 'storage' };
       handleExternalSyncEvent(parsed);
@@ -1505,6 +1609,8 @@ let currentSrv = null, poll = null, currentFile = null, currentPath = '';
 let confirmResolver = null;
 let selectedServerKind = 'py';
 let serversCache = [];
+let deleteCandidatesCache = [];
+let selectedDeleteServerKey = '';
 
 function stopPoll(){
   if(poll){ clearInterval(poll); poll = null; }
@@ -1545,10 +1651,10 @@ function navigate(route){
 }
 
 function hideAllViews(){
-  ['loginView','createView','homeView','serverView','adminView'].forEach(id => {
+  ['loginView', 'createView', 'homeView', 'serverView', 'adminView'].forEach(id => {
     document.getElementById(id).style.display = 'none';
   });
-  ['loginNavBtn','createNavBtn','adminBtn','homeBtn','newBtn','logoutBtn'].forEach(id => {
+  ['loginNavBtn', 'createNavBtn', 'adminBtn', 'homeBtn', 'newBtn', 'deleteSrvNavBtn', 'logoutBtn'].forEach(id => {
     document.getElementById(id).style.display = 'none';
   });
 }
@@ -1571,6 +1677,7 @@ function renderRoute(route = window.location.pathname){
   }
 
   document.getElementById('logoutBtn').style.display = 'inline-block';
+  document.getElementById('deleteSrvNavBtn').style.display = 'inline-block';
   if(sess.is_admin) document.getElementById('adminBtn').style.display = 'inline-block';
 
   if(route === '/admin'){
@@ -1663,7 +1770,7 @@ function refreshWalletBadge(){
   const sess = getSession();
   const key = sess && sess.username ? `user:${sess.username}` : 'guest';
   try{
-    const balMap = JSON.parse(localStorage.getItem('HAMA_WALLET_BALANCES_V1') || '{}');
+    const balMap = JSON.parse(localStorage.getItem(WALLET_KEY) || '{}');
     const val = Number(balMap[key] ?? 0).toFixed(2);
     badge.textContent = `الرصيد: ${val} USD`;
   }catch{
@@ -1705,6 +1812,7 @@ async function orderFreeService(kind){
   });
   await fetch(`/server/action/${encodeURIComponent(srvKey)}/start`, { method: 'POST' });
 
+  setLastAutoBuiltServer(srvKey);
   toast(`تم إنشاء وتشغيل الخدمة المجانية (${kind.toUpperCase()}) ✅`, 'ok');
   await loadServers();
   await loadPythonHost();
@@ -1729,7 +1837,7 @@ function openPaidServiceModal(svcId, svcName, priceLabel){
     const sess = getSession();
     const wKey = sess && sess.username ? `user:${sess.username}` : 'guest';
     let balMap = {};
-    try{ balMap = JSON.parse(localStorage.getItem('HAMA_WALLET_BALANCES_V1') || '{}'); }catch{}
+    try{ balMap = JSON.parse(localStorage.getItem(WALLET_KEY) || '{}'); }catch{}
     const curBal = Number(balMap[wKey] ?? 0);
     const numericPrice = parseFloat(priceLabel) || 0;
     if(curBal < numericPrice){
@@ -1737,26 +1845,178 @@ function openPaidServiceModal(svcId, svcName, priceLabel){
       return;
     }
     balMap[wKey] = Number((curBal - numericPrice).toFixed(2));
-    localStorage.setItem('HAMA_WALLET_BALANCES_V1', JSON.stringify(balMap));
+    localStorage.setItem(WALLET_KEY, JSON.stringify(balMap));
     const orderId = 'ORD-' + Math.random().toString(16).slice(2, 10).toUpperCase();
     try{
-      const ordersArr = JSON.parse(localStorage.getItem('HAMA_SERVICE_ORDERS_V1') || '[]');
+      const ordersArr = JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]');
       ordersArr.push({ orderId, svcId, svcName, details: cleanDetails, price: numericPrice, route: `/web/${orderId}`, createdAt: new Date().toISOString() });
-      localStorage.setItem('HAMA_SERVICE_ORDERS_V1', JSON.stringify(ordersArr));
+      localStorage.setItem(ORDERS_KEY, JSON.stringify(ordersArr));
     }catch{}
+    notifyExternalSync({ type: 'paid_service_order', orderId, svcId, svcName, price: numericPrice, route: `/web/${orderId}`, at: Date.now() });
     refreshWalletBadge();
     closeM();
     toast(`تم إتمام طلب الخدمة (${orderId}) على المسار /web/${orderId} ✅`, 'ok');
   });
 }
 
-async function deleteServerByKey(key, title){
-  const ok = await showConfirm(
-    'حذف سيرفر',
-    `هل أنت متأكد من حذف السيرفر "${title || key}" نهائياً مع جميع ملفاته وسجلاته؟`
-  );
-  if(!ok) return false;
+/* =========================================================================
+   اختيار السيرفر حسب الاسم ثم التأكيد على الحذف (تلقائي + يدوي)
+   ========================================================================= */
+function resolveAutoBuiltServer(candidates){
+  if(!Array.isArray(candidates) || candidates.length === 0) return null;
+  if(currentSrv){
+    const matchCurrent = candidates.find(s => s.key === currentSrv.key || s.folder === currentSrv.folder);
+    if(matchCurrent) return matchCurrent;
+  }
+  const lastBuilt = getLastAutoBuiltServer();
+  if(lastBuilt){
+    const matchLast = candidates.find(s => s.key === lastBuilt || s.folder === lastBuilt);
+    if(matchLast) return matchLast;
+  }
+  const autoBySub = candidates.find(s => /bot sync|auto|built|free/i.test(s.subtitle || '') || /bot_|srv_|free/i.test(s.folder || ''));
+  if(autoBySub) return autoBySub;
+  return candidates[candidates.length - 1];
+}
 
+async function fetchDeleteCandidates(){
+  const sess = getSession();
+  if(!sess) return [];
+  if(sess.is_admin){
+    try{
+      const r = await fetch('/api/admin/servers');
+      if(r.ok){
+        const d = await r.json();
+        if(Array.isArray(d.servers) && d.servers.length){
+          return d.servers.map(s => ({
+            key: s.key || s.folder,
+            folder: s.folder || s.key,
+            title: s.display_name || s.folder || s.key,
+            subtitle: `Owner: ${s.owner || ''} · ${s.startup_file || 'main.py'}`,
+            status: s.status || 'Offline'
+          }));
+        }
+      }
+    }catch{}
+  }
+  if(serversCache && serversCache.length){
+    return serversCache.slice();
+  }
+  try{
+    const r = await fetch('/servers');
+    if(r.ok){
+      const d = await r.json();
+      return (d.servers || []).map(s => ({
+        key: s.key || s.folder,
+        folder: s.folder || s.key,
+        title: s.title || s.display_name || s.folder,
+        subtitle: s.subtitle || '',
+        status: s.status || 'Offline'
+      }));
+    }
+  }catch{}
+  return [];
+}
+
+async function openDeleteServerPicker(preselectedKey = ''){
+  const candidates = await fetchDeleteCandidates();
+  if(!candidates.length){
+    toast('لا توجد سيرفرات متاحة للحذف حالياً', 'err');
+    return;
+  }
+  deleteCandidatesCache = candidates;
+  const autoSrv = preselectedKey
+    ? (candidates.find(s => s.key === preselectedKey || s.folder === preselectedKey) || resolveAutoBuiltServer(candidates))
+    : resolveAutoBuiltServer(candidates);
+
+  selectedDeleteServerKey = autoSrv ? autoSrv.key : candidates[0].key;
+  document.getElementById('delSrvSearch').value = '';
+  document.getElementById('delSrvMsg').textContent = '';
+  renderDeleteServerPicker(candidates, selectedDeleteServerKey);
+  document.getElementById('deleteServerModal').style.display = 'flex';
+}
+
+function closeDeleteServerPicker(){
+  document.getElementById('deleteServerModal').style.display = 'none';
+}
+
+function onDeleteSelectChange(val){
+  selectedDeleteServerKey = val;
+  filterDeleteServerPicker(true);
+}
+
+function filterDeleteServerPicker(keepSelected = false){
+  const q = (document.getElementById('delSrvSearch').value || '').toLowerCase().trim();
+  const filtered = !q
+    ? deleteCandidatesCache
+    : deleteCandidatesCache.filter(s =>
+        (s.title || '').toLowerCase().includes(q) ||
+        (s.folder || '').toLowerCase().includes(q) ||
+        (s.subtitle || '').toLowerCase().includes(q)
+      );
+
+  if(!keepSelected && filtered.length && !filtered.some(s => s.key === selectedDeleteServerKey)){
+    selectedDeleteServerKey = filtered[0].key;
+  }
+  renderDeleteServerPicker(filtered, selectedDeleteServerKey);
+}
+
+function renderDeleteServerPicker(list, activeKey){
+  const sel = document.getElementById('delSrvSelect');
+  const box = document.getElementById('delSrvList');
+  const msg = document.getElementById('delSrvMsg');
+  const autoSrv = resolveAutoBuiltServer(deleteCandidatesCache);
+
+  sel.innerHTML = '';
+  box.innerHTML = '';
+
+  if(!list.length){
+    msg.textContent = 'لا يوجد سيرفر مطابق لاسم البحث.';
+    return;
+  }
+  msg.textContent = '';
+
+  list.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.key;
+    opt.textContent = `${s.title} (${s.folder}) — ${s.status || 'Offline'}`;
+    if(s.key === activeKey) opt.selected = true;
+    sel.appendChild(opt);
+
+    const item = document.createElement('div');
+    item.className = 'srv-option-item' + (s.key === activeKey ? ' selected' : '');
+    const isAuto = autoSrv && autoSrv.key === s.key;
+    item.innerHTML = `
+      <div>
+        <div class="srv-option-title">${escapeHtml(s.title)}${isAuto ? '<span class="auto-badge">محدد تلقائياً</span>' : ''}</div>
+        <div class="srv-option-meta">${escapeHtml(s.folder)} · ${escapeHtml(s.subtitle || '')}</div>
+      </div>
+      <span class="tag ${statusClass(s.status) === 'running' ? 'ok' : (statusClass(s.status) === 'banned' ? 'bad' : '')}">${escapeHtml((s.status || 'Offline').toUpperCase())}</span>
+    `;
+    item.onclick = () => {
+      selectedDeleteServerKey = s.key;
+      renderDeleteServerPicker(list, selectedDeleteServerKey);
+    };
+    box.appendChild(item);
+  });
+}
+
+async function proceedDeleteSelectedServer(){
+  const selVal = document.getElementById('delSrvSelect').value || selectedDeleteServerKey;
+  const target = deleteCandidatesCache.find(s => s.key === selVal || s.folder === selVal);
+  if(!target){
+    document.getElementById('delSrvMsg').textContent = 'يرجى اختيار سيرفر أولاً.';
+    return;
+  }
+  closeDeleteServerPicker();
+  const ok = await showConfirm(
+    'تأكيد حذف السيرفر',
+    `هل أنت متأكد من حذف السيرفر "${target.title}" (المجلد: ${target.folder}) نهائياً مع جميع ملفاته وسجلاته؟`
+  );
+  if(!ok) return;
+  await executeDeleteServer(target.key, target.title);
+}
+
+async function executeDeleteServer(key, title){
   let r = await fetch(`/server/delete/${encodeURIComponent(key)}`, { method: 'POST' });
   if(r.status === 404 || r.status === 405){
     r = await fetch(`/server/delete/${encodeURIComponent(key)}`, { method: 'DELETE' });
@@ -1767,6 +2027,10 @@ async function deleteServerByKey(key, title){
     return false;
   }
 
+  if(getLastAutoBuiltServer() === key){
+    try{ localStorage.removeItem(AUTO_BUILT_KEY); }catch{}
+  }
+
   toast(`تم حذف السيرفر "${title || key}" ✅`, 'ok');
   if(currentSrv && (currentSrv.key === key || currentSrv.folder === key)){
     stopPoll();
@@ -1775,13 +2039,25 @@ async function deleteServerByKey(key, title){
   }else{
     await loadServers();
   }
+  if(document.getElementById('adminView').style.display !== 'none'){
+    await refreshAll();
+  }
   await loadPythonHost();
   return true;
 }
 
+async function deleteServerByKey(key, title){
+  const ok = await showConfirm(
+    'حذف سيرفر',
+    `هل أنت متأكد من حذف السيرفر "${title || key}" نهائياً مع جميع ملفاته وسجلاته؟`
+  );
+  if(!ok) return false;
+  return await executeDeleteServer(key, title);
+}
+
 async function deleteCurrentServer(){
   if(!currentSrv) return;
-  await deleteServerByKey(currentSrv.key || currentSrv.folder, currentSrv.title || currentSrv.folder);
+  await openDeleteServerPicker(currentSrv.key || currentSrv.folder);
 }
 
 /* ربط أزرار المميزات والبنود بالوظائف والأقسام */
@@ -2311,6 +2587,7 @@ document.getElementById('newBtn').onclick = () => openM('اسم السيرفر �
   });
   await fetch(`/server/action/${encodeURIComponent(srvKey)}/start`, { method: 'POST' });
 
+  setLastAutoBuiltServer(srvKey);
   toast(`تم إنشاء وتشغيل السيرفر (${kind.toUpperCase()}) ✅`, 'ok');
   closeM();
   await loadServers();
@@ -2509,7 +2786,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabMap = { login: '/login', create: '/create', admin: '/admin', home: '/' };
   const initialRoute = window.__INITIAL_TAB__ && tabMap[window.__INITIAL_TAB__]
     ? tabMap[window.__INITIAL_TAB__]
-    : (['/login','/create','/admin','/'].includes(window.location.pathname)
+    : (['/login', '/create', '/admin', '/'].includes(window.location.pathname)
       ? window.location.pathname
       : (getSession() ? '/' : '/login'));
   renderRoute(initialRoute);
