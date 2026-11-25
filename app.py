@@ -62,6 +62,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
     ContextTypes,
+    ConversationHandler,
 )
 
 logging.basicConfig(
@@ -106,7 +107,7 @@ bot_scripts = {}
 for d in [
     RUNNING_DIR, LOGS_DIR, DB_DIR, ASSETS_DIR, STORE_DIR, THUMBS_DIR,
     MARKET_DIR, ENV_DIR, ENCRYPTED_DIR, DOWNLOAD_DIR, UPLOAD_DIR,
-    SUSPICIOUS_DIR, BACKUPS_DIR, USERS_ROOT, DATA_DIR, SERVICES_STORAGE_DIR,
+    SUSPICIOUS_DIR, BACKUPS_DIR, USERS_ROOT, DATA_DIR, SERVICES_STORAGE_DIR
 ]:
     os.makedirs(d, exist_ok=True)
 
@@ -129,37 +130,31 @@ INDEX_HTML_PATH = os.path.join(BASE_DIR, "index.html")
 PANEL_PORT_PRIMARY = int(os.environ.get("PORT", os.environ.get("SERVER_PORT", 8008)))
 PANEL_PORT_SECONDARY = int(os.environ.get("SECONDARY_SERVER_PORT", 3004))
 
-# توحيد بيانات الأدمن والتوكن والروابط الأساسية
 ADMIN_USERNAME = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASS", "1002670694")
 ADMIN_FREE_MODE = True
 
-UNIFIED_BOT_TOKEN = (
-    os.environ.get("BOT_TOKEN")
-    or os.environ.get("TELEBOT_TOKEN")
-    or "8641088295:AAGlgERmbLszyMQtxxzGXcfyurACiX5aMhg"
-).strip()
-TOKEN = UNIFIED_BOT_TOKEN
-BOT_TOKEN = UNIFIED_BOT_TOKEN
+TOKEN = os.environ.get("TOKEN", "8641088295:AAGlgERmbLszyMQtxxzGXcfyurACiX5aMhg").strip()
 
-ADMIN_ID = int(os.environ.get("ADMIN_ID", "1002670694"))
-ADMIN_TELEGRAM_IDS = [ADMIN_ID]
+
+_admin_ids_raw = os.environ.get("ADMIN_TELEGRAM_IDS", "1002670694")
+ADMIN_TELEGRAM_IDS = [
+    int(x.strip()) for x in _admin_ids_raw.split(",") if x.strip().isdigit()
+]
+ADMIN_ID = int(os.environ.get("ADMIN_ID", str(ADMIN_TELEGRAM_IDS[0] if ADMIN_TELEGRAM_IDS else 1002670694)))
+if ADMIN_ID not in ADMIN_TELEGRAM_IDS:
+    ADMIN_TELEGRAM_IDS.append(ADMIN_ID)
 
 FIRE_EFFECT_ID = os.environ.get("FIRE_EFFECT_ID", None)
 DEV_TELEGRAM = os.environ.get("DEV_TELEGRAM", "https://t.me/Y_20_20")
-CHANNEL_EHAB_ME = str(ADMIN_ID)
+CHANNEL_EHAB_ME = os.environ.get("CHANNEL_EHAB_ME", str(ADMIN_ID))
 CHANNEL_EHAB_LINK = os.environ.get("CHANNEL_EHAB_LINK", "https://t.me/Y_20_20")
 user_bot = os.environ.get("BOT_USERNAME", "ehab_host_bot").lstrip("@")
-LOG_CHANNEL_ID = str(ADMIN_ID)
+LOG_CHANNEL_ID = os.environ.get("LOG_CHANNEL_ID", str(ADMIN_ID)).strip()
 
-UNIFIED_SITE_URL = (
-    os.environ.get("PUBLIC_API_URL")
-    or os.environ.get("RENDER_EXTERNAL_URL")
-    or "https://ehab700-host.onrender.com"
-).strip().rstrip("/")
-API_BASE_URL = UNIFIED_SITE_URL
-PUBLIC_API_URL = UNIFIED_SITE_URL
-GOOGLE_REDIRECT_URL = "https://www.google.com"
+API_BASE_URL = os.environ.get("API_BASE_URL", f"http://127.0.0.1:{PANEL_PORT_PRIMARY}").rstrip("/")
+PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "https://ehab700-host.onrender.com").strip()
+GOOGLE_REDIRECT_URL = os.environ.get("GOOGLE_REDIRECT_URL", "https://ehab700-host.onrender.com").strip() or "https://ehab700-host-3.onrender.com"
 
 DEVELOPER_INFO = (
     "<b><blockquote>🛠 طُوِّر بواسطة: 𝗘𝗛𝗔𝗕𝗔𝗜𝗛𝗔𝗪𝗕𝗔𝗡𝗜</blockquote></b>\n"
@@ -167,7 +162,6 @@ DEVELOPER_INFO = (
     "<tg-spoiler>نسخة الأدمن مجانية ومحمية بالكامل - جميع الحقوق محفوظة</tg-spoiler>"
 )
 
-# تخزين كل خدمة في ملف منفصل داخل SERVICES_STORAGE_DIR
 SERVICES_CATALOG = {
     "srv_python_host": {
         "id": "srv_python_host",
@@ -176,14 +170,6 @@ SERVICES_CATALOG = {
         "currency": "USD",
         "desc": "تشغيل سكريبتات وبوتات بايثون مع تثبيت تلقائي للمكتبات.",
         "file": os.path.join(SERVICES_STORAGE_DIR, "service_python_host.json"),
-    },
-    "srv_java_host": {
-        "id": "srv_java_host",
-        "name": "استضافة جافا (Java / JAR)",
-        "price": 6.0,
-        "currency": "USD",
-        "desc": "إدارة وتشغيل تطبيقات وملفات جافا عبر السيرفر واللوحة.",
-        "file": os.path.join(SERVICES_STORAGE_DIR, "service_java_host.json"),
     },
     "srv_php_host": {
         "id": "srv_php_host",
@@ -232,7 +218,6 @@ USER_STEPS = {}
 USERS = {}
 running_procs = {}
 server_states = {}
-ptb_user_states = {}
 
 bot = telebot.TeleBot(TOKEN, parse_mode="HTML", threaded=True)
 app = Flask(__name__)
@@ -254,13 +239,13 @@ def is_path_safe(base_dir: str, target_path: str) -> bool:
         return False
 
 
-def write_json(path: str, payload: dict):
+def _atomic_write_json_to(path: str, payload: dict):
     with db_lock:
         abs_path = os.path.abspath(path)
         os.makedirs(os.path.dirname(abs_path), exist_ok=True)
         tmp = abs_path + f".{os.getpid()}.{uuid.uuid4().hex[:6]}.tmp"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(payload if isinstance(payload, dict) else {}, f, indent=2, ensure_ascii=False)
+            json.dump(payload, f, indent=2, ensure_ascii=False)
             f.flush()
             try:
                 os.fsync(f.fileno())
@@ -269,23 +254,32 @@ def write_json(path: str, payload: dict):
         os.replace(tmp, abs_path)
 
 
-def read_json(path: str, default: dict = None) -> dict:
-    fallback = default if isinstance(default, dict) else {}
+def _read_json_from(path: str, default: dict) -> dict:
     with db_lock:
         if not os.path.exists(path):
-            return json.loads(json.dumps(fallback))
+            return json.loads(json.dumps(default))
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return data if isinstance(data, dict) else json.loads(json.dumps(fallback))
+                return data if isinstance(data, dict) else json.loads(json.dumps(default))
         except Exception:
-            return json.loads(json.dumps(fallback))
+            return json.loads(json.dumps(default))
 
 
-_atomic_write_json_to = write_json
-_read_json_from = read_json
-_atomic_write_json = write_json
-_read_json = read_json
+def read_json(path: str) -> dict:
+    return _read_json_from(path, {})
+
+
+def write_json(path: str, payload: dict):
+    _atomic_write_json_to(path, payload if isinstance(payload, dict) else {})
+
+
+def _atomic_write_json(path: str, payload: dict):
+    _atomic_write_json_to(path, payload)
+
+
+def _read_json(path: str, default: dict) -> dict:
+    return _read_json_from(path, default)
 
 
 def db_conn():
@@ -317,7 +311,7 @@ def get_settings() -> dict:
         "maintenance_mode": False,
         "python_upload_price": 1.0,
     }
-    cur = read_json(SETTINGS_DB, defaults)
+    cur = read_json(SETTINGS_DB)
     for k, v in defaults.items():
         if k not in cur:
             cur[k] = v
@@ -336,7 +330,8 @@ def esc(txt) -> str:
     return escape(str(txt or ""))
 
 
-_esc = esc
+def _esc(txt) -> str:
+    return escape(str(txt or ""))
 
 
 def _gb(num_bytes: int) -> str:
@@ -363,17 +358,6 @@ def _dir_size(path: str) -> int:
     except Exception:
         pass
     return total
-
-
-def get_ip():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("10.255.255.255", 1))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except Exception:
-        return "127.0.0.1"
 
 
 def _get_ipinfo() -> dict:
@@ -430,27 +414,15 @@ def scan_with_virustotal(content: str, file_name: str) -> bool:
     return True
 
 
-def _build_welcome_text(uid: int, first_name_raw: str, balance_val) -> str:
-    return (
-        f"<b>▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱</b>\n"
-        f"<b>   🌟 أهلاً بك عزيزي  ⦗ {esc(first_name_raw)} ⦘ 🌟   </b>\n"
-        f"<b>▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱</b>\n\n"
-        f"<b>💌 ︙ ايدي المستخدم : <code>{uid}</code></b>\n"
-        f"<b>💰 ︙ رصيدك المالي : <tg-spoiler>{balance_val}</tg-spoiler> ₽</b>\n"
-        f"<b>🚀 ︙ سرعة الاستضافة : فائقة </b>\n\n"
-        f"<b>💻 ︙ تحكم الآن بكافة الأقسام عبر الأزرار أدناه 👇</b>"
-    )
-
-
-def _send_welcome_screen(chat_id: int, uid: int, first_name_raw: str, users_map: dict, message_id_to_delete: int = None):
-    if message_id_to_delete:
-        try:
-            bot.delete_message(chat_id, message_id_to_delete)
-        except Exception:
-            pass
-    u = users_map.get(str(uid), {})
-    text = _build_welcome_text(uid, first_name_raw, u.get("balance", 0.0))
-    send_msg(chat_id, deco("🏠 القائمة الرئيسية", text, first_name_raw), main_kb(uid), effect_id=FIRE_EFFECT_ID)
+def get_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("10.255.255.255", 1))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
 
 
 # ==============================================================================
@@ -468,7 +440,7 @@ def init_db():
         "maintenance_mode": False,
         "python_upload_price": 1.0,
     }
-    current_settings = read_json(SETTINGS_DB, default_settings)
+    current_settings = read_json(SETTINGS_DB)
     for key, value in default_settings.items():
         if key not in current_settings:
             current_settings[key] = value
@@ -478,13 +450,15 @@ def init_db():
         if not os.path.exists(path):
             write_json(path, {})
 
-    for svc_id, svc_info in SERVICES_CATALOG.items():
-        if not os.path.exists(svc_info["file"]):
-            write_json(svc_info["file"], {"service_id": svc_id, "name": svc_info["name"], "records": []})
+    admins_data = read_json(ADMINS_DB)
+    if "admins" not in admins_data or ADMIN_ID not in admins_data["admins"]:
+        base_admins = admins_data.get("admins", [])
+        if ADMIN_ID not in base_admins:
+            base_admins.append(ADMIN_ID)
+        admins_data["admins"] = base_admins
+        write_json(ADMINS_DB, admins_data)
 
-    write_json(ADMINS_DB, {"admins": [ADMIN_ID]})
-
-    USERS = read_json(USERS_DB, {})
+    USERS = read_json(USERS_DB)
     try:
         db_conn().close()
     except Exception:
@@ -493,7 +467,7 @@ def init_db():
 
 
 def init_security():
-    security = read_json(SECURITY_DB, {})
+    security = read_json(SECURITY_DB)
     if "master_key" not in security:
         master_key = base64.b64encode(get_random_bytes(32)).decode("utf-8")
         security["master_key"] = master_key
@@ -502,7 +476,7 @@ def init_security():
 
 
 def get_master_key():
-    security = read_json(SECURITY_DB, {})
+    security = read_json(SECURITY_DB)
     master_key = security.get("master_key")
     if not master_key:
         master_key = base64.b64encode(get_random_bytes(32)).decode("utf-8")
@@ -512,7 +486,7 @@ def get_master_key():
 
 
 def generate_file_key(fid, user_id):
-    security = read_json(SECURITY_DB, {})
+    security = read_json(SECURITY_DB)
     file_keys = security.get("file_keys", {})
     if fid not in file_keys:
         combined = f"{fid}:{user_id}:{ADMIN_ID}:{TOKEN}"
@@ -530,7 +504,7 @@ def generate_file_key(fid, user_id):
 
 
 def get_file_key(fid):
-    security = read_json(SECURITY_DB, {})
+    security = read_json(SECURITY_DB)
     file_keys = security.get("file_keys", {})
     return file_keys.get(fid)
 
@@ -562,7 +536,7 @@ def encrypt_file_content(content, fid, user_id):
         }
         return json.dumps(encrypted_data)
     except Exception as e:
-        logger.warning(f"Encryption error: {e}")
+        print(f"Encryption error: {e}")
         return None
 
 
@@ -583,7 +557,7 @@ def decrypt_file_content(encrypted_json, fid):
             pt = unpad(cipher.decrypt(ct), AES.block_size)
         return pt.decode("utf-8")
     except Exception as e:
-        logger.warning(f"Decryption error: {e}")
+        print(f"Decryption error: {e}")
         return None
 
 
@@ -614,7 +588,7 @@ def verify_file_access(fid, user_id):
         return False
     file_info = files[fid]
     file_user_id = file_info.get("user_id")
-    if is_admin(user_id):
+    if user_id == ADMIN_ID or is_admin(user_id):
         return True
     if file_user_id == user_id:
         return True
@@ -630,22 +604,41 @@ def is_bot_locked():
 
 
 def is_admin(user_id):
-    return int(user_id) == ADMIN_ID
+    if user_id == ADMIN_ID or user_id in ADMIN_TELEGRAM_IDS:
+        return True
+    admins_data = read_json(ADMINS_DB)
+    return user_id in admins_data.get("admins", [ADMIN_ID])
 
 
 def is_main_admin(user_id):
-    return int(user_id) == ADMIN_ID
+    return user_id == ADMIN_ID
 
 
 def get_admins():
-    return [ADMIN_ID]
+    admins_data = read_json(ADMINS_DB)
+    admins = admins_data.get("admins", [ADMIN_ID])
+    if ADMIN_ID not in admins:
+        admins.append(ADMIN_ID)
+    return admins
 
 
 def add_admin(user_id):
-    return int(user_id) == ADMIN_ID
+    admins_data = read_json(ADMINS_DB)
+    if user_id not in admins_data.get("admins", []):
+        admins_data["admins"] = admins_data.get("admins", []) + [user_id]
+        write_json(ADMINS_DB, admins_data)
+        return True
+    return False
 
 
 def remove_admin(user_id):
+    if user_id == ADMIN_ID:
+        return False
+    admins_data = read_json(ADMINS_DB)
+    if user_id in admins_data.get("admins", []):
+        admins_data["admins"].remove(user_id)
+        write_json(ADMINS_DB, admins_data)
+        return True
     return False
 
 
@@ -747,7 +740,7 @@ def del_msg(chat_id, *msg_ids):
 
 
 def is_user_pro(uid):
-    if is_admin(uid):
+    if uid == ADMIN_ID or is_admin(uid):
         return True
     users = read_json(USERS_DB)
     u = users.get(str(uid), {})
@@ -770,7 +763,7 @@ def is_user_pro(uid):
 
 
 def check_sub(user_id):
-    if is_admin(user_id):
+    if user_id == ADMIN_ID or is_admin(user_id):
         return True
     settings = get_settings()
     channels = settings.get("channels", [])
@@ -1185,11 +1178,6 @@ def repair_source(source, instructions, file_name, model_id=None):
             "- تأكد من صحة الصياغة النحوية (Syntax) والمسافات البادئة (Indentation) بدقة.\n"
             "- لا تغير أسماء الدوال أو المتغيرات الأساسية غير المرتبطة بالطلب.\n"
         )
-    elif ext_lower in (".java", ".jar"):
-        extra_rules = (
-            "\nتوجيهات لملفات Java:\n"
-            "- حافظ على تعريف الفئات (classes) ودالة main الصحيحة دون حذف أو تغيير عشوائي.\n"
-        )
 
     prompt = (
         "أنت مبرمج محترف متخصص في تصحيح وإصلاح وتعديل ملفات الأكواد البرمجية. "
@@ -1339,16 +1327,12 @@ def handle_admin_system(call):
     except Exception:
         boot = "مستمر"
 
-    ip_query = esc(str(ip.get("query", "غير متاح")))
-    ip_isp = esc(str(ip.get("isp", "—")))
-    boot_str = str(boot).split(".")[0] if hasattr(boot, "__str__") else "مستمر"
-
     text = (
-        f"<blockquote>💻 <b>معلومات النظام والسيرفر (Unified Mode)</b></blockquote>\n\n"
+        f"<blockquote>💻 <b>معلومات النظام والسيرفر (Pydroid Mode)</b></blockquote>\n\n"
         f"<blockquote>"
-        f"🌍 <b>الموقع:</b> {esc(place)}\n"
-        f"🌐 <b>IP:</b> <code>{ip_query}</code>\n"
-        f"🏢 <b>المزود:</b> {ip_isp}"
+        f"🌍 <b>الموقع:</b> {_esc(place)}\n"
+        f"🌐 <b>IP:</b> <code>{_esc(str(ip.get('query', 'غير متاح')))}</code>\n"
+        f"🏢 <b>المزود:</b> {_esc(str(ip.get('isp', '—')))}"
         f"</blockquote>\n\n"
         f"<blockquote>"
         f"🧠 <b>CPU:</b> {cpu_total:.0f}% | {freq_s}\n"
@@ -1369,7 +1353,7 @@ def handle_admin_system(call):
         f"<blockquote>"
         f"🤖 <b>البوت:</b> {_mb(proc.memory_info().rss)} MB | {proc.num_threads()} thread\n"
         f"▶️ <b>سكربتات شغالة:</b> {len(bot_scripts)}\n"
-        f"⏱ <b>تشغيل البوت:</b> {boot_str}\n"
+        f"⏱ <b>تشغيل البوت:</b> {str(boot).split('.')[0]}\n"
         f"🖥 <b>OS:</b> {uname.system} {uname.release} | Python {platform.python_version()}"
         f"</blockquote>"
     )
@@ -1525,8 +1509,7 @@ def handle_sys_top(call):
             who = "🤖 البوت نفسه"
         elif pid in by_pid:
             inf = by_pid[pid]
-            fname_val = esc(str(inf.get("file_name", "")))
-            who = f"📄 {fname_val} (<code>{inf.get('owner_id')}</code>)"
+            who = f"📄 {_esc(str(inf.get('file_name')))} (<code>{inf.get('owner_id')}</code>)"
         else:
             who = f"⚙️ PID {pid}"
         lines.append(f"{who} — <b>{_mb(rss)} MB</b>")
@@ -1565,7 +1548,7 @@ def start_cmd(msg):
             }
             write_json(USERS_DB, users)
             try:
-                first = esc(f"{first_name_raw} {msg.from_user.last_name or ''}".strip())
+                first = esc(f"{first_name_raw} {msg.from_user.last_name or ''}")
                 user = msg.from_user.username or "لا يوجد"
                 day2, _ = get_date_strings()
                 cap = (
@@ -1573,7 +1556,7 @@ def start_cmd(msg):
                     f"➖ <b>إسم الشخص:</b> <a href=\"tg://user?id={uid}\">{first}</a> 📝•\n"
                     f"➖ <b>الحالة :</b> تم التحقق وليس روبوت ✅️ •\n"
                     f"➖ <b>ايديه :</b> <code>{uid}</code> 🆔️•\n"
-                    f"➖ <b>معرف حسابه :</b> @{esc(user)} 📮•\n\n"
+                    f"➖ <b>معرف حسابه :</b> @{user} 📮•\n\n"
                     f"        🔰\n"
                     f"➖➖➖➖➖➖\n"
                     f"📆 - {day2}"
@@ -1581,13 +1564,13 @@ def start_cmd(msg):
                 structure = [
                     [{"text": "👤 كشف العضو", "url": f"tg://openmessage?user_id={uid}", "style": "primary"}]
                 ]
-                for adm in get_admins():
+                for _adm in get_admins():
                     try:
                         photos = bot.get_user_profile_photos(uid)
                         if photos.total_count > 0:
-                            bot.send_photo(adm, photos.photos[0][-1].file_id, caption=cap, parse_mode="HTML", reply_markup=build_keyboard(structure))
+                            bot.send_photo(CHANNEL_EHAB_ME, photos.photos[0][-1].file_id, caption=cap, parse_mode="HTML", reply_markup=build_keyboard(structure))
                         else:
-                            bot.send_message(adm, cap, parse_mode="HTML", reply_markup=build_keyboard(structure))
+                            bot.send_message(CHANNEL_EHAB_ME, cap, parse_mode="HTML", reply_markup=build_keyboard(structure))
                     except Exception:
                         pass
             except Exception:
@@ -1597,9 +1580,24 @@ def start_cmd(msg):
             return bot.send_message(msg.chat.id, deco("🚫 محظور", "عذراً، تم حظرك نهائياً من استخدام البوت.", first_name_raw))
         if not check_sub(uid):
             return sub_msg(msg.chat.id)
-        _send_welcome_screen(msg.chat.id, uid, first_name_raw, users, message_id_to_delete=msg.message_id)
+        try:
+            bot.delete_message(msg.chat.id, msg.message_id)
+        except Exception:
+            pass
+        u = users.get(str(uid), {})
+
+        text = (
+            f"<b>▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱</b>\n"
+            f"<b>   🌟 أهلاً بك عزيزي  ⦗ {first_name_raw} ⦘ 🌟   </b>\n"
+            f"<b>▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱</b>\n\n"
+            f"<b>💌 ︙ ايدي المستخدم : <code>{msg.chat.id}</code></b>\n"
+            f"<b>💰 ︙ رصيدك المالي : <tg-spoiler>{u.get('balance', 0.0)}</tg-spoiler> ₽</b>\n"
+            f"<b>🚀 ︙ سرعة الاستضافة : فائقة </b>\n\n"
+            f"<b>💻 ︙ تحكم الآن بكافة الأقسام عبر الأزرار أدناه 👇</b>"
+        )
+        send_msg(msg.chat.id, deco("🏠 القائمة الرئيسية", text, first_name_raw), main_kb(uid), effect_id=FIRE_EFFECT_ID)
     except Exception as e:
-        logger.warning(f"Start Error: {e}")
+        print(f"Start Error: {e}")
 
 
 def sub_msg(chat_id):
@@ -1609,16 +1607,11 @@ def sub_msg(chat_id):
         return
     kb = types.InlineKeyboardMarkup(row_width=1)
     for ch in channels:
-        ch_username = (ch.get("username") or "").lstrip("@").strip()
-        ch_title = ch.get("name") or ch_username or "قناة"
-        if ch_username:
-            kb.add(btn(f"📢 {ch_title}", url=f"https://t.me/{ch_username}", style="primary"))
-    if user_bot:
-        kb.add(btn("🔙 العودة إلى البوت", url=f"https://t.me/{user_bot.lstrip('@')}", style="danger"))
+        ch_username = ch["username"].replace("@", "")
+        kb.add(btn(f"📢 {ch['name']}", url=f"[https://t.me/](https://t.me/){ch_username}", style="primary"))
     kb.add(btn("✅ تحقق من الاشتراك", callback_data="check_sub", style="success"))
     text = "🔔 <b>اشتراك إجباري مطلوب</b>\n\nيجب عليك الاشتراك في القنوات التالية لاستخدام البوت:"
     send_msg(chat_id, deco("🔔 اشتراك مطلوب", text), kb, effect_id=FIRE_EFFECT_ID)
-
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -1640,7 +1633,21 @@ def callback_router(call):
         if data in ("cancel", "user_home", "nav_main"):
             set_cancel(uid, True)
             bot.answer_callback_query(call.id, "✅ تم العودة للقائمة.")
-            _send_welcome_screen(cid, uid, first_name_raw, users, message_id_to_delete=call.message.message_id)
+            u = users.get(str(uid), {})
+            text = (
+                f"<b>▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱</b>\n"
+                f"<b>   🌟 أهلاً بك عزيزي  ⦗ {first_name_raw} ⦘ 🌟   </b>\n"
+                f"<b>▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱</b>\n\n"
+                f"<b>💌 ︙ ايدي المستخدم : <code>{cid}</code></b>\n"
+                f"<b>💰 ︙ رصيدك المالي : <tg-spoiler>{u.get('balance', 0.0)}</tg-spoiler> ₽</b>\n"
+                f"<b>🚀 ︙ سرعة الاستضافة : فائقة </b>\n\n"
+                f"<b>💻 ︙ تحكم الآن بكافة الأقسام عبر الأزرار أدناه 👇</b>"
+            )
+            try:
+                bot.delete_message(cid, call.message.message_id)
+            except Exception:
+                pass
+            send_msg(cid, deco("🏠 القائمة الرئيسية", text, first_name_raw), main_kb(uid), effect_id=FIRE_EFFECT_ID)
             return
 
         if data == "admin_system_status":
@@ -1670,7 +1677,21 @@ def callback_router(call):
         if data == "check_sub":
             if check_sub(uid):
                 bot.answer_callback_query(call.id, "✅ تم التحقق بنجاح!")
-                _send_welcome_screen(cid, uid, first_name_raw, users, message_id_to_delete=call.message.message_id)
+                u = users.get(str(uid), {})
+                text = (
+                    f"<b>▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱</b>\n"
+                    f"<b>   🌟 أهلاً بك عزيزي  ⦗ {first_name_raw} ⦘ 🌟   </b>\n"
+                    f"<b>▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱</b>\n\n"
+                    f"<b>💌 ︙ ايدي المستخدم : <code>{cid}</code></b>\n"
+                    f"<b>💰 ︙ رصيدك المالي : <tg-spoiler>{u.get('balance', 0.0)}</tg-spoiler> ₽</b>\n"
+                    f"<b>🚀 ︙ سرعة الاستضافة : فائقة </b>\n\n"
+                    f"<b>💻 ︙ تحكم الآن بكافة الأقسام عبر الأزرار أدناه 👇</b>"
+                )
+                try:
+                    bot.delete_message(cid, call.message.message_id)
+                except Exception:
+                    pass
+                send_msg(cid, deco("🏠 القائمة الرئيسية", text, first_name_raw), main_kb(uid), effect_id=FIRE_EFFECT_ID)
             else:
                 bot.answer_callback_query(call.id, "❌ لم تقم بالاشتراك في كافة القنوات!", show_alert=True)
             return
@@ -1758,9 +1779,7 @@ def callback_router(call):
                 elif e:
                     exp = e
             vip_label = "VIP 👑" if vip else "مجاني 🆓"
-            pts_val = u.get("points", 0)
-            bal_val = u.get("balance", 0.0)
-            text = f"💰 رصيدك الحالي: <code>{pts_val}</code> نقطة | 💵 الرصيد المالي: <code>{bal_val}</code> ₽\n💎 الرتبة: {vip_label}\n⏰ صلاحية VIP: {exp}\n\n💡 ملاحظة: يتم رفع الملفات وتشغيلها حصرياً عبر رصيد النقاط."
+            text = f"💰 رصيدك الحالي: <code>{u.get('points', 0)}</code> نقطة | 💵 الرصيد المالي: <code>{u.get('balance', 0.0)}</code> ₽\n💎 الرتبة: {vip_label}\n⏰ صلاحية VIP: {exp}\n\n💡 ملاحظة: يتم رفع الملفات وتشغيلها حصرياً عبر رصيد النقاط."
             kb = types.InlineKeyboardMarkup(row_width=1)
             kb.add(btn("⎙● رجـــــوع ●⎙", callback_data="nav_main", style="primary"))
             try:
@@ -1852,7 +1871,9 @@ def callback_router(call):
             delete_file(call, data.split("_")[1])
         elif data.startswith("dl_"):
             download_file(call, data.split("_")[1])
-        elif data.startswith(("term_", "rterm_")):
+        elif data.startswith("term_"):
+            terminal(call, data.split("_")[1])
+        elif data.startswith("rterm_"):
             terminal(call, data.split("_")[1])
         elif data.startswith("inp_"):
             fid = data.split("_")[1]
@@ -1917,10 +1938,7 @@ def callback_router(call):
                     except Exception:
                         exp = e
             vip_label = "VIP 👑" if vip else "مجاني 🆓"
-            uname_val = esc(u.get("username") or "لا يوجد")
-            jdate_val = esc(u.get("join_date") or "اليوم")
-            pts_val = u.get("points", 0)
-            text = f"🆔 الآيدي: <code>{uid}</code>\n🔗 المعرف: @{uname_val}\n📅 الانضمام: {jdate_val}\n\n💎 الرتبة: {vip_label}\n⏰ صلاحية VIP: {exp}\n💰 رصيد النقاط: <code>{pts_val}</code>\n\n📁 ملفاتك: {len(u_files)}\n🟢 قيد التشغيل: {running}"
+            text = f"🆔 الآيدي: <code>{uid}</code>\n🔗 المعرف: @{u.get('username', 'لا يوجد')}\n📅 الانضمام: {u.get('join_date', 'اليوم')}\n\n💎 الرتبة: {vip_label}\n⏰ صلاحية VIP: {exp}\n💰 رصيد النقاط: <code>{u.get('points', 0)}</code>\n\n📁 ملفاتك: {len(u_files)}\n🟢 قيد التشغيل: {running}"
             kb = types.InlineKeyboardMarkup()
             kb.add(btn("💼 محفظتي", callback_data="nav_wallet", style="primary"))
             kb.add(btn("⎙● رجـــــوع ●⎙", callback_data="nav_main", style="primary"))
@@ -2073,7 +2091,7 @@ def callback_router(call):
                         os.remove(p)
                         cleaned_count += 1
             except Exception as e:
-                logger.warning(f"Clean error: {e}")
+                print(f"Clean error: {e}")
             bot.answer_callback_query(call.id, f"🧹 تم تنظيف كافة مخلفات الاستضافة والمؤقتات بنجاح! تم حذف ({cleaned_count}) عنصراً مع الاحتفاظ بأيدي وأرصدة المستخدمين والبوتات النشطة لتسريع الاستضافة.", show_alert=True)
             admin_panel(call)
 
@@ -2111,7 +2129,7 @@ def callback_router(call):
         elif data.startswith("delch_") and is_admin(uid):
             del_channel(call, int(data.split("_")[1]))
     except Exception as e:
-        logger.warning(f"Callback Error: {e}")
+        print(f"Callback Error: {e}")
 
 
 def pro_grant_step(msg, tuid, prompt_id):
@@ -2202,74 +2220,20 @@ def cb_ai_repair_confirm(call):
         except Exception:
             pass
     except Exception as e:
-        logger.warning(f"AI Repair Error: {e}")
+        print(f"AI Repair Error: {e}")
         bot.answer_callback_query(call.id, "❌ حدث خطأ أثناء عملية المعالجة بالذكاء الاصطناعي!", show_alert=True)
-
-
-def _validate_and_prepare_upload(msg, prompt_id, expected_ext: str, label_name: str, nav_back: str):
-    uid = msg.from_user.id
-    if is_cancelled(uid):
-        clear_cancel(uid)
-        return None, None
-    del_msg(msg.chat.id, prompt_id, msg.message_id)
-    first_name_raw = msg.from_user.first_name or "مستخدم"
-    if not msg.document or not msg.document.file_name.endswith(expected_ext):
-        send_msg(msg.chat.id, deco("❌ خطأ", f"يجب إرسال {label_name} بصيغة {expected_ext}", first_name_raw), back_kb(nav_back), effect_id=FIRE_EFFECT_ID)
-        return None, None
-    users = read_json(USERS_DB)
-    pts = users.get(str(uid), {}).get("points", 0)
-    st_settings = get_settings()
-    required_price = st_settings.get("python_upload_price", 1.0)
-    if pts < required_price and not is_user_pro(uid):
-        send_msg(msg.chat.id, deco("❌ رصيد غير كافي", f"رصيدك الحالي لا يكفي لرفع الملف! السعر المطلوب: {required_price} نقطة.", first_name_raw), back_kb("nav_wallet"), effect_id=FIRE_EFFECT_ID)
-        return None, None
-    return pts, required_price
-
-
-def _register_pending_upload(user_id: int, file_name: str, content_str: str, hours: int, upload_kind: str):
-    fid = gen_id()
-    if not save_encrypted_file(fid, content_str, user_id):
-        send_msg(user_id, deco("❌ خطأ", "فشل في حفظ وتشفير الملف بأمان!"), effect_id=FIRE_EFFECT_ID)
-        return False
-
-    files = read_json(FILES_DB)
-    files[fid] = {
-        "user_id": user_id,
-        "file_name": file_name,
-        "type": "free" if not is_user_pro(user_id) else "pro",
-        "status": "pending",
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "hours": hours,
-    }
-    write_json(FILES_DB, files)
-
-    for adm in get_admins():
-        try:
-            admin_kb = build_keyboard([
-                [{"text": "📥 تحميل الملف", "callback_data": f"vdl_{fid}", "style": "primary"},
-                 {"text": "✅ موافقة ✅", "callback_data": f"vapprove_{fid}", "style": "success"}],
-                [{"text": "❌ رفض ❌", "callback_data": f"vdel_{fid}", "style": "danger"}],
-            ])
-            bot.send_message(
-                adm,
-                f"📤 <b>طلب رفع {upload_kind} جديد معلق للمراجعة:</b>\n\n📄 الملف: <code>{escape(file_name)}</code>\n👤 الآيدي: <code>{user_id}</code>\n⏰ الساعات: {hours}",
-                parse_mode="HTML",
-                reply_markup=admin_kb,
-            )
-        except Exception as e:
-            logger.warning(f"Admin pending notify error: {e}")
-
-    text = f"⏳ <b>تم رفع {upload_kind} بنجاح وهو قيد المراجعة والتعليق بانتظار موافقة الإدارة.</b>\n\n📄 <code>{escape(file_name)}</code>\n⏰ الساعات المطلوبة: {hours}"
-    send_msg(user_id, deco("⏳ قيد المراجعة", text), back_kb(), effect_id=FIRE_EFFECT_ID)
-    return True
 
 
 def upload_step(msg, prompt_id):
     uid = msg.from_user.id
-    pts, required_price = _validate_and_prepare_upload(msg, prompt_id, ".py", "ملف سكريبت بلغة بايثون", "nav_upload")
-    if pts is None:
+    if is_cancelled(uid):
+        clear_cancel(uid)
         return
+    del_msg(msg.chat.id, prompt_id, msg.message_id)
     first_name_raw = msg.from_user.first_name or "مستخدم"
+    if not msg.document or not msg.document.file_name.endswith(".py"):
+        send_msg(msg.chat.id, deco("❌ خطأ", "يجب إرسال ملف سكريبت بلغة بايثون بصيغة .py", first_name_raw), back_kb("nav_upload"), effect_id=FIRE_EFFECT_ID)
+        return
 
     try:
         finfo = bot.get_file(msg.document.file_id)
@@ -2293,7 +2257,16 @@ def upload_step(msg, prompt_id):
                     pass
             return
     except Exception as e:
-        logger.warning(f"Security check error: {e}")
+        print(f"Security check error: {e}")
+
+    users = read_json(USERS_DB)
+    pts = users.get(str(uid), {}).get("points", 0)
+    st_settings = get_settings()
+    required_price = st_settings.get("python_upload_price", 1.0)
+
+    if pts < required_price and not is_user_pro(uid):
+        send_msg(msg.chat.id, deco("❌ رصيد غير كافي", f"رصيدك الحالي لا يكفي لرفع ملف! السعر المطلوب: {required_price} نقطة.", first_name_raw), back_kb("nav_wallet"), effect_id=FIRE_EFFECT_ID)
+        return
 
     m = send_msg(
         msg.chat.id,
@@ -2307,10 +2280,14 @@ def upload_step(msg, prompt_id):
 
 def upload_zip_step(msg, prompt_id):
     uid = msg.from_user.id
-    pts, required_price = _validate_and_prepare_upload(msg, prompt_id, ".zip", "ملف مضغوط", "nav_upload_zip")
-    if pts is None:
+    if is_cancelled(uid):
+        clear_cancel(uid)
         return
+    del_msg(msg.chat.id, prompt_id, msg.message_id)
     first_name_raw = msg.from_user.first_name or "مستخدم"
+    if not msg.document or not msg.document.file_name.endswith(".zip"):
+        send_msg(msg.chat.id, deco("❌ خطأ", "يجب إرسال ملف مضغوط بصيغة .zip", first_name_raw), back_kb("nav_upload_zip"), effect_id=FIRE_EFFECT_ID)
+        return
 
     try:
         finfo = bot.get_file(msg.document.file_id)
@@ -2371,6 +2348,15 @@ def upload_zip_step(msg, prompt_id):
         except Exception:
             pass
 
+        users = read_json(USERS_DB)
+        pts = users.get(str(uid), {}).get("points", 0)
+        st_settings = get_settings()
+        required_price = st_settings.get("python_upload_price", 1.0)
+
+        if pts < required_price and not is_user_pro(uid):
+            send_msg(msg.chat.id, deco("❌ رصيد غير كافي", f"رصيدك الحالي لا يكفي لرفع ملف ZIP! السعر المطلوب: {required_price} نقطة.", first_name_raw), back_kb("nav_wallet"), effect_id=FIRE_EFFECT_ID)
+            return
+
         m = send_msg(
             msg.chat.id,
             deco("⏰ تحديد الساعات لملف ZIP", f"الملف المضغوط: <b>{escape(msg.document.file_name)}</b>\n\n💰 رصيدك المتاح: <code>{pts}</code> نقطة\n💵 سعر الرفع: {required_price} نقطة\n\nأرسل عدد الساعات المطلوبة للتشغيل:", first_name_raw),
@@ -2381,50 +2367,134 @@ def upload_zip_step(msg, prompt_id):
         bot.register_next_step_handler(m, hours_zip_step, msg.document.file_name, main_content, m.message_id)
 
     except Exception as e:
-        logger.warning(f"ZIP Upload error: {e}")
+        print(f"ZIP Upload error: {e}")
         send_msg(msg.chat.id, deco("❌ خطأ", "حدث خطأ أثناء معالجة ملف الـ ZIP وفحص قواعد البيانات والمسارات.", first_name_raw), back_kb("nav_main"), effect_id=FIRE_EFFECT_ID)
 
 
-def _parse_and_validate_hours(msg, prompt_id, nav_back: str):
+def hours_zip_step(msg, zip_filename, main_content, prompt_id):
     uid = msg.from_user.id
     if is_cancelled(uid):
         clear_cancel(uid)
-        return None
+        return
     del_msg(msg.chat.id, prompt_id, msg.message_id)
     first_name_raw = msg.from_user.first_name or "مستخدم"
     if not msg.text or not msg.text.strip().isdigit():
-        send_msg(msg.chat.id, deco("❌ خطأ", "أرسل رقماً صحيحاً للساعات!", first_name_raw), back_kb(nav_back), effect_id=FIRE_EFFECT_ID)
-        return None
+        send_msg(msg.chat.id, deco("❌ خطأ", "أرسل رقماً صحيحاً للساعات!", first_name_raw), back_kb("nav_upload_zip"), effect_id=FIRE_EFFECT_ID)
+        return
     hours = int(msg.text.strip())
-    if hours < 1:
-        send_msg(msg.chat.id, deco("❌ خطأ", "يجب اختيار ساعة واحدة على الأقل!", first_name_raw), back_kb(nav_back), effect_id=FIRE_EFFECT_ID)
-        return None
     users = read_json(USERS_DB)
     pts = users.get(str(uid), {}).get("points", 0)
-    required_price = get_settings().get("python_upload_price", 1.0)
+    st_settings = get_settings()
+    required_price = st_settings.get("python_upload_price", 1.0)
+
+    if hours < 1:
+        send_msg(msg.chat.id, deco("❌ خطأ", "يجب اختيار ساعة واحدة على الأقل!", first_name_raw), back_kb("nav_upload_zip"), effect_id=FIRE_EFFECT_ID)
+        return
     total_cost = required_price * hours
     if total_cost > pts and not is_user_pro(uid):
         send_msg(msg.chat.id, deco("❌ رصيد غير كافي", f"تحتاج إلى {total_cost} نقطة، ورصيدك الحالي {pts} نقطة.", first_name_raw), back_kb("nav_wallet"), effect_id=FIRE_EFFECT_ID)
-        return None
-    return hours, total_cost
-
-
-def hours_zip_step(msg, zip_filename, main_content, prompt_id):
-    parsed = _parse_and_validate_hours(msg, prompt_id, "nav_upload_zip")
-    if not parsed:
         return
-    hours, _total_cost = parsed
-    _register_pending_upload(msg.from_user.id, zip_filename, main_content, hours, "ملف ZIP")
+
+    fid = gen_id()
+    if not save_encrypted_file(fid, main_content, uid):
+        send_msg(uid, deco("❌ خطأ", "فشل في حفظ وتشفير ملف المشروع بأمان!"), effect_id=FIRE_EFFECT_ID)
+        return
+
+    files = read_json(FILES_DB)
+    files[fid] = {
+        "user_id": uid,
+        "file_name": zip_filename,
+        "type": "free" if not is_user_pro(uid) else "pro",
+        "status": "pending",
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "hours": hours,
+    }
+    write_json(FILES_DB, files)
+
+    for adm in get_admins():
+        try:
+            admin_kb = build_keyboard([
+                [{"text": "📥 تحميل الملف", "callback_data": f"vdl_{fid}", "style": "primary"},
+                 {"text": "✅ موافقة ✅", "callback_data": f"vapprove_{fid}", "style": "success"}],
+                [{"text": "❌ رفض ❌", "callback_data": f"vdel_{fid}", "style": "danger"}],
+            ])
+            bot.send_message(
+                adm,
+                f"📦 <b>طلب رفع ملف ZIP جديد معلق للمراجعة:</b>\n\n📄 الأرشيف: <code>{escape(zip_filename)}</code>\n👤 الآيدي: <code>{uid}</code>\n⏰ الساعات: {hours}",
+                parse_mode="HTML",
+                reply_markup=admin_kb,
+            )
+        except Exception as e:
+            print(f"Admin pending ZIP notify error: {e}")
+
+    text = f"⏳ <b>تم رفع أرشيف الـ ZIP بنجاح وهو قيد المراجعة والتعليق بانتظار موافقة الإدارة.</b>\n\n📄 <code>{escape(zip_filename)}</code>\n⏰ الساعات المطلوبة: {hours}"
+    send_msg(uid, deco("⏳ قيد المراجعة", text), back_kb(), effect_id=FIRE_EFFECT_ID)
 
 
 def hours_step(msg, doc, prompt_id):
-    parsed = _parse_and_validate_hours(msg, prompt_id, "nav_upload")
-    if not parsed:
+    uid = msg.from_user.id
+    if is_cancelled(uid):
+        clear_cancel(uid)
         return
-    hours, _total_cost = parsed
+    del_msg(msg.chat.id, prompt_id, msg.message_id)
+    first_name_raw = msg.from_user.first_name or "مستخدم"
+    if not msg.text or not msg.text.strip().isdigit():
+        send_msg(msg.chat.id, deco("❌ خطأ", "أرسل رقماً صحيحاً للساعات!", first_name_raw), back_kb("nav_upload"), effect_id=FIRE_EFFECT_ID)
+        return
+    hours = int(msg.text.strip())
+    users = read_json(USERS_DB)
+    pts = users.get(str(uid), {}).get("points", 0)
+    st_settings = get_settings()
+    required_price = st_settings.get("python_upload_price", 1.0)
+
+    if hours < 1:
+        send_msg(msg.chat.id, deco("❌ خطأ", "يجب اختيار ساعة واحدة على الأقل!", first_name_raw), back_kb("nav_upload"), effect_id=FIRE_EFFECT_ID)
+        return
+    total_cost = required_price * hours
+    if total_cost > pts and not is_user_pro(uid):
+        send_msg(msg.chat.id, deco("❌ رصيد غير كافي", f"تحتاج إلى {total_cost} نقطة، ورصيدك الحالي {pts} نقطة.", first_name_raw), back_kb("nav_wallet"), effect_id=FIRE_EFFECT_ID)
+        return
+    complete_upload(doc, uid, hours, total_cost)
+
+
+def complete_upload(doc, user_id, hours, total_cost):
+    fid = gen_id()
     finfo = bot.get_file(doc.file_id)
     file_content = bot.download_file(finfo.file_path).decode("utf-8")
-    _register_pending_upload(msg.from_user.id, doc.file_name, file_content, hours, "ملف")
+
+    if not save_encrypted_file(fid, file_content, user_id):
+        send_msg(user_id, deco("❌ خطأ", "فشل في حفظ وتشفير الملف بأمان!"), effect_id=FIRE_EFFECT_ID)
+        return
+
+    files = read_json(FILES_DB)
+    files[fid] = {
+        "user_id": user_id,
+        "file_name": doc.file_name,
+        "type": "free" if not is_user_pro(user_id) else "pro",
+        "status": "pending",
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "hours": hours,
+    }
+    write_json(FILES_DB, files)
+
+    for adm in get_admins():
+        try:
+            admin_kb = build_keyboard([
+                [{"text": "📥 تحميل الملف", "callback_data": f"vdl_{fid}", "style": "primary"},
+                 {"text": "✅ موافقة ✅", "callback_data": f"vapprove_{fid}", "style": "success"}],
+                [{"text": "❌ رفض ❌", "callback_data": f"vdel_{fid}", "style": "danger"}],
+            ])
+            bot.send_message(
+                adm,
+                f"📤 <b>طلب رفع ملف جديد معلق للمراجعة:</b>\n\n📄 الملف: <code>{escape(doc.file_name)}</code>\n👤 الآيدي: <code>{user_id}</code>\n⏰ الساعات: {hours}",
+                parse_mode="HTML",
+                reply_markup=admin_kb,
+            )
+        except Exception as e:
+            print(f"Admin pending notify error: {e}")
+
+    text = f"⏳ <b>تم رفع ملفك بنجاح وهو قيد المراجعة والتعليق بانتظار موافقة الإدارة.</b>\n\n📄 <code>{escape(doc.file_name)}</code>\n⏰ الساعات المطلوبة: {hours}"
+    send_msg(user_id, deco("⏳ قيد المراجعة", text), back_kb(), effect_id=FIRE_EFFECT_ID)
 
 
 def pending_list(call):
@@ -2451,10 +2521,7 @@ def admin_view_pending_file(call, fid):
     f = files[fid]
     content = load_encrypted_file(fid)
     preview = escape(content[:800]) if content else "تعذر قراءة المحتوى"
-    fname_val = esc(f.get("file_name"))
-    uid_val = f.get("user_id")
-    hrs_val = f.get("hours")
-    text = f"⏳ <b>معاينة الملف المعلق:</b>\n\n📄 الاسم: {fname_val}\n👤 صاحب الآيدي: <code>{uid_val}</code>\n⏰ الساعات: {hrs_val}\n\n<pre><code>{preview}</code></pre>"
+    text = f"⏳ <b>معاينة الملف المعلق:</b>\n\n📄 الاسم: {f.get('file_name')}\n👤 صاحب الآيدي: <code>{f.get('user_id')}</code>\n⏰ الساعات: {f.get('hours')}\n\n<pre><code>{preview}</code></pre>"
     kb = types.InlineKeyboardMarkup(row_width=2)
     kb.add(
         btn("📥 تحميل الملف", callback_data=f"vdl_{fid}", style="primary"),
@@ -2562,9 +2629,7 @@ def file_panel(call, fid):
     else:
         running_text = "يعمل ✅" if is_running else "متوقف ❌"
 
-    fname_val = esc(f.get("file_name"))
-    cdate_val = esc(f.get("created_at"))
-    text = f"📄 اسم الملف: {fname_val}\n🟢 الحالة: {running_text}\n📅 تاريخ الرفع: {cdate_val}\n\n🔍 المعاينة:\n<pre><code>{preview}</code></pre>"
+    text = f"📄 اسم الملف: {f.get('file_name')}\n🟢 الحالة: {running_text}\n📅 تاريخ الرفع: {f.get('created_at')}\n\n🔍 المعاينة:\n<pre><code>{preview}</code></pre>"
     kb = types.InlineKeyboardMarkup(row_width=2)
     if status == "active":
         kb.add(
@@ -2673,13 +2738,12 @@ def download_file(call, fid):
         with open(temp_path, "w", encoding="utf-8") as f:
             f.write(content)
         thumb = get_thumb()
-        cap_name = files[fid]["file_name"]
         with open(temp_path, "rb") as f:
             if thumb:
                 with open(thumb, "rb") as t:
-                    bot.send_document(call.message.chat.id, f, thumb=t, caption=f"📄 {cap_name}", parse_mode="HTML")
+                    bot.send_document(call.message.chat.id, f, thumb=t, caption=f"📄 {files[fid]['file_name']}", parse_mode="HTML")
             else:
-                bot.send_document(call.message.chat.id, f, caption=f"📄 {cap_name}", parse_mode="HTML")
+                bot.send_document(call.message.chat.id, f, caption=f"📄 {files[fid]['file_name']}", parse_mode="HTML")
         os.remove(temp_path)
         bot.answer_callback_query(call.id, "✅ تم إرسال الملف بنجاح.")
     except Exception:
@@ -2697,8 +2761,7 @@ def terminal(call, fid):
     running = fid in active_processes and active_processes[fid].poll() is None
     output = get_logs(fid, 40)
     run_label = "يعمل ✅" if running else "متوقف ❌"
-    fname_val = esc(files[fid]["file_name"])
-    text = f"📄 الملف: {fname_val}\n🟢 الحالة: {run_label}\n\n📺 <b>مخرجات التيرمنال:</b>\n{output}"
+    text = f"📄 الملف: {files[fid]['file_name']}\n🟢 الحالة: {run_label}\n\n📺 <b>مخرجات التيرمنال:</b>\n{output}"
     kb = types.InlineKeyboardMarkup(row_width=2)
     kb.add(
         btn("🔄 تحديث السجل", callback_data=f"rterm_{fid}", style="primary"),
@@ -2757,30 +2820,14 @@ def token_step(msg, fid, prompt_id):
     new_tok = msg.text.strip()
     content = load_encrypted_file(fid)
     if not content:
-        send_msg(
-            msg.chat.id,
-            deco("❌ خطأ", "تعذر تحميل الملف المشفر!", first_name_raw),
-            back_kb(f"manage_{fid}"),
-            effect_id=FIRE_EFFECT_ID,
-        )
+        send_msg(msg.chat.id, deco("❌ خطأ", "تعذر تحميل الملف المشفر!", first_name_raw), back_kb(f"manage_{fid}"), effect_id=FIRE_EFFECT_ID)
         return
-
     keywords = ["TOKEN", "bot_token", "api_key", "tok", "TKN", "BOT_TKN", "API_TOKEN"]
-    pattern = r"""(["'])\d{8,12}:[a-zA-Z0-9_-]{35,}(["'])"""
-    new_content = re.sub(
-        pattern,
-        lambda m: f"{m.group(1)}{new_tok}{m.group(2)}",
-        content,
-    )
-
+    pattern = r"([\"'])\d{8,12}:[a-zA-Z0-9_-]{35,}([\"'])"
+    new_content = re.sub(pattern, rf"\g<1>{new_tok}\g<2>", content)
     for kw in keywords:
-        kw_pattern = rf"""\b{re.escape(kw)}\s*=\s*(["'])[^"']*(["'])"""
-        new_content = re.sub(
-            kw_pattern,
-            lambda m, k=kw: f"{k} = {m.group(1)}{new_tok}{m.group(2)}",
-            new_content,
-        )
-
+        kw_pattern = rf"{kw}\s*=\s*([\"'][^\"']*[\"'])"
+        new_content = re.sub(kw_pattern, f"{kw} = '{new_tok}'", new_content)
 
     files = read_json(FILES_DB)
     if fid in files:
@@ -2792,6 +2839,7 @@ def token_step(msg, fid, prompt_id):
     else:
         text = "❌ الملف غير مسجل!"
     send_msg(msg.chat.id, deco("🔑 تغيير التوكن", text, first_name_raw), back_kb(f"manage_{fid}"), effect_id=FIRE_EFFECT_ID)
+
 
 def token_info(call, fid):
     uid = call.from_user.id
@@ -2806,15 +2854,12 @@ def token_info(call, fid):
         tokens = re.findall(r"(\d{8,12}:[a-zA-Z0-9_-]{35,})", content)
         if not tokens:
             return bot.answer_callback_query(call.id, "🔍 لم يتم العثور على توكن بداخل الكود!", show_alert=True)
-        tok = tokens[0].strip()
-        url = f"https://api.telegram.org/bot{tok}/getMe"
+        tok = tokens[0]
+        url = f"[https://api.telegram.org/bot](https://api.telegram.org/bot){tok}/getMe"
         res = requests.get(url, timeout=15).json()
         if res.get("ok"):
             info = res["result"]
-            b_name = escape(info.get("first_name", ""))
-            b_user = escape(info.get("username", ""))
-            b_id = info.get("id")
-            text = f"✅ التوكن صالح ويعمل بنجاح!\n\n🤖 اسم البوت: {b_name}\n👤 معرف البوت: @{b_user}\n🆔 آيدي البوت: <code>{b_id}</code>"
+            text = f"✅ التوكن صالح ويعمل بنجاح!\n\n🤖 اسم البوت: {escape(info.get('first_name', ''))}\n👤 معرف البوت: @{info.get('username', '')}\n🆔 آيدي البوت: <code>{info.get('id')}</code>"
         else:
             text = "❌ التوكن غير صالح أو منتهي الصلاحية."
         kb = types.InlineKeyboardMarkup()
@@ -2826,7 +2871,6 @@ def token_info(call, fid):
         send_msg(call.message.chat.id, deco("ℹ️ معلومات التوكن", text, call.from_user.first_name or "مستخدم"), kb, effect_id=FIRE_EFFECT_ID)
     except Exception:
         bot.answer_callback_query(call.id, "❌ حدث خطأ أثناء فحص التوكن!", show_alert=True)
-
 
 
 def lib_step(msg, prompt_id):
@@ -2892,6 +2936,7 @@ def broadcast_step(msg, prompt_id):
         pass
     send_msg(msg.chat.id, deco("📢 إذاعة عامة", text, first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
 
+
 def channels_broadcast_step(msg, prompt_id):
     uid = msg.from_user.id
     if is_cancelled(uid):
@@ -2902,50 +2947,18 @@ def channels_broadcast_step(msg, prompt_id):
     settings = get_settings()
     channels = settings.get("channels", [])
     if not channels:
-        send_msg(
-            msg.chat.id,
-            deco("❌ خطأ", "لا توجد قنوات اشتراك إجباري مسجلة للإذاعة فيها!", first_name_raw),
-            back_kb("nav_admin"),
-            effect_id=FIRE_EFFECT_ID,
-        )
+        send_msg(msg.chat.id, deco("❌ خطأ", "لا توجد قنوات اشتراك إجباري مسجلة للإذاعة فيها!", first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
         return
 
     success, failed = 0, 0
-    wait = send_msg(
-        msg.chat.id,
-        deco("📢 إذاعة للقنوات", f"⏳ جاري الإرسال إلى {len(channels)} قناة...", first_name_raw),
-        effect_id=FIRE_EFFECT_ID,
-    )
+    wait = send_msg(msg.chat.id, deco("📢 إذاعة للقنوات", f"⏳ جاري الإرسال إلى {len(channels)} قناة...", first_name_raw), effect_id=FIRE_EFFECT_ID)
     save_message(msg.chat.id, wait.message_id)
 
-    clean_bot_user = (user_bot or "").lstrip("@").strip()
-    rows = [
+    markup = build_keyboard([
         [{"text": "👨‍💻 مراسلة المطور", "url": DEV_TELEGRAM, "style": "primary"}],
         [{"text": "📢 قناة التحديث", "url": CHANNEL_EHAB_LINK, "style": "success"}],
-    ]
-    if clean_bot_user:
-        rows.append([{"text": "🔙 العودة إلى البوت", "url": f"https://t.me/{clean_bot_user}", "style": "danger"}])
-
-    markup = build_keyboard(rows)
-
-    body_txt = msg.text or msg.caption or ""
-    txt = f"<b>{body_txt}</b>\n\n<blockquote>إذاعة إدارية للقنوات الرسمية</blockquote>"
-
-    for ch in channels:
-        try:
-            bot.send_message(ch["username"], txt, parse_mode="HTML", reply_markup=markup)
-            success += 1
-            time.sleep(0.05)
-        except Exception:
-            failed += 1
-
-    text = f"✅ اكتملت إذاعة القنوات بنجاح\n\n📫 تم النشر في قنوات: {success}\n❌ فشل النشر: {failed}"
-    try:
-        bot.delete_message(msg.chat.id, wait.message_id)
-    except Exception:
-        pass
-    send_msg(msg.chat.id, deco("📢 إذاعة للقنوات", text, first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
-
+        [{"text": "🔙 العودة إلى البوت", "url": f"[https://t.me/](https://t.me/){user_bot}", "style": "danger"}],
+    ])
 
     body_txt = msg.text or msg.caption or ""
     txt = f"<b>{body_txt}</b>\n\n<blockquote>إذاعة إدارية للقنوات الرسمية</blockquote>"
@@ -3055,9 +3068,7 @@ def handle_bot_action(call, action, fid):
             bot.delete_message(call.message.chat.id, call.message.message_id)
         except Exception:
             pass
-        fname_val = esc(f.get("file_name"))
-        uid_val = f.get("user_id")
-        send_msg(call.message.chat.id, deco("🤖 إدارة البوت", f"اسم الملف: <b>{fname_val}</b>\nصاحب الآيدي: <code>{uid_val}</code>", call.from_user.first_name or "مستخدم"), kb, effect_id=FIRE_EFFECT_ID)
+        send_msg(call.message.chat.id, deco("🤖 إدارة البوت", f"اسم الملف: <b>{f.get('file_name')}</b>\nصاحب الآيدي: <code>{f.get('user_id')}</code>", call.from_user.first_name or "مستخدم"), kb, effect_id=FIRE_EFFECT_ID)
     elif action == "run":
         start_script(fid)
         bot.answer_callback_query(call.id, "✅ تم تشغيل البوت بنجاح.")
@@ -3222,10 +3233,7 @@ def user_panel(call, tuid):
     u_files = [f for f in files.values() if f.get("user_id") == int(tuid)]
     vip_lbl = "VIP 👑" if vip else "مجاني 🆓"
     ban_lbl = "محظور ❌" if banned else "نشط ✅"
-    uname_val = esc(u.get("username") or "لا يوجد")
-    jdate_val = esc(u.get("join_date") or "اليوم")
-    pts_val = u.get("points", 0)
-    text = f"🆔 الآيدي: <code>{tuid}</code>\n🔗 المعرف: @{uname_val}\n📅 الانضمام: {jdate_val}\n\n💰 النقاط: <code>{pts_val}</code>\n💎 الرتبة: {vip_lbl}\n⏰ صلاحية VIP: {exp}\n\n📁 إجمالي ملفاته: {len(u_files)}\n🚫 حالة الحظر: {ban_lbl}"
+    text = f"🆔 الآيدي: <code>{tuid}</code>\n🔗 المعرف: @{u.get('username', 'لا يوجد')}\n📅 الانضمام: {u.get('join_date', 'اليوم')}\n\n💰 النقاط: <code>{u.get('points', 0)}</code>\n💎 الرتبة: {vip_lbl}\n⏰ صلاحية VIP: {exp}\n\n📁 إجمالي ملفاته: {len(u_files)}\n🚫 حالة الحظر: {ban_lbl}"
     kb = types.InlineKeyboardMarkup(row_width=2)
     kb.add(
         btn("🔓 فك الحظر" if banned else "🚫 حظر المستخدم", callback_data=f"ban_{tuid}", style="success" if banned else "danger"),
@@ -3295,9 +3303,7 @@ def buy_confirm(call, sid):
     users = read_json(USERS_DB)
     pts = users.get(str(call.from_user.id), {}).get("points", 0)
     enough = "✅ رصيدك يكفي لإتمام الشراء!" if pts >= item["price"] else "❌ رصيدك لا يكفي لشراء هذا الملف!"
-    iname_val = esc(item["name"])
-    iprice_val = item["price"]
-    text = f"📦 الملف: {iname_val}\n💰 السعر المطلوب: {iprice_val} نقطة\n💵 رصيدك الحالي: <code>{pts}</code> نقطة\n\n{enough}"
+    text = f"📦 الملف: {item['name']}\n💰 السعر المطلوب: {item['price']} نقطة\n💵 رصيدك الحالي: <code>{pts}</code> نقطة\n\n{enough}"
     kb = types.InlineKeyboardMarkup(row_width=2)
     if pts >= item["price"]:
         kb.add(
@@ -3322,9 +3328,9 @@ def buy_exec(call, sid):
         return bot.answer_callback_query(call.id, "❌ العنصر غير موجود!", show_alert=True)
     if users.get(str(uid), {}).get("points", 0) < item["price"]:
         return bot.answer_callback_query(call.id, "❌ نقاطك غير كافية!", show_alert=True)
+    users[str(uid)]["points"] -= item["price"]
+    write_json(USERS_DB, users)
     path = os.path.join(STORE_DIR, f"{sid}.py")
-    if not os.path.exists(path):
-        return bot.answer_callback_query(call.id, "❌ ملف المنتج غير متوفر حالياً، لم يتم خصم رصيدك.", show_alert=True)
     try:
         thumb = get_thumb()
         with open(path, "rb") as f:
@@ -3333,8 +3339,6 @@ def buy_exec(call, sid):
                     bot.send_document(uid, f, thumb=t, caption=f"✅ تم شراء الملف بنجاح: {item['name']}", parse_mode="HTML")
             else:
                 bot.send_document(uid, f, caption=f"✅ تم شراء الملف بنجاح: {item['name']}", parse_mode="HTML")
-        users[str(uid)]["points"] -= item["price"]
-        write_json(USERS_DB, users)
         try:
             conn = db_conn()
             conn.execute(
@@ -3348,21 +3352,30 @@ def buy_exec(call, sid):
         bot.answer_callback_query(call.id, "✅ تم إرسال الملف إليك بنجاح!")
         store_view(call)
     except Exception:
-        bot.answer_callback_query(call.id, "❌ حدث خطأ أثناء إرسال الملف، لم يتم خصم رصيدك!", show_alert=True)
+        users[str(uid)]["points"] += item["price"]
+        write_json(USERS_DB, users)
+        bot.answer_callback_query(call.id, "❌ حدث خطأ أثناء إرسال الملف!", show_alert=True)
 
 
 def admins_panel(call):
     uid = call.from_user.id
     admins = get_admins()
-    text = f"👮 المشرف الرئيسي ({len(admins)}):\n\n"
+    text = f"👮 قائمة المشرفين ({len(admins)}):\n\n"
     kb = types.InlineKeyboardMarkup(row_width=1)
+    if is_main_admin(uid):
+        kb.add(btn("➕ إضافة مشرف جديد", callback_data="add_admin", style="success"))
     for aid in admins:
         try:
             user = bot.get_chat(aid)
             name = user.first_name or str(aid)
-            text += f"👑 {escape(name)} - <code>{aid}</code>\n"
+            owner = "👑" if aid == ADMIN_ID else "👮"
+            text += f"{owner} {escape(name)} - <code>{aid}</code>\n"
+            if aid != ADMIN_ID and is_main_admin(uid):
+                kb.add(btn(f"🗑️ إزالة {name[:10]}", callback_data=f"rmadmin_{aid}", style="danger"))
         except Exception:
-            text += f"👑 <code>{aid}</code>\n"
+            text += f"👮 <code>{aid}</code>\n"
+            if aid != ADMIN_ID and is_main_admin(uid):
+                kb.add(btn(f"🗑️ إزالة {aid}", callback_data=f"rmadmin_{aid}", style="danger"))
     kb.add(btn("🔙 رجوع للرئيسية", callback_data="nav_admin", style="primary"))
     try:
         bot.delete_message(call.message.chat.id, call.message.message_id)
@@ -3378,7 +3391,22 @@ def add_admin_step(msg, prompt_id):
         return
     del_msg(msg.chat.id, prompt_id, msg.message_id)
     first_name_raw = msg.from_user.first_name or "مستخدم"
-    send_msg(msg.chat.id, deco("ℹ️ نظام الأدمن الموحد", f"النظام مضبوط على أدمن واحد رئيسي ثابت: <code>{ADMIN_ID}</code>", first_name_raw), back_kb("adm_admins"), effect_id=FIRE_EFFECT_ID)
+    if not is_main_admin(uid):
+        send_msg(msg.chat.id, deco("❌ خطأ", "هذا الأمر مخصص للمالك الرئيسي فقط!", first_name_raw), back_kb("adm_admins"), effect_id=FIRE_EFFECT_ID)
+        return
+    if not msg.text or not msg.text.strip().isdigit():
+        send_msg(msg.chat.id, deco("❌ خطأ", "آيدي غير صحيح! أرسل أرقاماً فقط.", first_name_raw), back_kb("adm_admins"), effect_id=FIRE_EFFECT_ID)
+        return
+    new_id = int(msg.text.strip())
+    if add_admin(new_id):
+        try:
+            bot.send_message(new_id, deco("🎉 مبارك", "تم تعيينك مشرفاً جديداً في البوت!"))
+        except Exception:
+            pass
+        text = f"✅ تم إضافة المشرف بنجاح:\n<code>{new_id}</code>"
+    else:
+        text = "❌ هذا المستخدم مشرف مسبقاً!"
+    send_msg(msg.chat.id, deco("👮 إضافة مشرف", text, first_name_raw), back_kb("adm_admins"), effect_id=FIRE_EFFECT_ID)
 
 
 def channels_panel(call):
@@ -3439,7 +3467,7 @@ def del_channel(call, index):
         bot.answer_callback_query(call.id, "❌ حدث خطأ!")
 
 
-def _admin_balance_target_step(msg, prompt_id, action_title: str, next_handler):
+def admin_add_balance_id_step(msg, prompt_id):
     uid = msg.from_user.id
     if is_cancelled(uid):
         clear_cancel(uid)
@@ -3451,20 +3479,18 @@ def _admin_balance_target_step(msg, prompt_id, action_title: str, next_handler):
         return
     target_id = msg.text.strip()
     admin_steps[uid] = {"target_id": target_id}
-    verb = "إضافي لهذا الشخص؟ (أرسل النقاط):" if "إضافة" in action_title else "من هذا الشخص؟"
-    m = send_msg(msg.chat.id, deco(action_title, f"المستخدم المستهدف: <code>{target_id}</code>\n\nكم تريد رصيد {verb}", first_name_raw), cancel_kb("cancel_admin"), effect_id=FIRE_EFFECT_ID)
+    m = send_msg(msg.chat.id, deco("➕ إضافة رصيد", f"المستخدم المستهدف: <code>{target_id}</code>\n\nكم تريد رصيد إضافي لهذا الشخص؟ (أرسل النقاط):", first_name_raw), cancel_kb("cancel_admin"), effect_id=FIRE_EFFECT_ID)
     save_message(msg.chat.id, m.message_id)
-    bot.register_next_step_handler(m, next_handler, m.message_id)
+    bot.register_next_step_handler(m, admin_add_balance_amount_step, m.message_id)
 
 
-def _admin_balance_amount_step(msg, prompt_id, is_add: bool):
+def admin_add_balance_amount_step(msg, prompt_id):
     uid = msg.from_user.id
     if is_cancelled(uid):
         clear_cancel(uid)
         return
     del_msg(msg.chat.id, prompt_id, msg.message_id)
     first_name_raw = msg.from_user.first_name or "مستخدم"
-    title = "➕ إضافة رصيد" if is_add else "➖ خصم رصيد"
     if not msg.text or not msg.text.strip().isdigit():
         send_msg(msg.chat.id, deco("❌ خطأ", "كمية رصيد غير صحيحة!", first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
         return
@@ -3475,42 +3501,67 @@ def _admin_balance_amount_step(msg, prompt_id, is_add: bool):
         return
     users = read_json(USERS_DB)
     if target_id in users:
-        if is_add:
-            users[target_id]["points"] = users[target_id].get("points", 0) + amount
-            users[target_id]["balance"] = users[target_id].get("balance", 0.0) + float(amount)
-            user_notice = f"تم إضافة <b>{amount}</b> رصيد ونقاط إلى حسابك من قبل الإدارة!"
-            admin_notice = f"تم إضافة {amount} للمستخدم <code>{target_id}</code> وتم إشعاره تلقائياً."
-        else:
-            users[target_id]["points"] = max(0, users[target_id].get("points", 0) - amount)
-            users[target_id]["balance"] = max(0.0, users[target_id].get("balance", 0.0) - float(amount))
-            user_notice = f"تم خصم <b>{amount}</b> من حسابك من قبل الإدارة!"
-            admin_notice = f"تم خصم {amount} من المستخدم <code>{target_id}</code> بنجاح."
+        users[target_id]["points"] = users[target_id].get("points", 0) + amount
+        users[target_id]["balance"] = users[target_id].get("balance", 0.0) + float(amount)
         write_json(USERS_DB, users)
         try:
-            bot.send_message(int(target_id), deco(title, user_notice))
+            bot.send_message(int(target_id), deco("💰 إضافة رصيد", f"تم إضافة <b>{amount}</b> رصيد ونقاط إلى حسابك من قبل الإدارة!"))
         except Exception:
             pass
-        send_msg(msg.chat.id, deco("✅ تم بنجاح", admin_notice, first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
+        send_msg(msg.chat.id, deco("✅ تم بنجاح", f"تم إضافة {amount} للمستخدم <code>{target_id}</code> وتم إشعاره تلقائياً.", first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
     else:
         send_msg(msg.chat.id, deco("❌ خطأ", "المستخدم غير موجود!", first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
     if uid in admin_steps:
         del admin_steps[uid]
 
 
-def admin_add_balance_id_step(msg, prompt_id):
-    _admin_balance_target_step(msg, prompt_id, "➕ إضافة رصيد", admin_add_balance_amount_step)
-
-
-def admin_add_balance_amount_step(msg, prompt_id):
-    _admin_balance_amount_step(msg, prompt_id, True)
-
-
 def admin_deduct_balance_id_step(msg, prompt_id):
-    _admin_balance_target_step(msg, prompt_id, "➖ خصم رصيد", admin_deduct_balance_amount_step)
+    uid = msg.from_user.id
+    if is_cancelled(uid):
+        clear_cancel(uid)
+        return
+    del_msg(msg.chat.id, prompt_id, msg.message_id)
+    first_name_raw = msg.from_user.first_name or "مستخدم"
+    if not msg.text or not msg.text.strip().isdigit():
+        send_msg(msg.chat.id, deco("❌ خطأ", "آيدي غير صحيح!", first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
+        return
+    target_id = msg.text.strip()
+    admin_steps[uid] = {"target_id": target_id}
+    m = send_msg(msg.chat.id, deco("➖ خصم رصيد", f"المستخدم المستهدف: <code>{target_id}</code>\n\nكم تريد خصم رصيد من هذا الشخص؟", first_name_raw), cancel_kb("cancel_admin"), effect_id=FIRE_EFFECT_ID)
+    save_message(msg.chat.id, m.message_id)
+    bot.register_next_step_handler(m, admin_deduct_balance_amount_step, m.message_id)
 
 
 def admin_deduct_balance_amount_step(msg, prompt_id):
-    _admin_balance_amount_step(msg, prompt_id, False)
+    uid = msg.from_user.id
+    if is_cancelled(uid):
+        clear_cancel(uid)
+        return
+    del_msg(msg.chat.id, prompt_id, msg.message_id)
+    first_name_raw = msg.from_user.first_name or "مستخدم"
+    if not msg.text or not msg.text.strip().isdigit():
+        send_msg(msg.chat.id, deco("❌ خطأ", "كمية غير صحيحة!", first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
+        return
+    amount = int(msg.text.strip())
+    target_id = admin_steps.get(uid, {}).get("target_id")
+    if not target_id:
+        send_msg(msg.chat.id, deco("❌ خطأ", "خطأ في استرجاع الآيدي!", first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
+        return
+    users = read_json(USERS_DB)
+    if target_id in users:
+        curr = users[target_id].get("points", 0)
+        users[target_id]["points"] = max(0, curr - amount)
+        users[target_id]["balance"] = max(0.0, users[target_id].get("balance", 0.0) - float(amount))
+        write_json(USERS_DB, users)
+        try:
+            bot.send_message(int(target_id), deco("➖ خصم رصيد", f"تم خصم <b>{amount}</b> من حسابك من قبل الإدارة!"))
+        except Exception:
+            pass
+        send_msg(msg.chat.id, deco("✅ تم بنجاح", f"تم خصم {amount} من المستخدم <code>{target_id}</code> بنجاح.", first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
+    else:
+        send_msg(msg.chat.id, deco("❌ خطأ", "المستخدم غير موجود!", first_name_raw), back_kb("nav_admin"), effect_id=FIRE_EFFECT_ID)
+    if uid in admin_steps:
+        del admin_steps[uid]
 
 
 # ==============================================================================
@@ -3579,11 +3630,11 @@ def current_username():
 
 
 def load_users():
-    return read_json(PANEL_USERS_DB, {"users": []})
+    return _read_json(PANEL_USERS_DB, {"users": []})
 
 
 def save_users(db):
-    write_json(PANEL_USERS_DB, db)
+    _atomic_write_json(PANEL_USERS_DB, db)
 
 
 def find_user(db, username: str):
@@ -3699,9 +3750,13 @@ def log_append(key: str, text: str):
 
 
 def get_site_base_url(req=None) -> str:
-    base = (UNIFIED_SITE_URL or "").strip().rstrip("/")
-    if base:
-        return base if base.startswith("http") else f"https://{base}"
+    env_url = (
+        os.environ.get("RENDER_EXTERNAL_URL")
+        or os.environ.get("PUBLIC_API_URL")
+        or ""
+    ).strip().rstrip("/")
+    if env_url:
+        return env_url if env_url.startswith("http") else f"https://{env_url}"
     if req is not None:
         try:
             host_url = (req.host_url or "").strip().rstrip("/")
@@ -3709,6 +3764,11 @@ def get_site_base_url(req=None) -> str:
                 return host_url
         except Exception:
             pass
+    fallback = (PUBLIC_API_URL or "").strip().rstrip("/")
+    if fallback:
+        return fallback if fallback.startswith("http") else f"https://{fallback}"
+    if API_BASE_URL and "127.0.0.1" not in API_BASE_URL and "localhost" not in API_BASE_URL:
+        return API_BASE_URL
     return f"http://{get_ip()}:{PANEL_PORT_PRIMARY}"
 
 
@@ -3759,6 +3819,23 @@ def build_generated_server_url(
     }
 
 
+def _atomic_write_json_raw(path: str, payload: dict):
+    with db_lock:
+        abs_path = os.path.abspath(path)
+        if not is_path_safe(USERS_ROOT, abs_path) and not is_path_safe(DATA_DIR, abs_path):
+            raise ValueError("Unsafe path for JSON write")
+        os.makedirs(os.path.dirname(abs_path), exist_ok=True)
+        tmp = abs_path + f".{os.getpid()}.{uuid.uuid4().hex[:6]}.tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+            f.flush()
+            try:
+                os.fsync(f.fileno())
+            except Exception:
+                pass
+        os.replace(tmp, abs_path)
+
+
 def ensure_meta(owner: str, folder: str):
     server_dir = get_server_dir(owner, folder)
     os.makedirs(server_dir, exist_ok=True)
@@ -3772,9 +3849,9 @@ def ensure_meta(owner: str, folder: str):
         "google_jump_url": "",
     }
     if not os.path.exists(meta_path):
-        write_json(meta_path, base)
+        _atomic_write_json_raw(meta_path, base)
     else:
-        m = read_json(meta_path, base)
+        m = _read_json(meta_path, base)
         changed = False
         for k, v in base.items():
             if k not in m:
@@ -3784,20 +3861,20 @@ def ensure_meta(owner: str, folder: str):
             m["owner"] = owner
             changed = True
         if changed:
-            write_json(meta_path, m)
+            _atomic_write_json_raw(meta_path, m)
     return meta_path
 
 
 def read_meta(owner: str, folder: str):
     ensure_meta(owner, folder)
     meta_path = os.path.join(get_server_dir(owner, folder), "meta.json")
-    return read_json(meta_path, {"display_name": folder, "startup_file": "", "owner": owner, "banned": False})
+    return _read_json(meta_path, {"display_name": folder, "startup_file": "", "owner": owner, "banned": False})
 
 
 def write_meta(owner: str, folder: str, meta):
     ensure_meta(owner, folder)
     meta_path = os.path.join(get_server_dir(owner, folder), "meta.json")
-    write_json(meta_path, meta)
+    _atomic_write_json_raw(meta_path, meta)
 
 
 def refresh_server_js_link(owner: str, folder: str, startup_file: str = "", subpath: str = "", req=None) -> dict:
@@ -3823,7 +3900,7 @@ def sync_active_server_for_owner(owner: str, folder: str, startup_file: str = ""
     full_key = normalize_state_key(owner, folder)
     links = refresh_server_js_link(owner, folder, startup_file=startup_file, req=req)
     active_file = os.path.join(DATA_DIR, "active_servers.json")
-    db = read_json(active_file, {"by_owner": {}, "last_selected": None})
+    db = _read_json(active_file, {"by_owner": {}, "last_selected": None})
     entry = {
         "key": full_key,
         "owner": owner,
@@ -3835,7 +3912,7 @@ def sync_active_server_for_owner(owner: str, folder: str, startup_file: str = ""
     }
     db.setdefault("by_owner", {})[owner] = entry
     db["last_selected"] = entry
-    write_json(active_file, db)
+    _atomic_write_json(active_file, db)
     return entry
 
 
@@ -3850,23 +3927,23 @@ def get_user_limit(username: str) -> int:
 
 
 def get_balance(user_key: str) -> float:
-    if str(user_key).strip().lower() in (ADMIN_USERNAME.lower(), f"user:{ADMIN_USERNAME.lower()}") or str(user_key).strip() == str(ADMIN_ID):
+    if str(user_key).strip().lower() in (ADMIN_USERNAME.lower(), f"user:{ADMIN_USERNAME.lower()}") or str(user_key).strip() in [str(i) for i in ADMIN_TELEGRAM_IDS]:
         return 999999.0
     with finance_lock:
-        db = read_json(BALANCES_DB, {"balances": {}})
+        db = _read_json(BALANCES_DB, {"balances": {}})
         return float(db.get("balances", {}).get(str(user_key), 0.0))
 
 
 def add_balance(user_key: str, amount: float) -> float:
     with finance_lock:
-        db = read_json(BALANCES_DB, {"balances": {}})
+        db = _read_json(BALANCES_DB, {"balances": {}})
         balances = db.setdefault("balances", {})
         cur = float(balances.get(str(user_key), 0.0))
         new_bal = round(cur + float(amount), 4)
         if new_bal < 0:
             raise ValueError("Balance cannot be negative")
         balances[str(user_key)] = new_bal
-        write_json(BALANCES_DB, db)
+        _atomic_write_json(BALANCES_DB, db)
         return new_bal
 
 
@@ -3876,21 +3953,21 @@ def deduct_balance_safe(user_key: str, amount: float, is_free_admin: bool = Fals
     with finance_lock:
         amt = float(amount)
         if amt <= 0:
-            return False, float(read_json(BALANCES_DB, {"balances": {}}).get("balances", {}).get(str(user_key), 0.0))
-        db = read_json(BALANCES_DB, {"balances": {}})
+            return False, float(_read_json(BALANCES_DB, {"balances": {}}).get("balances", {}).get(str(user_key), 0.0))
+        db = _read_json(BALANCES_DB, {"balances": {}})
         balances = db.setdefault("balances", {})
         cur = float(balances.get(str(user_key), 0.0))
         if cur < amt:
             return False, cur
         new_bal = round(cur - amt, 4)
         balances[str(user_key)] = new_bal
-        write_json(BALANCES_DB, db)
+        _atomic_write_json(BALANCES_DB, db)
         return True, new_bal
 
 
 def record_order(user_key: str, service_id: str, amount: float, details: str, status: str, result_msg: str = "") -> str:
     with finance_lock:
-        db = read_json(ORDERS_DB, {"orders": []})
+        db = _read_json(ORDERS_DB, {"orders": []})
         order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
         entry = {
             "order_id": order_id,
@@ -3903,19 +3980,19 @@ def record_order(user_key: str, service_id: str, amount: float, details: str, st
             "created_at": _utc_now_iso(),
         }
         db.setdefault("orders", []).append(entry)
-        write_json(ORDERS_DB, db)
+        _atomic_write_json(ORDERS_DB, db)
 
         svc_meta = SERVICES_CATALOG.get(service_id)
         if svc_meta:
-            svc_data = read_json(svc_meta["file"], {"service_id": service_id, "name": svc_meta["name"], "records": []})
+            svc_data = _read_json(svc_meta["file"], {"service_id": service_id, "records": []})
             svc_data.setdefault("records", []).append(entry)
-            write_json(svc_meta["file"], svc_data)
+            _atomic_write_json(svc_meta["file"], svc_data)
         return order_id
 
 
 def update_order_status(order_id: str, status: str, result_msg: str = ""):
     with finance_lock:
-        db = read_json(ORDERS_DB, {"orders": []})
+        db = _read_json(ORDERS_DB, {"orders": []})
         for item in db.get("orders", []):
             if item.get("order_id") == order_id:
                 item["status"] = status
@@ -3923,7 +4000,7 @@ def update_order_status(order_id: str, status: str, result_msg: str = ""):
                     item["result"] = result_msg
                 item["updated_at"] = _utc_now_iso()
                 break
-        write_json(ORDERS_DB, db)
+        _atomic_write_json(ORDERS_DB, db)
 
 
 def execute_paid_service_order(user_key: str, service_id: str, details: str, is_free_admin: bool = False) -> dict:
@@ -3931,27 +4008,27 @@ def execute_paid_service_order(user_key: str, service_id: str, details: str, is_
     if not svc:
         return {"success": False, "message": "الخدمة غير موجودة"}
 
-    if not details or len(details.strip()) < 2:
-        return {"success": False, "message": "البيانات المدخلة للطلب غير مكتملة — لم يتم خصم أي رصيد."}
-
     charged_price = 0.0 if (is_free_admin and ADMIN_FREE_MODE) else float(svc["price"])
     curr = svc["currency"]
-
-    if charged_price > 0 and get_balance(user_key) < charged_price:
+    ok, balance_after_deduct = deduct_balance_safe(user_key, charged_price, is_free_admin=is_free_admin)
+    if not ok:
         return {
             "success": False,
-            "message": f"رصيدك الحالي ({get_balance(user_key):.2f} {curr}) غير كافٍ لإتمام الدفع ({charged_price:.2f} {curr}).",
+            "message": f"رصيدك الحالي ({balance_after_deduct:.2f} {curr}) غير كافٍ لإتمام الدفع ({charged_price:.2f} {curr}).",
         }
 
-    order_id = record_order(user_key, service_id, charged_price, details, "paid_pending", "مجاني للأدمن" if charged_price == 0.0 else "جاري تجهيز التسليم")
+    order_id = record_order(user_key, service_id, charged_price, details, "paid_pending", "مجاني للأدمن" if charged_price == 0.0 else "تم حجز المبلغ وجاري التنفيذ")
 
     try:
+        if not details or len(details.strip()) < 2:
+            raise ValueError("البيانات المدخلة للطلب غير مكتملة")
+
         web_dir = os.path.join(DATA_DIR, "web_requests", order_id)
         if not is_path_safe(DATA_DIR, web_dir):
             raise ValueError("مسار الطلب غير آمن")
         os.makedirs(web_dir, exist_ok=True)
         request_file = os.path.join(web_dir, "request_info.json")
-        write_json(request_file, {
+        _atomic_write_json(request_file, {
             "order_id": order_id,
             "user_key": str(user_key),
             "service": svc["name"],
@@ -3960,15 +4037,6 @@ def execute_paid_service_order(user_key: str, service_id: str, details: str, is_
             "free_admin": bool(is_free_admin and ADMIN_FREE_MODE),
             "created_at": _utc_now_iso(),
         })
-
-        ok, balance_after_deduct = deduct_balance_safe(user_key, charged_price, is_free_admin=is_free_admin)
-        if not ok:
-            update_order_status(order_id, "cancelled", "فشل خصم الرصيد قبل التسليم")
-            return {
-                "success": False,
-                "order_id": order_id,
-                "message": f"رصيدك الحالي ({balance_after_deduct:.2f} {curr}) غير كافٍ لإتمام الدفع ({charged_price:.2f} {curr}).",
-            }
 
         delivered_msg = f"تم استلام وتجهيز الطلب رقم {order_id} على المسار /web/{order_id}"
         update_order_status(order_id, "delivered", delivered_msg)
@@ -3979,12 +4047,16 @@ def execute_paid_service_order(user_key: str, service_id: str, details: str, is_
             "message": delivered_msg,
         }
     except Exception as e:
-        update_order_status(order_id, "failed_before_charge", f"لم يتم الخصم بسبب: {e}")
+        if charged_price > 0:
+            refunded_bal = add_balance(user_key, charged_price)
+        else:
+            refunded_bal = get_balance(user_key)
+        update_order_status(order_id, "refunded", f"تم الاسترجاع تلقائياً بسبب: {e}")
         return {
             "success": False,
             "order_id": order_id,
-            "balance": get_balance(user_key),
-            "message": f"تعذر إتمام التسليم ولم يتم خصم المبلغ من رصيدك. السبب: {e}",
+            "balance": refunded_bal,
+            "message": f"تعذر إتمام التسليم وتم إرجاع المبلغ ({charged_price:.2f}) إلى رصيدك تلقائياً. السبب: {e}",
         }
 
 
@@ -4042,18 +4114,14 @@ def detect_runtime_kind(owner: str, folder: str, startup_file: str) -> str:
     ext = os.path.splitext((startup_file or "").lower())[1]
     if ext in (".js", ".mjs", ".cjs"):
         return "js"
-    if ext in (".java", ".jar"):
-        return "java"
     if ext == ".py":
         return "py"
 
-    types_db = read_json(SERVER_TYPES_DB, {"types": {}})
+    types_db = _read_json(SERVER_TYPES_DB, {"types": {}})
     for candidate_key in (normalize_state_key(owner, folder), folder):
         t = str(types_db.get("types", {}).get(candidate_key, "")).lower()
         if "js" in t or "node" in t:
             return "js"
-        if "java" in t:
-            return "java"
         if "py" in t:
             return "py"
 
@@ -4072,13 +4140,13 @@ def resolve_startup_file(owner: str, folder: str, startup_file: str) -> str:
             return os.path.relpath(candidate, server_dir)
         return cleaned
 
-    for fallback in ("main.py", "app.py", "bot.py", "index.js", "server.js", "app.js", "Main.java", "app.jar", "index.html", "index.php"):
+    for fallback in ("main.py", "app.py", "bot.py", "index.js", "server.js", "app.js", "index.html", "index.php"):
         if os.path.isfile(os.path.join(server_dir, fallback)):
             return fallback
 
     for root_dir, _dirs, files in os.walk(server_dir):
         for fname in sorted(files):
-            if fname.endswith((".py", ".js", ".java", ".jar")):
+            if fname.endswith((".py", ".js")):
                 full_f = os.path.join(root_dir, fname)
                 return os.path.relpath(full_f, server_dir)
     return "main.py"
@@ -4129,29 +4197,6 @@ def start_with_autoinstall(owner: str, folder: str, startup_file: str):
     child_env = os.environ.copy()
     child_env["PYTHONUNBUFFERED"] = "1"
     child_env["NODE_ENV"] = child_env.get("NODE_ENV", "production")
-
-    log_path = os.path.join(server_dir, "server.log")
-    log_file = open(log_path, "a", encoding="utf-8", errors="ignore")
-
-    if runtime_kind == "java":
-        java_bin = shutil.which("java")
-        javac_bin = shutil.which("javac")
-        if not java_bin:
-            log_file.write("[JAVA] بيئة Java (java) غير مثبتة على الخادم الحالي. تم حفظ الملف وجاهز للنقل إلى بيئة JVM.\n")
-            log_file.flush()
-            raise RuntimeError("بيئة Java غير مثبتة على هذا الخادم (مطلوب java / JDK لتشغيل ملفات Java)")
-        ext = os.path.splitext(resolved_startup.lower())[1]
-        if ext == ".jar":
-            cmd = [java_bin, "-jar", resolved_startup]
-        else:
-            if javac_bin:
-                subprocess.check_call([javac_bin, resolved_startup], cwd=server_dir)
-                class_name = os.path.splitext(os.path.basename(resolved_startup))[0]
-                cmd = [java_bin, class_name]
-            else:
-                cmd = [java_bin, resolved_startup]
-        proc = subprocess.Popen(cmd, cwd=server_dir, env=child_env, stdout=log_file, stderr=log_file)
-        return proc, log_file
 
     if runtime_kind == "js":
         node_bin = shutil.which("node")
@@ -4256,6 +4301,8 @@ while (true) {
 }
 """
 
+        log_path = os.path.join(server_dir, "server.log")
+        log_file = open(log_path, "a", encoding="utf-8", errors="ignore")
         proc = subprocess.Popen(
             [node_bin, "-e", js_wrapper_code, resolved_startup, npm_bin or ""],
             cwd=server_dir,
@@ -4318,6 +4365,8 @@ while True:
         traceback.print_exc()
         break
 """
+    log_path = os.path.join(server_dir, "server.log")
+    log_file = open(log_path, "a", encoding="utf-8", errors="ignore")
 
     proc = subprocess.Popen(
         [sys.executable, "-u", "-c", wrapper_code, resolved_startup],
@@ -4374,7 +4423,340 @@ def stop_proc(key: str, owner: str = "", folder: str = ""):
 # ==============================================================================
 # ٨. تجميع الصفحات في index.html وإصلاح المسارات والـ API (Unified index.html)
 # ==============================================================================
-DEFAULT_UNIFIED_INDEX_HTML = "index.html"
+DEFAULT_UNIFIED_INDEX_HTML = """<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>𝗘𝗛𝗔𝗕 - اللوحة الموحدة</title>
+  <style>
+    body { font-family: Tahoma, Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+    .container { max-width: 960px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); }
+    .nav { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #334155; padding-bottom: 14px; }
+    button { background: #2563eb; color: #fff; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #1d4ed8; }
+    button.danger { background: #dc2626; }
+    button.success { background: #16a34a; }
+    input, select, textarea { width: 100%; padding: 10px; margin: 6px 0 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; box-sizing: border-box; }
+    .card { background: #0f172a; padding: 14px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #334155; }
+    .hidden { display: none; }
+    pre { background: #020617; padding: 12px; border-radius: 8px; overflow-x: auto; direction: ltr; text-align: left; }
+    .msg { padding: 10px; border-radius: 8px; margin-bottom: 12px; background: #172554; }
+    a.link-pill { color: #93c5fd; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🚀 𝗘𝗛𝗔𝗕 — اللوحة الموحدة (أدمن مجاني • سيرفرات • توليد روابط)</h2>
+    <div id="statusMsg" class="msg hidden"></div>
+
+    <div class="nav">
+      <button onclick="switchTab('home')">📁 السيرفرات والملفات</button>
+      <button onclick="switchTab('login')">🔑 تسجيل الدخول</button>
+      <button onclick="switchTab('create')">➕ إنشاء حساب جديد</button>
+      <button id="adminTabBtn" class="hidden" onclick="switchTab('admin')">👑 لوحة الأدمن</button>
+      <button class="danger" onclick="logoutUser()">🚪 خروج</button>
+    </div>
+
+    <div id="tab-login" class="hidden">
+      <h3>تسجيل الدخول</h3>
+      <input id="loginUser" placeholder="اسم المستخدم" />
+      <input id="loginPass" type="password" placeholder="كلمة المرور" />
+      <button class="success" onclick="doLogin()">دخول</button>
+    </div>
+
+    <div id="tab-create" class="hidden">
+      <h3>إنشاء حساب جديد</h3>
+      <input id="regUser" placeholder="اسم المستخدم (أحرف، أرقام، _ ، .)" />
+      <input id="regEmail" placeholder="البريد الإلكتروني" />
+      <input id="regPass" type="password" placeholder="كلمة المرور (6 أحرف فأكثر)" />
+      <input id="regPass2" type="password" placeholder="تأكيد كلمة المرور" />
+      <button class="success" onclick="doCreate()">إنشاء الحساب</button>
+    </div>
+
+    <div id="tab-home">
+      <h3>إضافة سيرفر جديد</h3>
+      <input id="newServerName" placeholder="اسم السيرفر (مثال: my-bot)" />
+      <select id="newServerType">
+        <option value="Python">Python (.py)</option>
+        <option value="Node.js/JS">JavaScript / Node (.js)</option>
+        <option value="HTML">HTML / Web</option>
+        <option value="PHP">PHP</option>
+      </select>
+      <button class="success" onclick="addServer()">➕ إنشاء سيرفر</button>
+      <button onclick="loadServers()">🔄 تحديث القائمة</button>
+      <hr />
+      <h3>السيرفرات الخاصة بك</h3>
+      <div id="serversList"></div>
+      <div id="fileManagerBox" class="card hidden">
+        <h4>إدارة ملفات السيرفر: <span id="activeServerKey"></span></h4>
+        <input id="startupFileInput" placeholder="ملف التشغيل الرئيسي (مثال: main.py أو index.js)" />
+        <input id="extraPathInput" placeholder="زيادة/امتداد مسار إضافي للرابط (اختياري، مثال: bot/run)" />
+        <button onclick="saveStartup()">💾 حفظ ملف التشغيل وتوليد الرابط</button>
+        <button class="success" onclick="serverAct('start')">▶️ تشغيل وتوليد الرابط</button>
+        <button class="danger" onclick="serverAct('stop')">⏹ إيقاف</button>
+        <button class="danger" onclick="serverAct('restart')">🔄 إعادة تشغيل</button>
+        <button class="danger" onclick="serverAct('delete')">🗑 حذف السيرفر</button>
+        <div id="generatedLinkBox" class="card hidden" style="margin-top:12px;">
+          <div><b>🔗 الرابط المولّد:</b> <a id="genUrlAnchor" class="link-pill" target="_blank"></a></div>
+          <div style="margin-top:8px;"><b>🌐 رابط التحويل المباشر:</b> <a id="goUrlAnchor" class="link-pill" target="_blank"></a></div>
+        </div>
+        <h5>الملفات والمجلدات:</h5>
+        <div id="filesList"></div>
+        <input id="editFilePath" placeholder="مسار الملف للتعديل أو الحفظ (مثال: main.py أو app.js)" />
+        <textarea id="editFileContent" rows="8" placeholder="محتوى الملف..."></textarea>
+        <button onclick="loadFileContent()">📂 فتح الملف</button>
+        <button class="success" onclick="saveFileContent()">💾 حفظ الملف</button>
+        <h5>الكونسول والسجل:</h5>
+        <pre id="serverLogs"></pre>
+      </div>
+    </div>
+
+    <div id="tab-admin" class="hidden">
+      <h3>👑 لوحة إدارة الأدمن (مجانية بالكامل)</h3>
+      <button onclick="loadAdminData()">🔄 تحديث بيانات الأدمن</button>
+      <div id="adminStats" class="card"></div>
+      <h4>المستخدمون</h4>
+      <div id="adminUsers"></div>
+      <h4>جميع السيرفرات</h4>
+      <div id="adminServers"></div>
+    </div>
+  </div>
+
+  <script>
+    let currentKey = "";
+    function showMsg(txt) {
+      const el = document.getElementById("statusMsg");
+      el.textContent = txt;
+      el.classList.remove("hidden");
+    }
+    function switchTab(tab) {
+      for (const t of ["login", "create", "home", "admin"]) {
+        document.getElementById("tab-" + t).classList.add("hidden");
+      }
+      document.getElementById("tab-" + tab).classList.remove("hidden");
+      if (tab === "home") loadServers();
+      if (tab === "admin") loadAdminData();
+    }
+    async function doLogin() {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          username: document.getElementById("loginUser").value,
+          password: document.getElementById("loginPass").value
+        })
+      });
+      const d = await res.json();
+      if (d.success) {
+        if (d.is_admin) document.getElementById("adminTabBtn").classList.remove("hidden");
+        showMsg("تم تسجيل الدخول بنجاح");
+        switchTab("home");
+      } else {
+        showMsg("خطأ: " + (d.message || "فشل الدخول"));
+      }
+    }
+    async function doCreate() {
+      const res = await fetch("/api/auth/create", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          username: document.getElementById("regUser").value,
+          email: document.getElementById("regEmail").value,
+          password: document.getElementById("regPass").value,
+          password2: document.getElementById("regPass2").value
+        })
+      });
+      const d = await res.json();
+      if (d.success) {
+        showMsg("تم إنشاء الحساب بنجاح! API Key: " + (d.api_key || ""));
+        switchTab("login");
+      } else {
+        showMsg("خطأ: " + (d.message || "تعذر إنشاء الحساب"));
+      }
+    }
+    async function logoutUser() {
+      await fetch("/logout");
+      document.getElementById("adminTabBtn").classList.add("hidden");
+      showMsg("تم تسجيل الخروج");
+      switchTab("login");
+    }
+    async function deleteServerDirect(key) {
+      if (!key) return;
+      const res = await fetch("/api/bot/server/action", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ folder: key, action: "delete" })
+      });
+      const d = await res.json();
+      showMsg(d.success ? (d.message || "تم حذف السيرفر بنجاح") : ("خطأ: " + (d.message || "فشل الحذف")));
+      if (currentKey === key) {
+        currentKey = "";
+        document.getElementById("fileManagerBox").classList.add("hidden");
+      }
+      loadServers();
+    }
+    async function loadServers() {
+      const res = await fetch("/servers");
+      if (res.status === 401 || res.status === 403) {
+        switchTab("login");
+        return;
+      }
+      const d = await res.json();
+      const box = document.getElementById("serversList");
+      box.innerHTML = "";
+      for (const s of (d.servers || [])) {
+        const div = document.createElement("div");
+        div.className = "card";
+        const linkHtml = s.generated_url ? `<br/>🔗 الرابط المولّد: <a class="link-pill" href="${s.generated_url}" target="_blank">${s.generated_url}</a>` : "";
+        const btn = document.createElement("button");
+        btn.textContent = "⚙️ إدارة";
+        btn.setAttribute("data-key", s.key || "");
+        btn.setAttribute("data-startup", s.startup_file || "");
+        btn.onclick = function() {
+          openServer(this.getAttribute("data-key"), this.getAttribute("data-startup"));
+        };
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "🗑 حذف";
+        delBtn.className = "danger";
+        delBtn.style.marginRight = "8px";
+        delBtn.setAttribute("data-key", s.key || "");
+        delBtn.onclick = function() {
+          deleteServerDirect(this.getAttribute("data-key"));
+        };
+        div.innerHTML = `<b>${s.title}</b> (${s.status}) - ${s.subtitle}${linkHtml}<br/><br/>`;
+        div.appendChild(btn);
+        div.appendChild(delBtn);
+        box.appendChild(div);
+      }
+    }
+    async function addServer() {
+      const name = document.getElementById("newServerName").value;
+      const server_type = document.getElementById("newServerType").value;
+      const res = await fetch("/add", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name, server_type})
+      });
+      const d = await res.json();
+      showMsg(d.success ? "تم إنشاء السيرفر" : ("خطأ: " + d.message));
+      loadServers();
+    }
+    function openServer(key, startup) {
+      currentKey = key;
+      document.getElementById("fileManagerBox").classList.remove("hidden");
+      document.getElementById("activeServerKey").textContent = key;
+      document.getElementById("startupFileInput").value = startup;
+      refreshServerDetails();
+    }
+    async function updateGeneratedLinkUI() {
+      if (!currentKey) return;
+      const f = document.getElementById("startupFileInput").value || "";
+      const sub = document.getElementById("extraPathInput").value || "";
+      const q = `/api/bot/js-link?folder=${encodeURIComponent(currentKey)}&file=${encodeURIComponent(f)}&subpath=${encodeURIComponent(sub)}`;
+      const r = await fetch(q);
+      if (r.ok) {
+        const d = await r.json();
+        if (d.success && d.generated_url) {
+          document.getElementById("generatedLinkBox").classList.remove("hidden");
+          const a1 = document.getElementById("genUrlAnchor");
+          const a2 = document.getElementById("goUrlAnchor");
+          a1.href = d.generated_url;
+          a1.textContent = d.generated_url;
+          a2.href = d.google_jump_url;
+          a2.textContent = d.google_jump_url;
+        }
+      }
+    }
+    async function saveStartup() {
+      const f = document.getElementById("startupFileInput").value;
+      await fetch("/server/set-startup/" + encodeURIComponent(currentKey), {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({file: f})
+      });
+      await updateGeneratedLinkUI();
+      showMsg("تم حفظ ملف التشغيل وتوليد الرابط");
+    }
+    async function serverAct(act) {
+      if (act === "delete") {
+        await deleteServerDirect(currentKey);
+        return;
+      }
+      const f = document.getElementById("startupFileInput").value || "";
+      const sub = document.getElementById("extraPathInput").value || "";
+      const res = await fetch("/server/action/" + encodeURIComponent(currentKey) + "/" + act, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({file: f, subpath: sub})
+      });
+      const d = await res.json();
+      if (d.generated_url) {
+        showMsg(`تم تنفيذ ${act} — الرابط المولّد: ${d.generated_url}`);
+      } else {
+        showMsg(d.success ? ("تم تنفيذ " + act) : ("خطأ: " + d.message));
+      }
+      await updateGeneratedLinkUI();
+      refreshServerDetails();
+    }
+    async function refreshServerDetails() {
+      if (!currentKey) return;
+      await updateGeneratedLinkUI();
+      const stRes = await fetch("/server/stats/" + encodeURIComponent(currentKey));
+      if (stRes.ok) {
+        const st = await stRes.json();
+        document.getElementById("serverLogs").textContent = st.logs || "";
+      }
+      const flRes = await fetch("/files/list/" + encodeURIComponent(currentKey));
+      if (flRes.ok) {
+        const fl = await flRes.json();
+        const names = [...(fl.dirs || []).map(x => "[DIR] " + x.name), ...(fl.files || []).map(x => x.name + " (" + x.size + ")")];
+        document.getElementById("filesList").textContent = names.join(" | ") || "فارغ";
+      }
+    }
+    async function loadFileContent() {
+      const file = document.getElementById("editFilePath").value;
+      const res = await fetch("/files/content/" + encodeURIComponent(currentKey) + "?file=" + encodeURIComponent(file));
+      const d = await res.json();
+      document.getElementById("editFileContent").value = d.content || "";
+    }
+    async function saveFileContent() {
+      const file = document.getElementById("editFilePath").value;
+      const content = document.getElementById("editFileContent").value;
+      const res = await fetch("/files/save/" + encodeURIComponent(currentKey), {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({file, content})
+      });
+      const d = await res.json();
+      showMsg(d.success ? "تم حفظ الملف" : ("خطأ: " + d.message));
+      refreshServerDetails();
+    }
+    async function loadAdminData() {
+      const stRes = await fetch("/api/admin/quickstats");
+      if (stRes.status === 403 || stRes.status === 401) {
+        showMsg("صلاحية الأدمن مطلوبة");
+        return;
+      }
+      const st = await stRes.json();
+      document.getElementById("adminStats").textContent = JSON.stringify(st.stats || {});
+      const uRes = await fetch("/api/admin/users");
+      const uData = await uRes.json();
+      document.getElementById("adminUsers").innerHTML = (uData.users || []).map(u =>
+        `<div class="card">${u.username} | ${u.email} | نشط: ${u.active} | مميز: ${u.premium} | سيرفرات: ${u.servers}</div>`
+      ).join("");
+      const sRes = await fetch("/api/admin/servers");
+      const sData = await sRes.json();
+      document.getElementById("adminServers").innerHTML = (sData.servers || []).map(s =>
+        `<div class="card">${s.key} | الحالة: ${s.status}</div>`
+      ).join("");
+    }
+    const initMode = window.__INITIAL_TAB__ || "home";
+    switchTab(initMode);
+  </script>
+</body>
+</html>
+"""
 
 
 def ensure_index_html_exists():
@@ -4446,25 +4828,6 @@ def _lookup_running_state(keys_to_check: list[str], banned: bool) -> str:
     return "Offline"
 
 
-def _build_server_entry(owner: str, folder: str, subtitle: str) -> dict:
-    meta = read_meta(owner, folder)
-    banned = bool(meta.get("banned", False))
-    key = normalize_state_key(owner, folder)
-    st = _lookup_running_state([key, folder], banned)
-    links = build_generated_server_url(owner, folder, meta.get("startup_file", ""))
-    return {
-        "title": meta.get("display_name", folder),
-        "folder": folder,
-        "owner": owner,
-        "key": key,
-        "subtitle": subtitle,
-        "startup_file": meta.get("startup_file", ""),
-        "generated_url": meta.get("generated_url") or links["generated_url"],
-        "google_jump_url": meta.get("google_jump_url") or links["google_jump_url"],
-        "status": st,
-    }
-
-
 def list_all_servers_for_admin():
     servers = []
     if not os.path.isdir(USERS_ROOT):
@@ -4474,20 +4837,25 @@ def list_all_servers_for_admin():
         if not os.path.isdir(root):
             continue
         for folder in sorted(os.listdir(root)):
-            if os.path.isdir(get_server_dir(owner, folder)):
-                servers.append(_build_server_entry(owner, folder, f"Owner: {owner}"))
-    return servers
-
-
-def list_servers_for_user(username: str):
-    ensure_user_dirs(username)
-    root = get_user_servers_root(username)
-    servers = []
-    if not os.path.isdir(root):
-        return servers
-    for folder in sorted(os.listdir(root)):
-        if os.path.isdir(get_server_dir(username, folder)):
-            servers.append(_build_server_entry(username, folder, f"Owner: {username}"))
+            server_dir = get_server_dir(owner, folder)
+            if not os.path.isdir(server_dir):
+                continue
+            meta = read_meta(owner, folder)
+            banned = bool(meta.get("banned", False))
+            key = normalize_state_key(owner, folder)
+            st = _lookup_running_state([key, folder], banned)
+            links = build_generated_server_url(owner, folder, meta.get("startup_file", ""))
+            servers.append({
+                "title": meta.get("display_name", folder),
+                "folder": folder,
+                "owner": owner,
+                "key": key,
+                "subtitle": f"Owner: {owner}",
+                "startup_file": meta.get("startup_file", ""),
+                "generated_url": meta.get("generated_url") or links["generated_url"],
+                "google_jump_url": meta.get("google_jump_url") or links["google_jump_url"],
+                "status": st,
+            })
     return servers
 
 
@@ -4506,9 +4874,18 @@ def healthz():
 
 
 def _keep_alive_worker():
-    site_url = get_site_base_url()
+    site_url = (
+        os.environ.get("RENDER_EXTERNAL_URL")
+        or os.environ.get("PUBLIC_API_URL")
+        or ""
+    ).strip().rstrip("/")
+
     if not site_url:
+        logger.warning("⚠️ Keep-Alive متوقف: لم يتم ضبط RENDER_EXTERNAL_URL أو PUBLIC_API_URL")
         return
+
+    if not site_url.startswith("http"):
+        site_url = f"https://{site_url}"
 
     target_url = f"{site_url}/api/ping"
     interval_sec = int(os.environ.get("KEEP_ALIVE_INTERVAL", "300"))
@@ -4543,6 +4920,35 @@ def _start_keep_alive_once():
             t.start()
 
 
+def list_servers_for_user(username: str):
+    ensure_user_dirs(username)
+    root = get_user_servers_root(username)
+    servers = []
+    if not os.path.isdir(root):
+        return servers
+    for folder in sorted(os.listdir(root)):
+        server_dir = get_server_dir(username, folder)
+        if not os.path.isdir(server_dir):
+            continue
+        meta = read_meta(username, folder)
+        banned = bool(meta.get("banned", False))
+        key = normalize_state_key(username, folder)
+        st = _lookup_running_state([key, folder], banned)
+        links = build_generated_server_url(username, folder, meta.get("startup_file", ""))
+        servers.append({
+            "title": meta.get("display_name", folder),
+            "folder": folder,
+            "owner": username,
+            "key": key,
+            "subtitle": f"Owner: {username}",
+            "startup_file": meta.get("startup_file", ""),
+            "generated_url": meta.get("generated_url") or links["generated_url"],
+            "google_jump_url": meta.get("google_jump_url") or links["google_jump_url"],
+            "status": st,
+        })
+    return servers
+
+
 def _render_js_runner_page(owner: str, folder: str, startup_file: str = "", subpath: str = "", auto_google: bool = False):
     server_dir = get_server_dir(owner, folder)
     if not os.path.isdir(server_dir):
@@ -4571,7 +4977,7 @@ def _render_js_runner_page(owner: str, folder: str, startup_file: str = "", subp
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>تشغيل البوت - {escape(bot_title)}</title>
+  <title>تشغيل البوت - {bot_title}</title>
   <style>
     body {{
       font-family: Tahoma, Arial, sans-serif;
@@ -4619,13 +5025,13 @@ def _render_js_runner_page(owner: str, folder: str, startup_file: str = "", subp
 <body>
   <div class="box">
     <div class="title">✨ تم بنجاح تشغيل الخادم والبوت ✨</div>
-    <div class="meta">🤖 البوت : {escape(bot_title)}</div>
+    <div class="meta">🤖 البوت : {bot_title}</div>
     <div class="meta">@Y_20_20 : المطور</div>
     <div class="url-box">
-      <div><b>ملف التشغيل:</b> {escape(resolved_file)}</div>
-      <div><b>الرابط المولّد:</b> <a href="{escape(gen_url)}">{escape(gen_url)}</a></div>
+      <div><b>ملف التشغيل:</b> {resolved_file}</div>
+      <div><b>الرابط المولّد:</b> <a href="{gen_url}">{gen_url}</a></div>
     </div>
-    <a class="btn" id="goGoogleBtn" href="{escape(google_url)}">الانتقال إلى جوجل</a>
+    <a class="btn" id="goGoogleBtn" href="{google_url}">الانتقال إلى جوجل</a>
   </div>
   <script>
     setTimeout(function() {{
@@ -4751,7 +5157,7 @@ def api_create():
         "api_key": api_key,
         "active": True,
         "premium": False,
-        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "created_at": datetime.utcnow().isoformat() + "Z",
     }
     db.setdefault("users", []).append(new_user)
     save_users(db)
@@ -4806,14 +5212,7 @@ def add_server():
 
     os.makedirs(server_dir, exist_ok=True)
     display_title = safe_name(raw_name) or folder
-    st_low = server_type.lower()
-    if "js" in st_low or "node" in st_low:
-        default_startup = "index.js"
-    elif "java" in st_low:
-        default_startup = "Main.java"
-    else:
-        default_startup = "main.py"
-
+    default_startup = "index.js" if ("js" in server_type.lower() or "node" in server_type.lower()) else "main.py"
     links = build_generated_server_url(owner, folder, default_startup, req=request)
     meta_data = {
         "display_name": display_title,
@@ -4823,21 +5222,22 @@ def add_server():
         "generated_url": links["generated_url"],
         "google_jump_url": links["google_jump_url"],
     }
-    write_json(os.path.join(server_dir, "meta.json"), meta_data)
+    _atomic_write_json_raw(os.path.join(server_dir, "meta.json"), meta_data)
 
-    sample_path = os.path.join(server_dir, default_startup)
-    if not os.path.exists(sample_path):
-        with open(sample_path, "w", encoding="utf-8") as f:
-            if default_startup == "index.js":
+    if default_startup == "index.js":
+        sample_path = os.path.join(server_dir, "index.js")
+        if not os.path.exists(sample_path):
+            with open(sample_path, "w", encoding="utf-8") as f:
                 f.write("console.log('Server initialized successfully');\n")
-            elif default_startup == "Main.java":
-                f.write('public class Main {\n    public static void main(String[] args) {\n        System.out.println("Java server initialized successfully");\n    }\n}\n')
-            else:
+    else:
+        sample_path = os.path.join(server_dir, "main.py")
+        if not os.path.exists(sample_path):
+            with open(sample_path, "w", encoding="utf-8") as f:
                 f.write("print('Server initialized successfully')\n")
 
-    types_db = read_json(SERVER_TYPES_DB, {"types": {}})
+    types_db = _read_json(SERVER_TYPES_DB, {"types": {}})
     types_db.setdefault("types", {})[normalize_state_key(owner, folder)] = server_type
-    write_json(SERVER_TYPES_DB, types_db)
+    _atomic_write_json(SERVER_TYPES_DB, types_db)
 
     set_state(normalize_state_key(owner, folder), "Offline")
     sync_active_server_for_owner(owner, folder, startup_file=default_startup, req=request)
@@ -4850,86 +5250,47 @@ def add_server():
     })
 
 
-@app.route("/server/set-startup/<path:key>", methods=["POST"])
-@api_login_required
-def set_startup(key):
-    if not can_access_key(key):
-        return jsonify({"success": False, "message": "غير مصرح"}), 403
-    try:
-        owner, folder = parse_server_key(key, allow_admin=True)
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 400
-
-    data = request.get_json(silent=True) or {}
-    file_rel = (data.get("file") or "").strip().replace("\\", "/").lstrip("/")
-    if not file_rel or ".." in file_rel.split("/"):
-        return jsonify({"success": False, "message": "اسم ملف غير صالح"}), 400
-
-    server_dir = get_server_dir(owner, folder)
-    if not os.path.isdir(server_dir):
-        return jsonify({"success": False, "message": "السيرفر غير موجود"}), 404
-
-    meta = read_meta(owner, folder)
-    meta["startup_file"] = file_rel
-    write_meta(owner, folder, meta)
-    links = refresh_server_js_link(owner, folder, startup_file=file_rel, req=request)
-    sync_active_server_for_owner(owner, folder, startup_file=file_rel, req=request)
-    return jsonify({
-        "success": True,
-        "startup_file": file_rel,
-        "generated_url": links["generated_url"],
-        "google_jump_url": links["google_jump_url"],
-    })
-
-
 def background_start(state_key: str, owner: str, folder: str, startup_file: str, subpath: str = ""):
     try:
+        meta = read_meta(owner, folder)
+        if meta.get("banned", False):
+            set_state(state_key, "Banned")
+            log_append(state_key, "[SYSTEM] Server is BANNED by admin.\n")
+            return
+
         set_state(state_key, "Installing")
         ensure_requirements_installed(owner, folder)
+
         set_state(state_key, "Starting")
-
-        meta = read_meta(owner, folder)
-        resolved_startup = resolve_startup_file(owner, folder, startup_file or meta.get("startup_file") or "")
-        links = refresh_server_js_link(owner, folder, startup_file=resolved_startup, subpath=subpath)
-        sync_active_server_for_owner(owner, folder, startup_file=resolved_startup)
-
-        log_append(state_key, f"[SYSTEM] Starting ({resolved_startup}) | URL: {links['generated_url']}...\n")
-        proc, logf = start_with_autoinstall(owner, folder, resolved_startup)
+        eff_startup = startup_file or meta.get("startup_file") or "main.py"
+        links = refresh_server_js_link(owner, folder, startup_file=eff_startup, subpath=subpath)
+        sync_active_server_for_owner(owner, folder, startup_file=eff_startup)
+        log_append(state_key, f"[SYSTEM] Starting {eff_startup}... | Generated Link: {links['generated_url']}\n")
+        proc, logf = start_with_autoinstall(owner, folder, eff_startup)
 
         with lock:
             running_procs[state_key] = (proc, logf)
             running_procs[folder] = (proc, logf)
 
-        set_state(state_key, "Running")
-        set_state(folder, "Running")
-
-        proc.wait()
-        try:
-            logf.close()
-        except Exception:
-            pass
+        time.sleep(0.7)
+        if proc.poll() is None:
+            set_state(state_key, "Running")
+            log_append(state_key, f"[SYSTEM] Process running (PID={proc.pid}) ✅\n")
+        else:
+            set_state(state_key, "Offline")
+            log_append(state_key, f"[SYSTEM] Process exited with code {proc.returncode}\n")
     except Exception as e:
-        log_append(state_key, f"[SYSTEM] Start error: {e}\n")
-    finally:
-        with lock:
-            running_procs.pop(state_key, None)
-            if running_procs.get(folder, (None,))[0] is not None:
-                running_procs.pop(folder, None)
-        meta = read_meta(owner, folder)
-        end_state = "Banned" if meta.get("banned") else "Offline"
-        set_state(state_key, end_state)
-        set_state(folder, end_state)
+        set_state(state_key, "Offline")
+        log_append(state_key, f"[SYSTEM] Error starting server: {e}\n")
 
 
 @app.route("/server/action/<path:key>/<act>", methods=["POST"])
 @api_login_required
 def server_action(key, act):
-    if not can_access_key(key):
-        return jsonify({"success": False, "message": "غير مصرح"}), 403
     try:
         owner, folder = parse_server_key(key, allow_admin=True)
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 400
+    except ValueError as e:
+        return jsonify({"success": False, "message": "Forbidden" if str(e) == "forbidden" else "Invalid server key"}), 403 if str(e) == "forbidden" else 400
 
     server_dir = get_server_dir(owner, folder)
     if not os.path.isdir(server_dir):
@@ -4939,67 +5300,94 @@ def server_action(key, act):
     state_key = normalize_state_key(owner, folder)
     req_data = request.get_json(silent=True) or {}
     req_file = (req_data.get("file") or "").strip()
-    req_sub = (req_data.get("subpath") or "").strip()
+    req_subpath = (req_data.get("subpath") or "").strip()
+    eff_startup = req_file or meta.get("startup_file") or "main.py"
+    links = refresh_server_js_link(owner, folder, startup_file=eff_startup, subpath=req_subpath, req=request)
+    sync_active_server_for_owner(owner, folder, startup_file=eff_startup, req=request)
 
     if meta.get("banned", False) and act in ("start", "restart"):
-        return jsonify({"success": False, "message": "هذا السيرفر محظور بواسطة الإدارة"}), 403
+        set_state(state_key, "Banned")
+        return jsonify({"success": False, "message": "هذا السيرفر محظور من الإدارة ولا يمكن تشغيله"})
 
     if act == "start":
-        if _lookup_running_state([state_key, folder], bool(meta.get("banned", False))) == "Running":
-            links = refresh_server_js_link(owner, folder, req_file or meta.get("startup_file", ""), req_sub, req=request)
-            return jsonify({"success": True, "message": "السيرفر قيد التشغيل بالفعل", **links})
-        eff_file = req_file or meta.get("startup_file") or resolve_startup_file(owner, folder, "")
-        if req_file:
-            meta["startup_file"] = req_file
-            write_meta(owner, folder, meta)
-        links = refresh_server_js_link(owner, folder, eff_file, req_sub, req=request)
-        sync_active_server_for_owner(owner, folder, startup_file=eff_file, req=request)
-        t = threading.Thread(target=background_start, args=(state_key, owner, folder, eff_file, req_sub), daemon=True)
+        t = threading.Thread(target=background_start, args=(state_key, owner, folder, eff_startup, req_subpath), daemon=True)
         t.start()
-        return jsonify({"success": True, "message": "تم بدء تشغيل السيرفر وتوليد الرابط", **links})
+        return jsonify({
+            "success": True,
+            "message": "جاري تشغيل السيرفر...",
+            "generated_url": links["generated_url"],
+            "google_jump_url": links["google_jump_url"],
+        })
 
-    elif act == "stop":
+    if act == "stop":
         stop_proc(state_key, owner, folder)
         set_state(state_key, "Offline")
-        set_state(folder, "Offline")
-        log_append(state_key, "[SYSTEM] Stopped by user.\n")
-        return jsonify({"success": True, "message": "تم إيقاف السيرفر"})
+        log_append(state_key, "[SYSTEM] Server stopped by user.\n")
+        return jsonify({"success": True, "message": "تم إيقاف السيرفر", "generated_url": links["generated_url"]})
 
-    elif act == "restart":
+    if act == "restart":
         stop_proc(state_key, owner, folder)
         set_state(state_key, "Offline")
-        set_state(folder, "Offline")
-        eff_file = req_file or meta.get("startup_file") or resolve_startup_file(owner, folder, "")
-        if req_file:
-            meta["startup_file"] = req_file
-            write_meta(owner, folder, meta)
-        links = refresh_server_js_link(owner, folder, eff_file, req_sub, req=request)
-        sync_active_server_for_owner(owner, folder, startup_file=eff_file, req=request)
-        t = threading.Thread(target=background_start, args=(state_key, owner, folder, eff_file, req_sub), daemon=True)
+        log_append(state_key, "[SYSTEM] Restarting server...\n")
+        t = threading.Thread(target=background_start, args=(state_key, owner, folder, eff_startup, req_subpath), daemon=True)
         t.start()
-        return jsonify({"success": True, "message": "تمت إعادة تشغيل السيرفر وتحديث الرابط", **links})
+        return jsonify({
+            "success": True,
+            "message": "جاري إعادة تشغيل السيرفر...",
+            "generated_url": links["generated_url"],
+            "google_jump_url": links["google_jump_url"],
+        })
 
-    elif act == "delete":
+    if act == "delete":
         stop_proc(state_key, owner, folder)
-        if is_path_safe(USERS_ROOT, server_dir) and os.path.exists(server_dir):
+        if is_path_safe(USERS_ROOT, server_dir):
             shutil.rmtree(server_dir, ignore_errors=True)
         with lock:
-            server_states.pop(state_key, None)
-            server_states.pop(folder, None)
-        return jsonify({"success": True, "message": "تم حذف السيرفر بالكامل"})
+            for ck in _candidate_keys(state_key, owner, folder):
+                server_states.pop(ck, None)
+                running_procs.pop(ck, None)
+        return jsonify({"success": True, "message": "تم حذف السيرفر"})
 
     return jsonify({"success": False, "message": "إجراء غير معروف"}), 400
+
+
+@app.route("/server/set-startup/<path:key>", methods=["POST"])
+@api_login_required
+def set_startup(key):
+    try:
+        owner, folder = parse_server_key(key, allow_admin=True)
+    except Exception:
+        return jsonify({"success": False, "message": "Invalid server key"}), 400
+
+    data = request.get_json(silent=True) or {}
+    fname = (data.get("file") or "").strip().lstrip("/")
+    if not fname or ".." in fname.split("/"):
+        return jsonify({"success": False, "message": "اسم ملف غير صالح"})
+
+    server_dir = get_server_dir(owner, folder)
+    if not os.path.isdir(server_dir):
+        return jsonify({"success": False, "message": "السيرفر غير موجود"}), 404
+
+    meta = read_meta(owner, folder)
+    meta["startup_file"] = fname
+    write_meta(owner, folder, meta)
+    links = refresh_server_js_link(owner, folder, startup_file=fname, req=request)
+    sync_active_server_for_owner(owner, folder, startup_file=fname, req=request)
+    return jsonify({
+        "success": True,
+        "startup_file": fname,
+        "generated_url": links["generated_url"],
+        "google_jump_url": links["google_jump_url"],
+    })
 
 
 @app.route("/server/stats/<path:key>", methods=["GET"])
 @api_login_required
 def server_stats(key):
-    if not can_access_key(key):
-        return jsonify({"success": False, "message": "غير مصرح"}), 403
     try:
         owner, folder = parse_server_key(key, allow_admin=True)
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 400
+    except Exception:
+        return jsonify({"success": False, "message": "Invalid server key"}), 400
 
     server_dir = get_server_dir(owner, folder)
     if not os.path.isdir(server_dir):
@@ -5009,81 +5397,67 @@ def server_stats(key):
     state_key = normalize_state_key(owner, folder)
     st = _lookup_running_state([state_key, folder], bool(meta.get("banned", False)))
 
+    logs_text = ""
     log_path = os.path.join(server_dir, "server.log")
-    logs = ""
     if os.path.exists(log_path):
         try:
             with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
-                logs = f.read()[-12000:]
+                logs_text = f.read()[-12000:]
         except Exception:
-            logs = ""
+            logs_text = ""
 
-    cpu_pct = 0.0
-    ram_mb = 0.0
-    with lock:
-        tup = running_procs.get(state_key) or running_procs.get(folder)
-    if tup and tup[0].poll() is None:
-        try:
-            p = psutil.Process(tup[0].pid)
-            cpu_pct = round(p.cpu_percent(interval=0.05), 1)
-            ram_mb = round(p.memory_info().rss / (1024 * 1024), 1)
-        except Exception:
-            pass
-
-    links = build_generated_server_url(owner, folder, meta.get("startup_file", ""), req=request)
     return jsonify({
         "success": True,
         "status": st,
-        "cpu": cpu_pct,
-        "ram_mb": ram_mb,
-        "logs": logs,
-        "generated_url": meta.get("generated_url") or links["generated_url"],
-        "google_jump_url": meta.get("google_jump_url") or links["google_jump_url"],
+        "cpu": 0.0,
+        "ram": "0 MB",
+        "uptime": "0s",
+        "logs": logs_text,
     })
 
 
 @app.route("/files/list/<path:key>", methods=["GET"])
 @api_login_required
 def files_list(key):
-    if not can_access_key(key):
-        return jsonify({"success": False, "message": "غير مصرح"}), 403
-    rel_path = request.args.get("path", "")
+    rel = request.args.get("path", "")
     try:
-        target = safe_join_server_path(key, rel_path)
+        target = safe_join_server_path(key, rel)
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 400
 
-    if not os.path.exists(target):
-        return jsonify({"success": False, "message": "المسار غير موجود"}), 404
+    if not os.path.exists(target) or not os.path.isdir(target):
+        return jsonify({"success": False, "message": "المجلد غير موجود"}), 404
 
-    dirs, files = [], []
+    dirs = []
+    files = []
     for entry in sorted(os.listdir(target)):
-        if entry in ("meta.json", "server.log", ".installed"):
+        if entry == "meta.json":
             continue
-        p = os.path.join(target, entry)
-        if os.path.isdir(p):
+        full = os.path.join(target, entry)
+        if os.path.isdir(full):
             dirs.append({"name": entry})
         else:
             try:
-                sz = os.path.getsize(p)
+                sz = os.path.getsize(full)
             except Exception:
                 sz = 0
             files.append({"name": entry, "size": sz})
-    return jsonify({"success": True, "path": rel_path, "dirs": dirs, "files": files})
+
+    return jsonify({"success": True, "dirs": dirs, "files": files})
 
 
 @app.route("/files/content/<path:key>", methods=["GET"])
 @api_login_required
-def files_content(key):
-    if not can_access_key(key):
-        return jsonify({"success": False, "message": "غير مصرح"}), 403
-    rel_file = request.args.get("file", "")
+def file_content_route(key):
+    rel = request.args.get("file", "")
     try:
-        target = safe_join_server_path(key, rel_file)
+        target = safe_join_server_path(key, rel)
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 400
+
     if not os.path.isfile(target):
         return jsonify({"success": False, "message": "الملف غير موجود"}), 404
+
     try:
         with open(target, "r", encoding="utf-8", errors="replace") as f:
             content = f.read()
@@ -5094,21 +5468,20 @@ def files_content(key):
 
 @app.route("/files/save/<path:key>", methods=["POST"])
 @api_login_required
-def files_save(key):
-    if not can_access_key(key):
-        return jsonify({"success": False, "message": "غير مصرح"}), 403
+def file_save_route(key):
     data = request.get_json(silent=True) or {}
-    rel_file = data.get("file", "")
+    rel = data.get("file", "")
     content = data.get("content", "")
     try:
-        target = safe_join_server_path(key, rel_file)
+        target = safe_join_server_path(key, rel)
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 400
+
     try:
         os.makedirs(os.path.dirname(target), exist_ok=True)
         with open(target, "w", encoding="utf-8") as f:
             f.write(content)
-        return jsonify({"success": True, "message": "تم حفظ الملف"})
+        return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -5118,18 +5491,20 @@ def files_save(key):
 def api_admin_quickstats():
     db = load_users()
     users_list = db.get("users", [])
-    servers_list = list_all_servers_for_admin()
-    running_cnt = sum(1 for s in servers_list if s.get("status") == "Running")
+    total_users = len(users_list)
+    active_users = sum(1 for u in users_list if u.get("active", True))
+    premium_users = sum(1 for u in users_list if u.get("premium", False))
+    all_srvs = list_all_servers_for_admin()
+    running_srvs = sum(1 for s in all_srvs if s.get("status") == "Running")
     return jsonify({
         "success": True,
         "stats": {
-            "total_users": len(users_list),
-            "active_users": sum(1 for u in users_list if u.get("active", True)),
-            "premium_users": sum(1 for u in users_list if u.get("premium", False)),
-            "total_servers": len(servers_list),
-            "running_servers": running_cnt,
-            "free_admin": ADMIN_FREE_MODE,
-        }
+            "total_users": total_users,
+            "active_users": active_users,
+            "premium_users": premium_users,
+            "total_servers": len(all_srvs),
+            "running_servers": running_srvs,
+        },
     })
 
 
@@ -5145,8 +5520,6 @@ def api_admin_users():
             "email": u.get("email", ""),
             "active": bool(u.get("active", True)),
             "premium": bool(u.get("premium", False)),
-            "api_key": u.get("api_key", ""),
-            "created_at": u.get("created_at", ""),
             "servers": len(list_servers_for_user(uname)),
         })
     return jsonify({"success": True, "users": out})
@@ -5158,372 +5531,294 @@ def api_admin_servers():
     return jsonify({"success": True, "servers": list_all_servers_for_admin()})
 
 
-@app.route("/api/bot/js-link", methods=["GET"])
-def api_bot_js_link():
-    api_key = (request.args.get("api_key") or request.headers.get("X-API-Key") or "").strip()
-    user_info = resolve_user_for_api(api_key)
-    folder = (request.args.get("folder") or "").strip()
-    startup_file = (request.args.get("file") or "").strip()
-    subpath = (request.args.get("subpath") or "").strip()
+def _find_server_by_folder_or_key(folder_or_key: str, user_info: dict = None):
+    raw = (folder_or_key or "").strip()
+    if not raw:
+        return None, None
+    default_owner = (user_info or {}).get("username", "") or current_username()
+    is_adm = bool((user_info or {}).get("is_admin")) or is_admin_session()
 
     try:
-        if folder:
-            owner, clean_folder = parse_server_key(
-                folder,
-                allow_admin=True,
-                default_owner=user_info.get("username", "") or ADMIN_USERNAME,
-                force_admin=bool(user_info.get("is_admin")),
-            )
-            links = refresh_server_js_link(owner, clean_folder, startup_file=startup_file, subpath=subpath, req=request)
-            return jsonify({"success": True, "owner": owner, "folder": clean_folder, **links})
+        owner, folder = parse_server_key(raw, allow_admin=True, default_owner=default_owner, force_admin=is_adm)
+        if os.path.isdir(get_server_dir(owner, folder)):
+            return owner, folder
+    except Exception:
+        pass
 
-        active_db = read_json(os.path.join(DATA_DIR, "active_servers.json"), {"by_owner": {}, "last_selected": None})
-        owner_key = user_info.get("username") or ADMIN_USERNAME
-        entry = active_db.get("by_owner", {}).get(owner_key) or active_db.get("last_selected")
-        if entry:
-            links = refresh_server_js_link(
-                entry.get("owner", owner_key),
-                entry.get("folder", "server"),
-                startup_file=startup_file or entry.get("startup_file", ""),
-                subpath=subpath,
-                req=request,
-            )
-            return jsonify({"success": True, "owner": entry.get("owner", owner_key), "folder": entry.get("folder", "server"), **links})
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 400
+    if is_adm and os.path.isdir(USERS_ROOT):
+        for candidate_owner in os.listdir(USERS_ROOT):
+            if os.path.isdir(get_server_dir(candidate_owner, raw)):
+                return candidate_owner, raw
+    return None, None
 
-    return jsonify({"success": False, "message": "لا يوجد سيرفر محدد بعد"})
+
+@app.route("/api/bot/js-link", methods=["GET"])
+def api_bot_js_link():
+    api_key = (request.headers.get("X-API-Key") or request.args.get("api_key") or "").strip()
+    user_info = resolve_user_for_api(api_key)
+    folder_arg = (request.args.get("folder") or "").strip()
+    startup_arg = (request.args.get("file") or "").strip()
+    subpath_arg = (request.args.get("subpath") or "").strip()
+
+    owner, folder = _find_server_by_folder_or_key(folder_arg, user_info)
+    if not owner or not folder:
+        active_db = _read_json(os.path.join(DATA_DIR, "active_servers.json"), {"by_owner": {}, "last_selected": None})
+        owner_hint = (user_info or {}).get("username") or current_username()
+        picked = active_db.get("by_owner", {}).get(owner_hint) or active_db.get("last_selected")
+        if picked and picked.get("owner") and picked.get("folder"):
+            owner, folder = picked["owner"], picked["folder"]
+            if not startup_arg:
+                startup_arg = picked.get("startup_file") or ""
+
+    if not owner or not folder:
+        all_srvs = list_all_servers_for_admin()
+        if all_srvs:
+            owner = all_srvs[0]["owner"]
+            folder = all_srvs[0]["folder"]
+            if not startup_arg:
+                startup_arg = all_srvs[0].get("startup_file") or ""
+        else:
+            links = build_generated_server_url(ADMIN_USERNAME, "default-server", startup_arg or "index.js", subpath=subpath_arg, req=request)
+            return jsonify({
+                "success": True,
+                "folder": "default-server",
+                "owner": ADMIN_USERNAME,
+                "generated_url": links["generated_url"],
+                "google_jump_url": links["google_jump_url"],
+                "google_target": links["google_target"],
+            })
+
+    meta = read_meta(owner, folder)
+    eff_file = startup_arg or resolve_startup_file(owner, folder, meta.get("startup_file") or "index.js")
+    links = refresh_server_js_link(owner, folder, startup_file=eff_file, subpath=subpath_arg, req=request)
+    sync_active_server_for_owner(owner, folder, startup_file=eff_file, req=request)
+    return jsonify({
+        "success": True,
+        "owner": owner,
+        "folder": folder,
+        "key": normalize_state_key(owner, folder),
+        "startup_file": eff_file,
+        "generated_url": links["generated_url"],
+        "google_jump_url": links["google_jump_url"],
+        "google_target": links["google_target"],
+    })
 
 
 @app.route("/api/bot/server/action", methods=["POST"])
 def api_bot_server_action():
     data = request.get_json(silent=True) or {}
-    api_key = (data.get("api_key") or request.args.get("api_key") or request.headers.get("X-API-Key") or "").strip()
+    api_key = (request.headers.get("X-API-Key") or data.get("api_key") or "").strip()
     user_info = resolve_user_for_api(api_key)
-    raw_folder = (data.get("folder") or "").strip()
-    action = (data.get("action") or "start").strip().lower()
 
-    if not raw_folder:
-        return jsonify({"success": False, "message": "يرجى تحديد اسم المجلد/السيرفر"}), 400
+    folder_raw = (data.get("folder") or data.get("key") or "").strip()
+    act = (data.get("action") or "").strip().lower()
+    if act not in ("start", "stop", "restart", "delete", "status"):
+        return jsonify({"success": False, "message": "إجراء غير صالح"}), 400
 
-    try:
-        owner, folder = parse_server_key(
-            raw_folder,
-            allow_admin=True,
-            default_owner=user_info.get("username", "") or ADMIN_USERNAME,
-            force_admin=bool(user_info.get("is_admin")),
-        )
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 400
+    owner, folder = _find_server_by_folder_or_key(folder_raw, user_info)
+    if not owner or not folder:
+        return jsonify({"success": False, "message": "السيرفر غير موجود"}), 404
 
-    server_dir = get_server_dir(owner, folder)
-    if not os.path.isdir(server_dir):
-        return jsonify({"success": False, "message": "المجلد غير موجود"}), 404
-
-    meta = read_meta(owner, folder)
     state_key = normalize_state_key(owner, folder)
+    server_dir = get_server_dir(owner, folder)
+    meta = read_meta(owner, folder)
 
-    if action == "delete":
+    if act == "status":
+        st = _lookup_running_state([state_key, folder], bool(meta.get("banned", False)))
+        links = build_generated_server_url(owner, folder, meta.get("startup_file", ""), req=request)
+        return jsonify({
+            "success": True,
+            "folder": folder,
+            "owner": owner,
+            "key": state_key,
+            "status": st,
+            "generated_url": meta.get("generated_url") or links["generated_url"],
+            "google_jump_url": meta.get("google_jump_url") or links["google_jump_url"],
+        })
+
+    if act == "delete":
         stop_proc(state_key, owner, folder)
-        if is_path_safe(USERS_ROOT, server_dir) and os.path.exists(server_dir):
+        if is_path_safe(USERS_ROOT, server_dir):
             shutil.rmtree(server_dir, ignore_errors=True)
         with lock:
-            server_states.pop(state_key, None)
-            server_states.pop(folder, None)
+            for ck in _candidate_keys(state_key, owner, folder):
+                server_states.pop(ck, None)
+                running_procs.pop(ck, None)
         return jsonify({"success": True, "message": f"تم حذف السيرفر {folder} بنجاح"})
 
-    if action in ("start", "restart"):
-        if action == "restart":
+    eff_startup = (data.get("file") or "").strip() or resolve_startup_file(owner, folder, meta.get("startup_file") or "index.js")
+    req_subpath = (data.get("subpath") or "").strip()
+    links = refresh_server_js_link(owner, folder, startup_file=eff_startup, subpath=req_subpath, req=request)
+    sync_active_server_for_owner(owner, folder, startup_file=eff_startup, req=request)
+
+    if act in ("start", "restart"):
+        if meta.get("banned", False):
+            set_state(state_key, "Banned")
+            return jsonify({"success": False, "message": "السيرفر محظور من الإدارة"}), 403
+        if act == "restart":
             stop_proc(state_key, owner, folder)
-        eff_file = (data.get("file") or meta.get("startup_file") or resolve_startup_file(owner, folder, "")).strip()
-        subpath = (data.get("subpath") or "").strip()
-        links = refresh_server_js_link(owner, folder, eff_file, subpath=subpath, req=request)
-        sync_active_server_for_owner(owner, folder, startup_file=eff_file, req=request)
-        t = threading.Thread(target=background_start, args=(state_key, owner, folder, eff_file, subpath), daemon=True)
+            set_state(state_key, "Offline")
+        t = threading.Thread(target=background_start, args=(state_key, owner, folder, eff_startup, req_subpath), daemon=True)
         t.start()
         return jsonify({
             "success": True,
-            "message": f"تم {'إعادة تشغيل' if action == 'restart' else 'تشغيل'} {folder} وتوليد الرابط",
-            **links,
+            "message": f"تم تنفيذ {act} للسيرفر {folder}",
+            "generated_url": links["generated_url"],
+            "google_jump_url": links["google_jump_url"],
         })
 
-    if action == "stop":
-        stop_proc(state_key, owner, folder)
-        set_state(state_key, "Offline")
-        set_state(folder, "Offline")
-        return jsonify({"success": True, "message": f"تم إيقاف {folder}"})
-
-    return jsonify({"success": False, "message": "إجراء غير مدعوم"}), 400
+    stop_proc(state_key, owner, folder)
+    set_state(state_key, "Offline")
+    return jsonify({
+        "success": True,
+        "message": f"تم إيقاف السيرفر {folder}",
+        "generated_url": links["generated_url"],
+        "google_jump_url": links["google_jump_url"],
+    })
 
 
 # ==============================================================================
-# ٩. تكامل python-telegram-bot الموحد مع نفس التوكن والأدمن والموقع
+# ٩. بوت تيليجرام التفاعلي (python-telegram-bot v20+)
 # ==============================================================================
-def _ptb_user_key(user_id: int) -> str:
-    return str(ADMIN_ID) if is_admin(user_id) else f"tg:{user_id}"
+def _is_tg_admin(user_id: int) -> bool:
+    return bool(user_id in ADMIN_TELEGRAM_IDS or is_admin(user_id))
 
 
-def _ptb_main_keyboard(user_id: int) -> InlineKeyboardMarkup:
+def _tg_user_key(user_id: int) -> str:
+    return f"tg:{user_id}"
+
+
+def _tg_is_free_admin(user_id: int) -> bool:
+    return _is_tg_admin(user_id) and ADMIN_FREE_MODE
+
+
+def _tg_main_keyboard(user_id: int) -> InlineKeyboardMarkup:
+    bal = get_balance(_tg_user_key(user_id))
     rows = [
-        [InlineKeyboardButton("📁 سيرفراتي وتوليد الروابط", callback_data="ptb_servers")],
-        [InlineKeyboardButton("🛒 الخدمات والمواقع (بالرصيد)", callback_data="ptb_services")],
-        [InlineKeyboardButton("💰 محفظتي ورصيدي", callback_data="ptb_wallet")],
-        [InlineKeyboardButton("🌐 رابط الموقع الموحد", url=get_site_base_url())],
+        [InlineKeyboardButton("🚀 استضافة سريعة / تشغيل فوري", callback_data="tg_quick_host")],
+        [
+            InlineKeyboardButton("🛒 الخدمات المدفوعة", callback_data="tg_services"),
+            InlineKeyboardButton(f"💰 رصيدي ({bal:.2f}$)", callback_data="tg_wallet"),
+        ],
+        [
+            InlineKeyboardButton("📦 طلباتي", callback_data="tg_orders"),
+            InlineKeyboardButton("🖥 حالة الخادم", callback_data="tg_status"),
+        ],
     ]
-    if is_admin(user_id):
-        rows.append([InlineKeyboardButton("👑 لوحة الأدمن", callback_data="ptb_admin")])
+    if _is_tg_admin(user_id):
+        rows.append([InlineKeyboardButton("👑 لوحة الأدمن المجانية", callback_data="tg_admin_panel")])
+    rows.append([InlineKeyboardButton("👨‍💻 معلومات المطور", callback_data="tg_dev_info")])
     return InlineKeyboardMarkup(rows)
 
 
-async def tg_start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.effective_user or not update.effective_message:
+async def _ptb_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    err = context.error
+    if "Conflict" in str(err):
+        logger.warning("⚠️ تعارض getUpdates (Conflict): تأكد من عدم تشغيل نسخة أخرى بنفس التوكن.")
+        await asyncio.sleep(5)
         return
-    uid = update.effective_user.id
-    if is_bot_locked() and not is_admin(uid):
-        await update.effective_message.reply_text("🔒 البوت مغلق حالياً للصيانة.")
-        return
-    ukey = _ptb_user_key(uid)
-    bal = get_balance(ukey)
-    role_txt = "👑 أدمن رئيسي (مجاني بالكامل)" if is_admin(uid) else "👤 مستخدم"
-    txt = (
-        f"<b>أهلاً بك في نظام 𝗘𝗛𝗔𝗕 الموحد</b>\n\n"
-        f"🆔 الآيدي: <code>{uid}</code>\n"
-        f"🎖 الرتبة: {role_txt}\n"
-        f"💰 الرصيد: <code>{bal:.2f} USD</code>\n"
-        f"🌐 الموقع: <code>{escape(get_site_base_url())}</code>"
-    )
-    await update.effective_message.reply_text(txt, parse_mode=ParseMode.HTML, reply_markup=_ptb_main_keyboard(uid))
-
-
-async def tg_cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.effective_user or not update.effective_message:
-        return
-    uid = update.effective_user.id
-    ptb_user_states.pop(uid, None)
-    await update.effective_message.reply_text("✅ تم إلغاء العملية الحالية.", reply_markup=_ptb_main_keyboard(uid))
-
-
-async def tg_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    if not query or not query.from_user:
-        return
-    await query.answer()
-    uid = query.from_user.id
-    data = query.data or ""
-    ukey = _ptb_user_key(uid)
-
-    if data == "ptb_home":
-        ptb_user_states.pop(uid, None)
-        bal = get_balance(ukey)
-        await query.edit_message_text(
-            f"<b>القائمة الموحدة</b>\n💰 الرصيد: <code>{bal:.2f} USD</code>",
-            parse_mode=ParseMode.HTML,
-            reply_markup=_ptb_main_keyboard(uid),
-        )
-        return
-
-    if data == "ptb_wallet":
-        bal = get_balance(ukey)
-        await query.edit_message_text(
-            f"<b>💼 محفظتك</b>\n\n💰 الرصيد الحالي: <code>{bal:.2f} USD</code>\n💡 ملاحظة: لا يتم خصم أي رصيد إلا بعد إتمام التسليم بنجاح.",
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="ptb_home")]]),
-        )
-        return
-
-    if data == "ptb_servers":
-        servers = list_all_servers_for_admin() if is_admin(uid) else list_servers_for_user(ADMIN_USERNAME)
-        if not servers:
-            await query.edit_message_text(
-                "📂 لا توجد سيرفرات مسجلة حالياً. أرسل اسم السيرفر لإنشائه الآن.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="ptb_home")]]),
-            )
-            ptb_user_states[uid] = {"step": WAITING_FOR_NEW_SERVER_NAME}
-            return
-        btns = []
-        for s in servers[:10]:
-            btns.append([InlineKeyboardButton(f"🖥 {s['title']} ({s['status']})", callback_data=f"ptb_srv_{s['key']}")])
-        btns.append([InlineKeyboardButton("🔙 رجوع", callback_data="ptb_home")])
-        await query.edit_message_text("<b>📁 السيرفرات المتاحة:</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btns))
-        return
-
-    if data.startswith("ptb_srv_"):
-        skey = data[len("ptb_srv_"):]
-        try:
-            owner, folder = parse_server_key(skey, allow_admin=True, default_owner=ADMIN_USERNAME, force_admin=is_admin(uid))
-            links = refresh_server_js_link(owner, folder, req=None)
-            txt = (
-                f"<b>🖥 السيرفر:</b> <code>{escape(skey)}</code>\n"
-                f"🔗 الرابط المولّد: <code>{escape(links['generated_url'])}</code>"
-            )
-            kb = InlineKeyboardMarkup([
-                [InlineKeyboardButton("▶️ تشغيل", callback_data=f"ptb_act_start_{skey}"), InlineKeyboardButton("⏹ إيقاف", callback_data=f"ptb_act_stop_{skey}")],
-                [InlineKeyboardButton("🔙 رجوع", callback_data="ptb_servers")],
-            ])
-            await query.edit_message_text(txt, parse_mode=ParseMode.HTML, reply_markup=kb)
-        except Exception as e:
-            await query.edit_message_text(f"❌ خطأ: {escape(str(e))}")
-        return
-
-    if data.startswith("ptb_act_"):
-        parts = data[len("ptb_act_"):].split("_", 1)
-        if len(parts) == 2:
-            act, skey = parts
-            try:
-                owner, folder = parse_server_key(skey, allow_admin=True, default_owner=ADMIN_USERNAME, force_admin=is_admin(uid))
-                state_key = normalize_state_key(owner, folder)
-                if act == "start":
-                    eff = resolve_startup_file(owner, folder, "")
-                    threading.Thread(target=background_start, args=(state_key, owner, folder, eff, ""), daemon=True).start()
-                    await query.edit_message_text(f"✅ تم بدء تشغيل <code>{escape(skey)}</code>", parse_mode=ParseMode.HTML)
-                elif act == "stop":
-                    stop_proc(state_key, owner, folder)
-                    set_state(state_key, "Offline")
-                    await query.edit_message_text(f"⏹ تم إيقاف <code>{escape(skey)}</code>", parse_mode=ParseMode.HTML)
-            except Exception as e:
-                await query.edit_message_text(f"❌ خطأ: {escape(str(e))}")
-        return
-
-    if data == "ptb_services":
-        btns = [
-            [InlineKeyboardButton(f"{svc['name']} — {svc['price']}$", callback_data=f"ptb_order_{sid}")]
-            for sid, svc in SERVICES_CATALOG.items()
-        ]
-        btns.append([InlineKeyboardButton("🔙 رجوع", callback_data="ptb_home")])
-        await query.edit_message_text("<b>🛒 اختر الخدمة المطلوبة:</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btns))
-        return
-
-    if data.startswith("ptb_order_"):
-        sid = data[len("ptb_order_"):]
-        if sid in SERVICES_CATALOG:
-            ptb_user_states[uid] = {"step": WAITING_FOR_SERVICE_INPUT, "service_id": sid}
-            svc = SERVICES_CATALOG[sid]
-            await query.edit_message_text(
-                f"<b>🛒 {escape(svc['name'])}</b>\n💰 السعر: <code>{svc['price']} {svc['currency']}</code>\n\nأرسل تفاصيل الطلب أو اسم الموقع/المسار الآن (أو /cancel للإلغاء):",
-                parse_mode=ParseMode.HTML,
-            )
-        return
-
-    if data == "ptb_admin" and is_admin(uid):
-        stats = {
-            "servers": len(list_all_servers_for_admin()),
-            "users": len(read_json(USERS_DB)),
-            "admin_id": ADMIN_ID,
-        }
-        await query.edit_message_text(
-            f"<b>👑 لوحة الأدمن الموحدة</b>\n\n🆔 الأدمن: <code>{stats['admin_id']}</code>\n👥 المستخدمون: <code>{stats['users']}</code>\n🖥 السيرفرات: <code>{stats['servers']}</code>",
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="ptb_home")]]),
-        )
-
-
-async def tg_text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.effective_user or not update.effective_message or not update.effective_message.text:
-        return
-    uid = update.effective_user.id
-    txt = update.effective_message.text.strip()
-    st = ptb_user_states.get(uid)
-    if not st:
-        return
-
-    if st.get("step") == WAITING_FOR_NEW_SERVER_NAME:
-        ptb_user_states.pop(uid, None)
-        folder = sanitize_folder_name(txt)
-        if not folder:
-            await update.effective_message.reply_text("❌ اسم السيرفر غير صالح.")
-            return
-        sdir = get_server_dir(ADMIN_USERNAME, folder)
-        os.makedirs(sdir, exist_ok=True)
-        links = refresh_server_js_link(ADMIN_USERNAME, folder, "main.py")
-        await update.effective_message.reply_text(
-            f"✅ تم إنشاء السيرفر <code>{escape(folder)}</code>\n🔗 الرابط: <code>{escape(links['generated_url'])}</code>",
-            parse_mode=ParseMode.HTML,
-            reply_markup=_ptb_main_keyboard(uid),
-        )
-        return
-
-    if st.get("step") == WAITING_FOR_SERVICE_INPUT:
-        ptb_user_states.pop(uid, None)
-        sid = st.get("service_id", "srv_web_request")
-        res = execute_paid_service_order(_ptb_user_key(uid), sid, txt, is_free_admin=is_admin(uid))
-        if res.get("success"):
-            msg_out = f"✅ {escape(res.get('message', ''))}\n💰 الرصيد المتبقي: <code>{res.get('balance', 0.0):.2f} USD</code>"
-        else:
-            msg_out = f"❌ {escape(res.get('message', ''))}"
-        await update.effective_message.reply_text(msg_out, parse_mode=ParseMode.HTML, reply_markup=_ptb_main_keyboard(uid))
-
-
-# ==============================================================================
-# ١٠. التشغيل الموحد للبوت والسيرفر وإغلاق الفحص (Unified Boot & Startup)
-# ==============================================================================
-_SYSTEM_BOOTSTRAPPED = False
-_BOOT_LOCK = threading.Lock()
-
-
-def run_flask_app():
-    port = int(os.environ.get("PORT", os.environ.get("SERVER_PORT", PANEL_PORT_PRIMARY)))
-    logger.info("🌐 تشغيل خادم الويب الموحد على المنفذ %s ...", port)
-    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
-
-
-def run_telebot():
-    logger.info("🤖 تشغيل بوت TeleBot الموحد...")
-    while True:
-        try:
-            bot.infinity_polling(none_stop=True, timeout=60, long_polling_timeout=60)
-        except Exception as e:
-            logger.warning("⚠️ انقطاع polling مؤقت، إعادة الاتصال خلال 5 ثوانٍ: %s", e)
-            time.sleep(5)
+    logger.warning(f"⚠️ خطأ في python-telegram-bot: {err}")
 
 
 async def _run_ptb_async():
-    ptb_app = Application.builder().token(TOKEN).build()
-    ptb_app.add_handler(CommandHandler("start", tg_start_cmd))
-    ptb_app.add_handler(CommandHandler("cancel", tg_cancel_cmd))
-    ptb_app.add_handler(CallbackQueryHandler(tg_callback_handler))
-    ptb_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, tg_text_message_handler))
-    await ptb_app.initialize()
-    await ptb_app.start()
-    await ptb_app.updater.start_polling(drop_pending_updates=True)
-    while True:
-        await asyncio.sleep(3600)
+    application = Application.builder().token(TOKEN).build()
+    application.add_error_handler(_ptb_error_handler)
+    application.add_handler(CommandHandler("start", tg_start_cmd))
+    application.add_handler(CommandHandler("cancel", tg_cancel_cmd))
+    application.add_handler(CallbackQueryHandler(tg_callback_handler))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, tg_text_message_handler))
+
+    await application.initialize()
+    await application.start()
+    if application.updater:
+        await application.updater.start_polling(drop_pending_updates=True)
+
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    finally:
+        if application.updater and application.updater.running:
+            await application.updater.stop()
+        if application.running:
+            await application.stop()
+        await application.shutdown()
 
 
-def run_ptb_thread():
-    if os.environ.get("ENABLE_PTB_POLLING", "0") != "1":
+def _run_telegram_bot_thread():
+    if not TOKEN or ":" not in TOKEN:
+        logger.warning("⚠️ TOKEN غير مضبوط؛ تم تخطي تشغيل بوت python-telegram-bot")
         return
-    logger.info("🤖 تشغيل محرك python-telegram-bot الموحد...")
+
+    allow_dup = os.environ.get("ALLOW_DUPLICATE_TOKEN", "0").strip() in ("1", "true", "yes")
+    if TOKEN and TOKEN == TOKEN and not allow_dup:
+        logger.warning(
+            "⚠️ TOKEN مطابق لـ TOKEN المستخدم مع TeleBot؛ تم تخطي تشغيل python-telegram-bot لتجنب تعارض getUpdates."
+        )
+        return
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
+        logger.info("🤖 تشغيل بوت python-telegram-bot بنجاح...")
         loop.run_until_complete(_run_ptb_async())
     except Exception as e:
-        logger.warning("⚠️ توقف محرك python-telegram-bot: %s", e)
+        logger.error(f"❌ خطأ في تشغيل بوت python-telegram-bot: {e}")
+    finally:
+        try:
+            pending = asyncio.all_tasks(loop=loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            loop.run_until_complete(loop.shutdown_asyncgens())
+        except Exception:
+            pass
+        try:
+            loop.close()
+        except Exception:
+            pass
 
 
+def _run_telebot_polling_thread():
+    if not TOKEN or ":" not in TOKEN:
+        logger.warning("⚠️ TOKEN غير مضبوط؛ تم تخطي تشغيل بوت TeleBot")
+        return
+    logger.info("🤖 تشغيل بوت TeleBot الرئيسي بنجاح...")
+    while True:
+        try:
+            bot.infinity_polling(none_stop=True, interval=1, timeout=30)
+        except Exception as e:
+            logger.warning(f"⚠️ إعادة تشغيل TeleBot polling بعد خطأ: {e}")
+            time.sleep(3)
+
+
+def _run_secondary_flask_port():
+    if os.environ.get("RENDER") or os.environ.get("RENDER_EXTERNAL_URL"):
+        return
+    if PANEL_PORT_SECONDARY and PANEL_PORT_SECONDARY != PANEL_PORT_PRIMARY:
+        try:
+            app.run(host="0.0.0.0", port=PANEL_PORT_SECONDARY, debug=False, use_reloader=False, threaded=True)
+        except Exception as e:
+            logger.warning(f"⚠️ تعذر تشغيل المنفذ الثانوي {PANEL_PORT_SECONDARY}: {e}")
+
+
+# ==============================================================================
+# ١٠. نقطة الدخول الرئيسية (Main Entrypoint)
+# ==============================================================================
 def bootstrap_system():
-    global _SYSTEM_BOOTSTRAPPED
-    with _BOOT_LOCK:
-        if _SYSTEM_BOOTSTRAPPED:
-            return
-        init_db()
-        ensure_index_html_exists()
-        _start_keep_alive_once()
-        _SYSTEM_BOOTSTRAPPED = True
-        logger.info("✅ اكتمل الفحص والتهيئة الموحدة بنجاح وإغلاق الفحص.")
+    init_db()
+    ensure_index_html_exists()
+    _start_keep_alive_once()
+    if not any(t.name == "EhabSecondaryFlask" for t in threading.enumerate()):
+        threading.Thread(target=_run_secondary_flask_port, name="EhabSecondaryFlask", daemon=True).start()
+    if not any(t.name == "EhabTeleBotThread" for t in threading.enumerate()):
+        threading.Thread(target=_run_telebot_polling_thread, name="EhabTeleBotThread", daemon=True).start()
+    if not any(t.name == "EhabPTBThread" for t in threading.enumerate()):
+        threading.Thread(target=_run_telegram_bot_thread, name="EhabPTBThread", daemon=True).start()
 
 
 bootstrap_system()
 
-
 if __name__ == "__main__":
-    if os.environ.get("RUN_BOT_ONLY", "0") == "1":
-        run_telebot()
-    elif os.environ.get("RUN_WEB_ONLY", "0") == "1":
-        run_flask_app()
-    else:
-        if os.environ.get("ENABLE_BOT_POLLING", "1") == "1":
-            threading.Thread(target=run_telebot, name="TeleBotPollingThread", daemon=True).start()
-        if os.environ.get("ENABLE_PTB_POLLING", "0") == "1":
-            threading.Thread(target=run_ptb_thread, name="PTBPollingThread", daemon=True).start()
-        run_flask_app()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
